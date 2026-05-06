@@ -1,0 +1,50 @@
+:root {
+  --color-background-primary: #fffaf5;
+  --color-background-secondary: #f4efe8;
+  --color-text-primary: #241f1a;
+  --color-text-secondary: #685d51;
+  --color-text-tertiary: #928679;
+  --color-border-tertiary: #dfd3c5;
+  --border-radius-md: 8px;
+  --border-radius-lg: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--color-background-primary);
+  color: var(--color-text-primary);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-md);
+  background: #fffdf9;
+  color: var(--color-text-primary);
+  padding: 7px 10px;
+}
+
+@media (max-width: 720px) {
+  #root > div {
+    max-width: none !important;
+    padding: 0 16px 40px !important;
+  }
+
+  nav {
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+}
