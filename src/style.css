@@ -115,9 +115,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .inventory-summary span { font-size: 13px; color: #756653; }
 .inventory-summary strong { font-size: 27px; font-weight: 550; font-variant-numeric: tabular-nums; }
 .inventory-summary small { margin-left: 6px; font-size: 13px; font-weight: 400; }
+.summary-total-block { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 1; }
 .summary-status-breakdown { display: grid; gap: 4px; margin-top: 9px; color: #8b7a64; font-size: 10px; }
-.inventory-summary > div:last-child { flex-wrap: wrap; }
-.inventory-summary > div:last-child .summary-status-breakdown { flex: 1 0 100%; }
+.inventory-summary > div:last-child { align-items: center; }
+.inventory-summary > div:last-child .summary-status-breakdown { flex: 0 0 145px; margin: 0 0 0 18px; padding-left: 18px; border-left: 1px solid #dcd0c1; }
 .summary-status-breakdown span { display: flex; justify-content: space-between; gap: 12px; }
 .summary-status-breakdown b { color: #6f583d; font-weight: 600; font-variant-numeric: tabular-nums; }
 .inventory-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; font-size: 12px; color: #827363; }
@@ -180,7 +181,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .inventory-summary { padding: 20px; }
   .inventory-summary > div { align-items: flex-start; flex-direction: column; padding-right: 14px; gap: 6px; }
   .inventory-summary > div + div { padding-left: 20px; }
-  .summary-status-breakdown { width: 100%; font-size: 9px; }
+  .summary-total-block { align-items: flex-start; flex-direction: column; gap: 6px; }
+  .inventory-summary > div:last-child .summary-status-breakdown { flex-basis: 100%; margin: 8px 0 0; padding: 8px 0 0; border-left: 0; border-top: 1px solid #dcd0c1; }
   .inventory-card { grid-template-columns: minmax(0, 1fr) 116px; }
   .bean-info { padding: 20px 16px; }
   .bean-info h3 { font-size: 18px; }
