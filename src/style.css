@@ -192,6 +192,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .generated-name { display: grid; gap: 8px; background: #f4efe8; padding: 16px; border-radius: 8px; }
 .generated-name span { color: #827363; font-size: 11px; }
 .generated-name output { font-size: 16px; overflow-wrap: anywhere; }
+.existing-purchasers { display: grid; gap: 7px; margin-top: 8px; color: #94816b; font-size: 11px; }
+.existing-purchaser-options { display: flex; flex-wrap: wrap; gap: 6px; }
+.existing-purchaser-options button { border: 1px solid #dfd3c5; background: #f7f1e9; color: #806444; border-radius: 16px; padding: 6px 10px; font-size: 11px; cursor: pointer; }
+.existing-purchaser-options button:hover { background: #eee3d4; }
 .farm-detail { font-size: 12px; color: #756653; }
 .bean-comments { border-top: 1px solid #e9dfd1; margin-top: 20px; padding-top: 15px; }
 .comments-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }

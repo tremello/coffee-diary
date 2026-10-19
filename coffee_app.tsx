@@ -188,6 +188,7 @@ function BeansPage({ beans, setBeans, notes, setNotes, userId, onBrew }: { beans
   const [addingOrigin, setAddingOrigin] = useState(false);
   const [newOrigin, setNewOrigin] = useState("");
   const origins = [...new Set([...DEFAULT_ORIGINS, ...customOrigins, ...beans.map(b => b.origin).filter(Boolean)])];
+  const roasteries = [...new Set(beans.map(bean => bean.roastery?.trim()).filter((roastery): roastery is string => Boolean(roastery)))];
   const addOrigin = () => {
     const origin = newOrigin.trim();
     if (!origin) return;
@@ -250,7 +251,7 @@ function BeansPage({ beans, setBeans, notes, setNotes, userId, onBrew }: { beans
             <label className="process-custom">가공방식 직접 입력<input value={DEFAULT_PROCESSES.includes(form.process) ? "" : form.process} placeholder="예: 카보닉 매서레이션" onChange={e => setForm({ ...form, process: e.target.value })} /><span>이 원두에만 적용돼요.</span></label>
           </fieldset>
           <div className="generated-name full-width"><span>자동으로 만들어지는 원두 이름</span><output>{beanName(form) || "원두 정보를 입력해주세요"}</output></div>
-          <label className="full-width">로스터리<input value={form.roastery} placeholder="로스터리 이름" onChange={e => setForm({ ...form, roastery: e.target.value })} /></label>
+          <label className="full-width">로스터리<input value={form.roastery} placeholder="로스터리 이름" onChange={e => setForm({ ...form, roastery: e.target.value })} />{editingId === null && roasteries.length > 0 && <span className="existing-purchasers"><span>기존 구매처</span><span className="existing-purchaser-options">{roasteries.map(roastery => <button type="button" key={roastery} onClick={() => setForm({ ...form, roastery })}>{roastery}</button>)}</span></span>}</label>
           <div className="bean-dates full-width">
           <label>구매량 (g) *<input type="number" min="0.1" step="0.1" required value={form.purchased} placeholder="200" onChange={e => setForm({ ...form, purchased: e.target.value })} /></label>
           <label>소비량 (g)<input type="number" min="0" step="0.1" value={form.consumed} placeholder="0" onChange={e => setForm({ ...form, consumed: e.target.value })} /><span className="input-hint">브루잉에 기록하지 않은 소비량</span></label>
