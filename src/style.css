@@ -181,8 +181,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .inventory-summary { padding: 20px; }
   .inventory-summary > div { align-items: flex-start; flex-direction: column; padding-right: 14px; gap: 6px; }
   .inventory-summary > div + div { padding-left: 20px; }
+  .inventory-summary > div:last-child { display: block; }
   .summary-total-block { align-items: flex-start; flex-direction: column; gap: 6px; }
-  .inventory-summary > div:last-child .summary-status-breakdown { flex-basis: 100%; margin: 8px 0 0; padding: 8px 0 0; border-left: 0; border-top: 1px solid #dcd0c1; }
+  .inventory-summary > div:last-child .summary-status-breakdown { display: grid; width: 100%; margin: 8px 0 0; padding: 8px 0 0; border-left: 0; border-top: 1px solid #dcd0c1; }
   .inventory-card { grid-template-columns: minmax(0, 1fr) 116px; }
   .bean-info { padding: 20px 16px; }
   .bean-info h3 { font-size: 18px; }
