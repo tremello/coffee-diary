@@ -148,7 +148,7 @@ function Header({ page, setPage, user, authLoading }: { page: Page; setPage: (pa
   const signIn = async () => {
     const email = window.prompt("동기화할 이메일 주소를 입력해주세요.");
     if (!email) return;
-    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: `${window.location.origin}/` } });
     if (error) window.alert(error.message); else window.alert("로그인 링크를 이메일로 보냈어요.");
   };
   const signOut = () => { void supabase.auth.signOut(); };
