@@ -152,6 +152,10 @@ function Header({ page, setPage, user, authLoading }: { page: Page; setPage: (pa
     const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: `${window.location.origin}/` } });
     if (error) window.alert(error.message); else window.alert("로그인 링크를 이메일로 보냈어요.");
   };
+  const signInGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/` } });
+    if (error) window.alert(error.message);
+  };
   const signOut = () => { void supabase.auth.signOut(); };
   return (
     <div style={{ borderBottom: "0.5px solid var(--color-border-tertiary)", marginBottom: "1.5rem" }}>
@@ -160,7 +164,7 @@ function Header({ page, setPage, user, authLoading }: { page: Page; setPage: (pa
           <p style={{ fontSize: 11, color: "var(--color-text-tertiary)", margin: 0, letterSpacing: 1, textTransform: "uppercase", fontFamily: FONT }}>My Coffee Diary</p>
           <h1 style={{ fontSize: 22, fontWeight: 500, margin: "2px 0 0", color: "var(--color-text-primary)", fontFamily: FONT }}>{PAGE_LABELS[page]}</h1>
         </div>
-        <div className="account-actions">{user ? <button className="account-button" onClick={signOut}>{user.email?.split("@")[0] ?? "내 계정"} · 로그아웃</button> : <button className="account-button" onClick={signIn}>기기 동기화 로그인</button>}<div style={{ fontSize: 22 }}>☕</div></div>
+        <div className="account-actions">{user ? <button className="account-button" onClick={signOut}>{user.email?.split("@")[0] ?? "내 계정"} · 로그아웃</button> : <><button className="google-button" onClick={signInGoogle}>Google 로그인</button><button className="account-button" onClick={signIn}>이메일 로그인</button></>}<div style={{ fontSize: 22 }}>☕</div></div>
       </div>
       <nav style={{ display: "flex", gap: 4, marginTop: "1rem" }}>
         {PAGES.map(p => (
