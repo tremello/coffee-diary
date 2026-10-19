@@ -6,7 +6,7 @@ const DEFAULT_PROCESSES = ["워시드", "내추럴", "허니", "무산소 내추
 const DEFAULT_ORIGINS = ["에티오피아", "파나마", "콜롬비아", "케냐", "코스타리카"];
 const localDate = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`; };
 const beanName = (bean: BeanForm) => [bean.origin, bean.farm, bean.variety, bean.process].map(value => value?.trim()).filter(Boolean).join(" ");
-const FONT = "'Pretendard', 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, -apple-system, sans-serif";
+const FONT = "'Nanum Barun Gothic', 'Apple SD Gothic Neo', sans-serif";
 const PAGES = ["Beans", "Brew Log", "Tasting Notes"] as const;
 const PAGE_LABELS = { Beans: "원두 재고", "Brew Log": "브루잉 기록", "Tasting Notes": "테이스팅 노트" };
 
