@@ -4,6 +4,8 @@ import { supabase } from "./src/supabase";
 const STORAGE_KEYS = { beans: "cf_beans", brews: "cf_brews", notes: "cf_notes" };
 const DEFAULT_PROCESSES = ["워시드", "내추럴", "허니", "무산소 내추럴", "무산소 워시드"];
 const DEFAULT_ORIGINS = ["에티오피아", "파나마", "콜롬비아", "케냐", "코스타리카"];
+const BEAN_STATUSES = ["배송 중", "디개싱 중", "소비 중"] as const;
+type BeanStatus = (typeof BEAN_STATUSES)[number];
 const localDate = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`; };
 const beanName = (bean: BeanForm) => [bean.origin, bean.farm, bean.variety, bean.process].map(value => value?.trim()).filter(Boolean).join(" ");
 const FONT = "'Nanum Barun Gothic', 'Apple SD Gothic Neo', sans-serif";
@@ -31,6 +33,7 @@ type Bean = {
   variety?: string;
   flavor?: string;
   memo?: string;
+  status?: BeanStatus;
 };
 
 type BeanForm = Omit<Bean, "id" | "purchased" | "remaining" | "consumed"> & {
@@ -111,7 +114,7 @@ const fmt = (n: number | string) => Number(n).toLocaleString();
 const sortByDateDesc = <T extends { date: string }>(items: T[]) =>
   [...items].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-const emptyBeanForm: BeanForm = { name: "", origin: "", process: "", roastery: "", date: "", purchased: "", consumed: "", price: "", roasteryNotes: "", roastDate: "", farm: "", variety: "", flavor: "", memo: "" };
+const emptyBeanForm: BeanForm = { name: "", origin: "", process: "", roastery: "", date: "", purchased: "", consumed: "", price: "", roasteryNotes: "", roastDate: "", farm: "", variety: "", flavor: "", memo: "", status: "소비 중" };
 const emptyBrewForm = (): BrewForm => ({ beanId: "", amount: "", waterAmount: "", method: "", date: new Date().toISOString().slice(0, 10), recipe: "" });
 const brewRatio = (amount: number, waterAmount?: number) => waterAmount && amount > 0 ? `1:${Number((waterAmount / amount).toFixed(1)).toLocaleString()}` : "";
 const emptyNoteForm = (): TastingNoteForm => ({
@@ -187,6 +190,7 @@ function BeansPage({ beans, setBeans, notes, setNotes, userId, onBrew }: { beans
   const [customOrigins, setCustomOrigins] = useStorage<string[]>("cf_origins", [], userId);
   const [addingOrigin, setAddingOrigin] = useState(false);
   const [newOrigin, setNewOrigin] = useState("");
+  const [editingStatusId, setEditingStatusId] = useState<number | null>(null);
   const origins = [...new Set([...DEFAULT_ORIGINS, ...customOrigins, ...beans.map(b => b.origin).filter(Boolean)])];
   const roasteries = [...new Set(beans.map(bean => bean.roastery?.trim()).filter((roastery): roastery is string => Boolean(roastery)))];
   const addOrigin = () => {
@@ -201,7 +205,7 @@ function BeansPage({ beans, setBeans, notes, setNotes, userId, onBrew }: { beans
   const visible = available.filter(b => filter === "all" || (filter === "active" ? b.remaining > 0 : b.remaining <= 0));
   const close = () => { setShow(false); setEditingId(null); setForm(emptyBeanForm); setError(""); setAddingOrigin(false); setNewOrigin(""); };
   const edit = (bean: Bean) => {
-    setForm({ ...bean, purchased: String(bean.purchased), consumed: String(bean.consumed ?? 0) });
+    setForm({ ...bean, status: bean.status ?? "소비 중", purchased: String(bean.purchased), consumed: String(bean.consumed ?? 0) });
     setEditingId(bean.id); setError(""); setShow(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -213,6 +217,10 @@ function BeansPage({ beans, setBeans, notes, setNotes, userId, onBrew }: { beans
   const undoRemove = () => {
     setBeans(beans.map(bean => bean.id === deletedId ? { ...bean, deleted: false } : bean));
     setDeletedId(null);
+  };
+  const updateStatus = (beanId: number, status: BeanStatus) => {
+    setBeans(beans.map(bean => bean.id === beanId ? { ...bean, status } : bean));
+    setEditingStatusId(null);
   };
   const save = (event: React.FormEvent) => {
     event.preventDefault();
@@ -282,7 +290,7 @@ function BeansPage({ beans, setBeans, notes, setNotes, userId, onBrew }: { beans
               <BeanComments bean={bean} notes={notes.filter(note => note.beanId === bean.id)} onAdd={note => setNotes([...notes, note])} />
             </div>
             <div className="bean-stock">
-              <span className={`stock-status ${pct <= 20 ? "low" : ""}`}>{bean.remaining <= 0 ? "다 마셨어요" : pct <= 20 ? "얼마 남지 않았어요" : "보유 중"}</span>
+              <div className="stock-status-row">{editingStatusId === bean.id ? <select className="stock-status-select" value={bean.status ?? "소비 중"} aria-label={`${bean.name} 상태`} onChange={event => updateStatus(bean.id, event.target.value as BeanStatus)}>{BEAN_STATUSES.map(status => <option key={status} value={status}>{status}</option>)}</select> : <><span className={`stock-status ${pct <= 20 ? "low" : ""}`}>{bean.remaining <= 0 ? "다 마셨어요" : bean.status ?? "소비 중"}</span><button type="button" className="status-edit-button" onClick={() => setEditingStatusId(bean.id)}>수정</button></>}</div>
               <p className="remaining-label">남은 원두</p>
               <p className="remaining-weight">{fmt(bean.remaining)}<span>g</span></p>
               <p className="purchased-weight">구매 {fmt(bean.purchased)}g</p>
