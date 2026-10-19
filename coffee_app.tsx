@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { supabase } from "./src/supabase";
 
 const STORAGE_KEYS = { beans: "cf_beans", brews: "cf_brews", notes: "cf_notes" };
 const DEFAULT_PROCESSES = ["워시드", "내추럴", "허니", "무산소 내추럴", "무산소 워시드"];
@@ -70,12 +71,37 @@ type TastingNoteForm = Omit<TastingNote, "id" | "beanId"> & {
 };
 type TastingNoteTextKey = "flavor" | "aroma" | "acidity" | "body" | "finish";
 
-function useStorage<T>(key: string, init: T): [T, StorageSetter<T>] {
+function useStorage<T>(key: string, init: T, userId: string | null = null): [T, StorageSetter<T>] {
   const [val, setVal] = useState(() => {
     try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : init; } catch { return init; }
   });
-  const set = (v: T) => { setVal(v); try { localStorage.setItem(key, JSON.stringify(v)); } catch {} };
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    supabase.from("coffee_data").select("data").eq("key", key).maybeSingle().then(({ data }) => {
+      if (cancelled) return;
+      if (data?.data !== undefined) setVal(data.data as T);
+      else if (Array.isArray(val) && val.length > 0) void supabase.from("coffee_data").upsert({ key, data: val, user_id: userId }, { onConflict: "user_id,key" });
+    });
+    return () => { cancelled = true; };
+  }, [key, userId]);
+  const set = (v: T) => {
+    setVal(v);
+    try { localStorage.setItem(key, JSON.stringify(v)); } catch {}
+    if (userId) void supabase.from("coffee_data").upsert({ key, data: v, user_id: userId }, { onConflict: "user_id,key" });
+  };
   return [val, set];
+}
+
+function useAuth() {
+  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => { setUser(data.session?.user ?? null); setLoading(false); });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user ?? null));
+    return () => listener.subscription.unsubscribe();
+  }, []);
+  return { user, loading };
 }
 
 const fmt = (n: number | string) => Number(n).toLocaleString();
@@ -100,24 +126,32 @@ const emptyNoteForm = (): TastingNoteForm => ({
 export default function App() {
   const [page, setPage] = useState<Page>("Beans");
   const [openBrewForm, setOpenBrewForm] = useState(false);
+  const { user, loading: authLoading } = useAuth();
   const [linkedBrewId, setLinkedBrewId] = useState<number | null>(null);
-  const [beans, setBeans] = useStorage<Bean[]>(STORAGE_KEYS.beans, []);
-  const [brews, setBrews] = useStorage<Brew[]>(STORAGE_KEYS.brews, []);
-  const [notes, setNotes] = useStorage<TastingNote[]>(STORAGE_KEYS.notes, []);
+  const [beans, setBeans] = useStorage<Bean[]>(STORAGE_KEYS.beans, [], user?.id ?? null);
+  const [brews, setBrews] = useStorage<Brew[]>(STORAGE_KEYS.brews, [], user?.id ?? null);
+  const [notes, setNotes] = useStorage<TastingNote[]>(STORAGE_KEYS.notes, [], user?.id ?? null);
 
   const goToNotes = (brewId: number) => { setLinkedBrewId(brewId); setPage("Tasting Notes"); };
 
   return (
     <div style={{ fontFamily: FONT, maxWidth: 960, margin: "0 auto", padding: "0 0 3rem" }}>
-      <Header page={page} setPage={setPage} />
-      {page === "Beans" && <BeansPage beans={beans} setBeans={setBeans} notes={notes} setNotes={setNotes} onBrew={() => { setOpenBrewForm(true); setPage("Brew Log"); }} />}
+      <Header page={page} setPage={setPage} user={user} authLoading={authLoading} />
+      {page === "Beans" && <BeansPage beans={beans} setBeans={setBeans} notes={notes} setNotes={setNotes} userId={user?.id ?? null} onBrew={() => { setOpenBrewForm(true); setPage("Brew Log"); }} />}
       {page === "Brew Log" && <BrewLog beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} goToNotes={goToNotes} notes={notes} openInitially={openBrewForm} onOpened={() => setOpenBrewForm(false)} />}
       {page === "Tasting Notes" && <TastingNotes beans={beans} notes={notes} setNotes={setNotes} brews={brews} linkedBrewId={linkedBrewId} setLinkedBrewId={setLinkedBrewId} />}
     </div>
   );
 }
 
-function Header({ page, setPage }: { page: Page; setPage: (page: Page) => void }) {
+function Header({ page, setPage, user, authLoading }: { page: Page; setPage: (page: Page) => void; user: { id: string; email?: string } | null; authLoading: boolean }) {
+  const signIn = async () => {
+    const email = window.prompt("동기화할 이메일 주소를 입력해주세요.");
+    if (!email) return;
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });
+    if (error) window.alert(error.message); else window.alert("로그인 링크를 이메일로 보냈어요.");
+  };
+  const signOut = () => { void supabase.auth.signOut(); };
   return (
     <div style={{ borderBottom: "0.5px solid var(--color-border-tertiary)", marginBottom: "1.5rem" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 0 0" }}>
@@ -125,7 +159,7 @@ function Header({ page, setPage }: { page: Page; setPage: (page: Page) => void }
           <p style={{ fontSize: 11, color: "var(--color-text-tertiary)", margin: 0, letterSpacing: 1, textTransform: "uppercase", fontFamily: FONT }}>My Coffee Diary</p>
           <h1 style={{ fontSize: 22, fontWeight: 500, margin: "2px 0 0", color: "var(--color-text-primary)", fontFamily: FONT }}>{PAGE_LABELS[page]}</h1>
         </div>
-        <div style={{ fontSize: 22 }}>☕</div>
+        <div className="account-actions">{!authLoading && (user ? <button className="account-button" onClick={signOut}>{user.email?.split("@")[0] ?? "내 계정"} · 로그아웃</button> : <button className="account-button" onClick={signIn}>기기 동기화 로그인</button>)}<div style={{ fontSize: 22 }}>☕</div></div>
       </div>
       <nav style={{ display: "flex", gap: 4, marginTop: "1rem" }}>
         {PAGES.map(p => (
@@ -142,13 +176,13 @@ function Header({ page, setPage }: { page: Page; setPage: (page: Page) => void }
   );
 }
 
-function BeansPage({ beans, setBeans, notes, setNotes, onBrew }: { beans: Bean[]; setBeans: StorageSetter<Bean[]>; notes: TastingNote[]; setNotes: StorageSetter<TastingNote[]>; onBrew: () => void }) {
+function BeansPage({ beans, setBeans, notes, setNotes, userId, onBrew }: { beans: Bean[]; setBeans: StorageSetter<Bean[]>; notes: TastingNote[]; setNotes: StorageSetter<TastingNote[]>; userId: string | null; onBrew: () => void }) {
   const [show, setShow] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<BeanForm>(emptyBeanForm);
   const [filter, setFilter] = useState("active");
   const [error, setError] = useState("");
-  const [customOrigins, setCustomOrigins] = useStorage<string[]>("cf_origins", []);
+  const [customOrigins, setCustomOrigins] = useStorage<string[]>("cf_origins", [], userId);
   const [addingOrigin, setAddingOrigin] = useState(false);
   const [newOrigin, setNewOrigin] = useState("");
   const origins = [...new Set([...DEFAULT_ORIGINS, ...customOrigins, ...beans.map(b => b.origin).filter(Boolean)])];

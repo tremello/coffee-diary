@@ -51,6 +51,9 @@ textarea {
 
 button { cursor: pointer; }
 button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid #806444; outline-offset: 4px; }
+.account-actions { display: flex; align-items: center; gap: 10px; }
+.account-button { border: 1px solid #d8c9b7; background: #fffdf9; color: #806444; border-radius: 8px; padding: 7px 10px; font-size: 11px; white-space: nowrap; }
+.account-button:hover { background: #f4eee6; }
 .inventory { padding-top: 10px; }
 .inventory-intro { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 14px 0 28px; }
 .eyebrow { font-size: 10px; letter-spacing: 2px; color: #8a765c; margin: 0 0 8px; }
@@ -111,6 +114,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .inventory-empty p { color: #8b7a64; font-size: 13px; margin-bottom: 24px; }
 @media (min-width: 721px) { #root { padding: 0 32px; } }
 @media (max-width: 540px) {
+  .account-actions { gap: 6px; }
+  .account-button { padding: 6px 8px; font-size: 10px; }
   .intro-actions { align-items: stretch; flex-direction: column; gap: 5px; }
   .intro-actions button { padding: 8px 10px; font-size: 11px; }
   .inventory-intro h2 { font-size: 25px; }
