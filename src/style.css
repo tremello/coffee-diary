@@ -230,6 +230,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .more-records { border: none; background: none; color: #806444; padding: 9px 0 0; font-size: 11px; }
 .input-hint { font-size: 11px; color: #94816b; }
 .brew-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.brew-form-grid label { min-width: 0; }
+.brew-form-grid input[type="date"] { width: 100%; }
 @media (max-width: 540px) { .bean-info { padding: 16px; } }
 
 /* Compact inventory rows for a long mobile bean shelf. */
