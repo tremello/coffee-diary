@@ -48,3 +48,169 @@ textarea {
     padding-bottom: 8px;
   }
 }
+
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid #806444; outline-offset: 4px; }
+.inventory { padding-top: 10px; }
+.inventory-intro { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 14px 0 28px; }
+.eyebrow { font-size: 10px; letter-spacing: 2px; color: #8a765c; margin: 0 0 8px; }
+.inventory-intro h2 { font-size: 30px; letter-spacing: -1px; margin: 0 0 9px; font-weight: 600; }
+.inventory-intro p:last-child { color: #827363; font-size: 13px; margin: 0; }
+.primary-button, .quiet-button { border: 1px solid #806444; border-radius: 9px; padding: 11px 16px; font-size: 13px; white-space: nowrap; }
+.primary-button { background: #806444; color: #fffdf9; }
+.primary-button:hover { background: #695137; }
+.secondary-button { border: 1px solid #cdbda9; background: #fffdf9; color: #806444; border-radius: 9px; padding: 11px 16px; font-size: 13px; white-space: nowrap; }
+.secondary-button:hover { background: #f4eee6; }
+.intro-actions { display: flex; align-items: center; gap: 8px; }
+.quiet-button { background: transparent; color: #806444; }
+.inventory-summary { display: grid; grid-template-columns: 1fr 1fr; padding: 24px 30px; background: #f0e9df; border-radius: 14px; margin-bottom: 28px; }
+.inventory-summary > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-right: 28px; }
+.inventory-summary > div + div { border-left: 1px solid #dcd0c1; padding: 0 0 0 28px; }
+.inventory-summary span { font-size: 13px; color: #756653; }
+.inventory-summary strong { font-size: 27px; font-weight: 550; font-variant-numeric: tabular-nums; }
+.inventory-summary small { margin-left: 6px; font-size: 13px; font-weight: 400; }
+.inventory-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; font-size: 12px; color: #827363; }
+.inventory-filters { display: flex; gap: 6px; }
+.inventory-filters button { border: 0; background: transparent; color: #827363; padding: 9px 14px; border-radius: 7px; font-size: 13px; }
+.inventory-filters button[aria-pressed="true"] { background: #e9dfd0; color: #59432c; font-weight: 600; }
+.bean-list { display: grid; gap: 16px; }
+.inventory-card { display: grid; grid-template-columns: minmax(0, 1fr) 210px; background: #fffdf9; border: 1px solid #e3d9cc; border-radius: 14px; overflow: hidden; }
+.bean-info { padding: 25px 28px; min-width: 0; }
+.roastery { font-size: 12px; color: #8b704f; margin: 0 0 6px; overflow-wrap: anywhere; }
+.bean-info h3 { font-size: 21px; font-weight: 600; margin: 0 0 16px; letter-spacing: -.5px; overflow-wrap: anywhere; }
+.bean-facts { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 0 0 21px; font-size: 12px; }
+.bean-facts div { display: flex; gap: 8px; }
+.bean-facts dt, .detail-label { color: #8b7e6f; font-size: 11px; }
+.bean-facts dd { margin: 0; color: #514538; overflow-wrap: anywhere; }
+.flavor-notes { display: grid; gap: 8px; }
+.flavor-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.flavor-tags > span { background: #f1eadf; color: #796044; border-radius: 5px; padding: 5px 9px; font-size: 12px; overflow-wrap: anywhere; }
+.placeholder-note { color: #938575; font-size: 12px; margin: 0; }
+.bean-memo { font-size: 13px; color: #7c6c5a; line-height: 1.7; margin: 13px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.edit-bean { background: none; border: 0; padding: 0; margin-top: 20px; font-size: 11px; color: #806444; }
+.bean-stock { background: #f5efe6; border-left: 1px solid #e7ddcf; padding: 26px 24px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; }
+.stock-status { font-size: 10px; border: 1px solid #d5c5b0; border-radius: 20px; padding: 4px 9px; color: #7b6446; }
+.stock-status.low { color: #975e38; border-color: #d8bda5; }
+.remaining-label { font-size: 11px; color: #8b7a64; margin: 22px 0 4px; }
+.remaining-weight { font-size: 36px; font-weight: 550; letter-spacing: -1.5px; margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; max-width: 100%; }
+.remaining-weight span { font-size: 16px; font-weight: 400; margin-left: 5px; letter-spacing: 0; }
+.purchased-weight { font-size: 12px; color: #94816b; margin: 4px 0 20px; }
+.stock-meter { width: 100%; height: 6px; border-radius: 4px; background: #e1d6c7; overflow: hidden; }
+.stock-meter > div { height: 100%; background: #96774f; border-radius: inherit; }
+.stock-percent { font-size: 10px; color: #8b765d; margin: 7px 0 0; }
+.bean-form { border: 1px solid #ded0bd; background: #fffdf9; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+.bean-form h3 { margin-top: 0; font-size: 18px; }
+.bean-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.bean-form-grid label { display: grid; gap: 7px; font-size: 12px; color: #75634d; }
+.bean-form-grid input, .bean-form-grid textarea { width: 100%; min-width: 0; padding: 10px 12px; }
+.full-width { grid-column: 1 / -1; }
+.form-buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+.inventory-empty { text-align: center; padding: 65px 20px; border: 1px dashed #d9cbb9; border-radius: 14px; }
+.inventory-empty > span { font-size: 28px; }
+.inventory-empty h3 { font-size: 18px; font-weight: 500; }
+.inventory-empty p { color: #8b7a64; font-size: 13px; margin-bottom: 24px; }
+@media (min-width: 721px) { #root { padding: 0 32px; } }
+@media (max-width: 540px) {
+  .intro-actions { align-items: stretch; flex-direction: column; gap: 5px; }
+  .intro-actions button { padding: 8px 10px; font-size: 11px; }
+  .inventory-intro h2 { font-size: 25px; }
+  .inventory-intro p:last-child { font-size: 11px; max-width: 190px; line-height: 1.6; }
+  .inventory-summary { padding: 20px; }
+  .inventory-summary > div { align-items: flex-start; flex-direction: column; padding-right: 14px; gap: 6px; }
+  .inventory-summary > div + div { padding-left: 20px; }
+  .inventory-card { grid-template-columns: minmax(0, 1fr) 116px; }
+  .bean-info { padding: 20px 16px; }
+  .bean-info h3 { font-size: 18px; }
+  .bean-facts { flex-direction: column; gap: 6px; }
+  .bean-stock { padding: 20px 12px; }
+  .stock-status { font-size: 9px; padding: 4px 6px; }
+  .remaining-weight { font-size: 28px; }
+  .remaining-weight span { font-size: 12px; }
+  .bean-form { padding: 18px; }
+  .bean-form-grid { grid-template-columns: 1fr; }
+}
+.origin-field { border: 0; padding: 0; margin: 0; min-width: 0; }
+.origin-field legend { font-size: 12px; color: #75634d; margin-bottom: 9px; }
+.origin-options { display: flex; flex-wrap: wrap; gap: 7px; }
+.origin-options button { background: #fffdf9; border: 1px solid #dfd3c5; border-radius: 20px; padding: 8px 12px; color: #75634d; font-size: 12px; }
+.origin-options button[aria-pressed="true"] { background: #806444; color: white; border-color: #806444; }
+.origin-add { display: flex; align-items: end; gap: 10px; margin-top: 12px; }
+.origin-add label { flex: 1; min-width: 0; }
+.generated-name { display: grid; gap: 8px; background: #f4efe8; padding: 16px; border-radius: 8px; }
+.generated-name span { color: #827363; font-size: 11px; }
+.generated-name output { font-size: 16px; overflow-wrap: anywhere; }
+.farm-detail { font-size: 12px; color: #756653; }
+.bean-comments { border-top: 1px solid #e9dfd1; margin-top: 20px; padding-top: 15px; }
+.comments-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.comments-heading h4 { margin: 0; font-size: 13px; font-weight: 500; }
+.comments-heading h4 span { color: #9a8061; margin-left: 4px; }
+.comments-heading .edit-bean { margin: 0; white-space: nowrap; }
+.comment-form { display: grid; gap: 12px; margin: 14px 0; padding: 14px; background: #f7f2eb; border-radius: 8px; }
+.comment-form label { display: grid; gap: 6px; font-size: 11px; color: #75634d; min-width: 0; }
+.comment-form input, .comment-form textarea { width: 100%; min-width: 0; }
+.comment-form .form-buttons { margin-top: 0; flex-wrap: wrap; }
+.comment-form button { padding: 8px 11px; font-size: 11px; }
+.taste-comment { border-left: 2px solid #dfd0bb; padding: 2px 0 4px 13px; margin: 16px 0; }
+.taste-comment time { display: block; color: #94816b; font-size: 11px; margin-bottom: 9px; }
+.taste-comment .bean-memo { margin-top: 8px; }
+.bean-stock { justify-content: flex-start; }
+@media (max-width: 540px) { .comment-form { padding: 10px; } }
+.process-custom { margin-top: 12px; }
+.process-custom > span { font-size: 11px; color: #94816b; }
+.bean-dates { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.bean-dates label { min-width: 0; }
+.bean-date-details { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 11px; color: #8b7e6f; }
+.bean-date-details time { margin-left: 5px; }
+.roastery { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+.roastery-cup-notes { display: grid; gap: 8px; margin-top: 4px; }
+.delete-bean-button { margin-right: auto; border: 1px solid #e9caca; background: #fbefed; color: #ae6262; border-radius: 9px; padding: 11px 16px; font-size: 13px; }
+.delete-bean-button:hover { background: #f5e0dc; }
+.delete-notice { display: flex; justify-content: space-between; align-items: center; background: #f3e9df; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+.delete-notice button { border: none; background: none; color: #806444; text-decoration: underline; }
+.stock-dates { display: grid; gap: 7px; font-size: 10px; color: #8b7e6f; margin-top: 24px; }
+.stock-dates span { display: grid; gap: 3px; }
+@media (max-width: 540px) { .roastery { font-size: 16px; } }
+.bean-info { padding: 20px 24px; }
+.bean-info h3 { margin-bottom: 9px; }
+.title-dates { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 16px; margin: 0 0 13px; font-size: 11px; color: #85745f; }
+.title-dates > span { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.title-dates strong { background: #eadecc; color: #705331; border-radius: 5px; padding: 3px 7px; font-size: 11px; }
+.bean-comments { margin-top: 12px; padding-top: 12px; }
+.edit-bean { margin-top: 12px; }
+.taste-comment { margin: 10px 0 0; }
+.comments-heading { margin-bottom: 8px; }
+.more-records { border: none; background: none; color: #806444; padding: 9px 0 0; font-size: 11px; }
+.input-hint { font-size: 11px; color: #94816b; }
+@media (max-width: 540px) { .bean-info { padding: 16px; } }
+
+/* Compact inventory rows for a long mobile bean shelf. */
+@media (max-width: 540px) {
+  .inventory-card { grid-template-columns: minmax(0, 1fr) 92px; border-radius: 10px; }
+  .bean-info { padding: 11px 12px; }
+  .roastery { font-size: 13px; margin-bottom: 4px; }
+  .bean-info h3 { font-size: 16px; margin-bottom: 6px; line-height: 1.3; }
+  .title-dates { gap: 4px 9px; margin-bottom: 7px; font-size: 9px; }
+  .title-dates strong { padding: 2px 5px; font-size: 9px; }
+  .roastery-cup-notes { gap: 4px; margin-top: 3px; }
+  .roastery-cup-notes .detail-label { font-size: 9px; }
+  .flavor-tags { gap: 3px; }
+  .flavor-tags > span { padding: 3px 6px; font-size: 10px; }
+  .edit-bean { margin-top: 7px; font-size: 9px; }
+  .bean-comments { margin-top: 7px; padding-top: 7px; }
+  .comments-heading { margin-bottom: 4px; }
+  .comments-heading h4 { font-size: 11px; }
+  .comments-heading .edit-bean { font-size: 9px; }
+  .taste-comment { margin: 6px 0 0; padding-left: 8px; }
+  .taste-comment time { font-size: 9px; margin-bottom: 4px; }
+  .taste-comment .bean-memo { font-size: 10px; line-height: 1.35; margin-top: 4px; }
+  .placeholder-note { font-size: 10px; margin: 4px 0 0; }
+  .more-records { padding-top: 5px; font-size: 9px; }
+  .bean-stock { padding: 12px 9px; }
+  .stock-status { font-size: 8px; padding: 3px 5px; }
+  .remaining-label { font-size: 9px; margin: 12px 0 2px; }
+  .remaining-weight { font-size: 24px; letter-spacing: -1px; }
+  .remaining-weight span { font-size: 10px; margin-left: 3px; }
+  .purchased-weight { font-size: 9px; margin: 3px 0 10px; }
+  .stock-percent { font-size: 8px; margin-top: 4px; }
+  .stock-dates { font-size: 8px; margin-top: 10px; gap: 4px; }
+}

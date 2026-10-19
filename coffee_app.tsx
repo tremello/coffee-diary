@@ -1,8 +1,13 @@
 import { useEffect, useState, type ReactNode } from "react";
 
 const STORAGE_KEYS = { beans: "cf_beans", brews: "cf_brews", notes: "cf_notes" };
+const DEFAULT_PROCESSES = ["워시드", "내추럴", "허니", "무산소 내추럴", "무산소 워시드"];
+const DEFAULT_ORIGINS = ["에티오피아", "파나마", "콜롬비아", "케냐", "코스타리카"];
+const localDate = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`; };
+const beanName = (bean: BeanForm) => [bean.origin, bean.farm, bean.variety, bean.process].map(value => value?.trim()).filter(Boolean).join(" ");
 const FONT = "'Söhne', 'ui-sans-serif', system-ui, -apple-system, sans-serif";
-const PAGES = ["Dashboard", "Beans", "Brew Log", "Tasting Notes"] as const;
+const PAGES = ["Beans", "Brew Log", "Tasting Notes"] as const;
+const PAGE_LABELS = { Beans: "원두 재고", "Brew Log": "브루잉 기록", "Tasting Notes": "테이스팅 노트" };
 
 type Page = (typeof PAGES)[number];
 type StorageSetter<T> = (value: T) => void;
@@ -14,13 +19,22 @@ type Bean = {
   process: string;
   roastery: string;
   date: string;
+  consumed?: number;
   purchased: number;
   remaining: number;
   price: string;
+  roasteryNotes?: string;
+  deleted?: boolean;
+  roastDate?: string;
+  farm?: string;
+  variety?: string;
+  flavor?: string;
+  memo?: string;
 };
 
-type BeanForm = Omit<Bean, "id" | "purchased" | "remaining"> & {
+type BeanForm = Omit<Bean, "id" | "purchased" | "remaining" | "consumed"> & {
   purchased: string;
+  consumed: string;
 };
 
 type Brew = {
@@ -68,7 +82,7 @@ const fmt = (n: number | string) => Number(n).toLocaleString();
 const sortByDateDesc = <T extends { date: string }>(items: T[]) =>
   [...items].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-const emptyBeanForm: BeanForm = { name: "", origin: "", process: "", roastery: "", date: "", purchased: "", price: "" };
+const emptyBeanForm: BeanForm = { name: "", origin: "", process: "", roastery: "", date: "", purchased: "", consumed: "", price: "", roasteryNotes: "", roastDate: "", farm: "", variety: "", flavor: "", memo: "" };
 const emptyBrewForm = (): BrewForm => ({ beanId: "", amount: "", method: "", date: new Date().toISOString().slice(0, 10), recipe: "" });
 const emptyNoteForm = (): TastingNoteForm => ({
   beanId: "",
@@ -84,7 +98,8 @@ const emptyNoteForm = (): TastingNoteForm => ({
 });
 
 export default function App() {
-  const [page, setPage] = useState<Page>("Dashboard");
+  const [page, setPage] = useState<Page>("Beans");
+  const [openBrewForm, setOpenBrewForm] = useState(false);
   const [linkedBrewId, setLinkedBrewId] = useState<number | null>(null);
   const [beans, setBeans] = useStorage<Bean[]>(STORAGE_KEYS.beans, []);
   const [brews, setBrews] = useStorage<Brew[]>(STORAGE_KEYS.brews, []);
@@ -93,11 +108,10 @@ export default function App() {
   const goToNotes = (brewId: number) => { setLinkedBrewId(brewId); setPage("Tasting Notes"); };
 
   return (
-    <div style={{ fontFamily: FONT, maxWidth: 780, margin: "0 auto", padding: "0 0 3rem" }}>
+    <div style={{ fontFamily: FONT, maxWidth: 960, margin: "0 auto", padding: "0 0 3rem" }}>
       <Header page={page} setPage={setPage} />
-      {page === "Dashboard" && <Dashboard beans={beans} brews={brews} notes={notes} setPage={setPage} />}
-      {page === "Beans" && <BeansPage beans={beans} setBeans={setBeans} brews={brews} />}
-      {page === "Brew Log" && <BrewLog beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} goToNotes={goToNotes} notes={notes} />}
+      {page === "Beans" && <BeansPage beans={beans} setBeans={setBeans} notes={notes} setNotes={setNotes} onBrew={() => { setOpenBrewForm(true); setPage("Brew Log"); }} />}
+      {page === "Brew Log" && <BrewLog beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} goToNotes={goToNotes} notes={notes} openInitially={openBrewForm} onOpened={() => setOpenBrewForm(false)} />}
       {page === "Tasting Notes" && <TastingNotes beans={beans} notes={notes} setNotes={setNotes} brews={brews} linkedBrewId={linkedBrewId} setLinkedBrewId={setLinkedBrewId} />}
     </div>
   );
@@ -109,7 +123,7 @@ function Header({ page, setPage }: { page: Page; setPage: (page: Page) => void }
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 0 0" }}>
         <div>
           <p style={{ fontSize: 11, color: "var(--color-text-tertiary)", margin: 0, letterSpacing: 1, textTransform: "uppercase", fontFamily: FONT }}>My Coffee Diary</p>
-          <h1 style={{ fontSize: 22, fontWeight: 500, margin: "2px 0 0", color: "var(--color-text-primary)", fontFamily: FONT }}>{page}</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 500, margin: "2px 0 0", color: "var(--color-text-primary)", fontFamily: FONT }}>{PAGE_LABELS[page]}</h1>
         </div>
         <div style={{ fontSize: 22 }}>☕</div>
       </div>
@@ -121,165 +135,190 @@ function Header({ page, setPage }: { page: Page; setPage: (page: Page) => void }
             background: page === p ? "#8B6F47" : "transparent",
             color: page === p ? "#fff" : "var(--color-text-secondary)",
             cursor: "pointer"
-          }}>{p}</button>
+          }}>{PAGE_LABELS[p]}</button>
         ))}
       </nav>
     </div>
   );
 }
 
-function BeanGauge({ bean }: { bean: Bean }) {
-  const pct = bean.purchased > 0 ? Math.min(100, (bean.remaining / bean.purchased) * 100) : 0;
-  const color = pct > 50 ? "#8B6F47" : pct > 20 ? "#E8A838" : "#D85A30";
-  const r = 28, cx = 36, cy = 36, stroke = 6;
-  const circumference = 2 * Math.PI * r;
-  const dashOffset = circumference * (1 - pct / 100);
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "0.5px solid var(--color-border-tertiary)" }}>
-      <svg width={72} height={72} style={{ flexShrink: 0 }}>
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--color-border-tertiary)" strokeWidth={stroke} />
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={stroke}
-          strokeDasharray={circumference} strokeDashoffset={dashOffset}
-          strokeLinecap="round" transform={`rotate(-90 ${cx} ${cy})`}
-          style={{ transition: "stroke-dashoffset 0.5s ease" }} />
-        <text x={cx} y={cy - 4} textAnchor="middle" fontSize={11} fontWeight={500} fill={color} fontFamily={FONT}>{Math.round(pct)}%</text>
-        <text x={cx} y={cy + 9} textAnchor="middle" fontSize={9} fill="var(--color-text-tertiary)" fontFamily={FONT}>{fmt(Math.round(bean.remaining))}g</text>
-      </svg>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ margin: "0 0 2px", fontSize: 13, fontWeight: 500, fontFamily: FONT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{bean.name}</p>
-        <p style={{ margin: 0, fontSize: 11, color: "var(--color-text-tertiary)", fontFamily: FONT }}>{fmt(bean.remaining)}g / {fmt(bean.purchased)}g</p>
-        {bean.remaining <= 0 && <span style={{ fontSize: 10, background: "#FAECE7", color: "#D85A30", padding: "1px 6px", borderRadius: 8, fontFamily: FONT }}>소진</span>}
-        {bean.remaining > 0 && bean.remaining <= bean.purchased * 0.2 && <span style={{ fontSize: 10, background: "#FAEEDA", color: "#BA7517", padding: "1px 6px", borderRadius: 8, fontFamily: FONT }}>소진 임박</span>}
-      </div>
-    </div>
-  );
-}
-
-function Dashboard({ beans, brews, notes, setPage }: { beans: Bean[]; brews: Brew[]; notes: TastingNote[]; setPage: (page: Page) => void }) {
-  const totalBeans = beans.length;
-  const activeBeans = beans.filter(b => b.remaining > 0).length;
-  const totalBrews = brews.length;
-  const totalNotes = notes.length;
-  const recentBrews = sortByDateDesc(brews).slice(0, 3);
-  const recentNotes = sortByDateDesc(notes).slice(0, 3);
-
-  return (
-    <div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: "1.5rem" }}>
-        {[["보유 원두", totalBeans + "종"], ["재고 있음", activeBeans + "종"], ["브루잉 기록", totalBrews + "회"], ["컵 노트", totalNotes + "개"]].map(([label, val]) => (
-          <div key={label} style={{ background: "var(--color-background-secondary)", borderRadius: "var(--border-radius-md)", padding: "1rem", textAlign: "center" }}>
-            <p style={{ fontSize: 12, color: "var(--color-text-secondary)", margin: "0 0 4px", fontFamily: FONT }}>{label}</p>
-            <p style={{ fontSize: 22, fontWeight: 500, margin: 0, color: "var(--color-text-primary)", fontFamily: FONT }}>{val}</p>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-        <Section title="최근 브루잉" onMore={() => setPage("Brew Log")}>
-          {recentBrews.length === 0 ? <Empty text="브루잉 기록이 없어요" /> : recentBrews.map(b => {
-            const bean = beans.find(x => x.id === b.beanId);
-            return (
-              <div key={b.id} style={{ borderBottom: "0.5px solid var(--color-border-tertiary)", padding: "8px 0" }}>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 500, fontFamily: FONT }}>{bean?.name || "삭제된 원두"}</p>
-                <p style={{ margin: 0, fontSize: 12, color: "var(--color-text-secondary)", fontFamily: FONT }}>{b.date} · {b.amount}g · {b.method}</p>
-              </div>
-            );
-          })}
-        </Section>
-        <Section title="최근 컵 노트" onMore={() => setPage("Tasting Notes")}>
-          {recentNotes.length === 0 ? <Empty text="컵 노트가 없어요" /> : recentNotes.map(n => {
-            const bean = beans.find(x => x.id === n.beanId);
-            return (
-              <div key={n.id} style={{ borderBottom: "0.5px solid var(--color-border-tertiary)", padding: "8px 0" }}>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 500, fontFamily: FONT }}>{bean?.name || "삭제된 원두"} {"★".repeat(n.rating)}{"☆".repeat(5 - n.rating)}</p>
-                <p style={{ margin: 0, fontSize: 12, color: "var(--color-text-secondary)", fontFamily: FONT }}>{n.flavor}</p>
-              </div>
-            );
-          })}
-        </Section>
-      </div>
-
-      <Section title="원두 재고 현황">
-        {beans.length === 0 ? <Empty text="등록된 원두가 없어요" /> :
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 24px" }}>
-            {beans.map(b => <BeanGauge key={b.id} bean={b} />)}
-          </div>
-        }
-      </Section>
-    </div>
-  );
-}
-
-function BeansPage({ beans, setBeans, brews }: { beans: Bean[]; setBeans: StorageSetter<Bean[]>; brews: Brew[] }) {
+function BeansPage({ beans, setBeans, notes, setNotes, onBrew }: { beans: Bean[]; setBeans: StorageSetter<Bean[]>; notes: TastingNote[]; setNotes: StorageSetter<TastingNote[]>; onBrew: () => void }) {
   const [show, setShow] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<BeanForm>(emptyBeanForm);
-  const beanTextFields: Array<[keyof BeanForm, string]> = [["name","원두 이름*"],["origin","원산지"],["process","프로세싱"],["roastery","로스터리"],["price","가격(원)"]];
-
-  const add = () => {
-    if (!form.name || !form.purchased) return;
-    const g = parseFloat(form.purchased);
-    if (Number.isNaN(g) || g <= 0) return;
-    setBeans([...beans, { ...form, id: Date.now(), purchased: g, remaining: g }]);
-    setForm(emptyBeanForm);
-    setShow(false);
+  const [filter, setFilter] = useState("active");
+  const [error, setError] = useState("");
+  const [customOrigins, setCustomOrigins] = useStorage<string[]>("cf_origins", []);
+  const [addingOrigin, setAddingOrigin] = useState(false);
+  const [newOrigin, setNewOrigin] = useState("");
+  const origins = [...new Set([...DEFAULT_ORIGINS, ...customOrigins, ...beans.map(b => b.origin).filter(Boolean)])];
+  const addOrigin = () => {
+    const origin = newOrigin.trim();
+    if (!origin) return;
+    if (!origins.includes(origin)) setCustomOrigins([...customOrigins, origin]);
+    setForm({ ...form, origin }); setNewOrigin(""); setAddingOrigin(false);
   };
-
-  const remove = (id: number) => {
-    if (brews.some(b => b.beanId === id)) { alert("브루잉 기록이 있는 원두는 삭제할 수 없어요."); return; }
-    setBeans(beans.filter(b => b.id !== id));
+  const [deletedId, setDeletedId] = useState<number | null>(null);
+  const available = beans.filter(b => !b.deleted);
+  const active = available.filter(b => b.remaining > 0);
+  const visible = available.filter(b => filter === "all" || (filter === "active" ? b.remaining > 0 : b.remaining <= 0));
+  const close = () => { setShow(false); setEditingId(null); setForm(emptyBeanForm); setError(""); setAddingOrigin(false); setNewOrigin(""); };
+  const edit = (bean: Bean) => {
+    setForm({ ...bean, purchased: String(bean.purchased), consumed: String(bean.consumed ?? 0) });
+    setEditingId(bean.id); setError(""); setShow(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
-
+  const remove = () => {
+    if (editingId === null) return;
+    setBeans(beans.map(bean => bean.id === editingId ? { ...bean, deleted: true } : bean));
+    setDeletedId(editingId); close();
+  };
+  const undoRemove = () => {
+    setBeans(beans.map(bean => bean.id === deletedId ? { ...bean, deleted: false } : bean));
+    setDeletedId(null);
+  };
+  const save = (event: React.FormEvent) => {
+    event.preventDefault();
+    const purchased = Number(form.purchased);
+    if (!form.origin.trim() || !Number.isFinite(purchased) || purchased <= 0) {
+      setError("원산지와 0보다 큰 구매량을 입력해주세요."); return;
+    }
+    const previous = beans.find(b => b.id === editingId);
+    const consumed = Number(form.consumed);
+    if (!Number.isFinite(consumed) || consumed < 0) { setError("소비량은 0 이상의 숫자로 입력해주세요."); return; }
+    const used = Math.round(((previous ? previous.purchased - previous.remaining - (previous.consumed ?? 0) : 0) + consumed) * 10) / 10;
+    if (purchased < used) { setError(`이미 사용한 ${fmt(used)}g보다 구매량이 적을 수 없어요.`); return; }
+    const bean: Bean = { ...form, name: beanName(form), id: editingId ?? Date.now(), purchased, consumed, remaining: Math.round((purchased - used) * 10) / 10 };
+    setBeans(editingId === null ? [...beans, bean] : beans.map(b => b.id === editingId ? bean : b));
+    close();
+  };
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-        <p style={{ margin: 0, fontSize: 13, color: "var(--color-text-secondary)", fontFamily: FONT }}>총 {beans.length}종의 원두</p>
-        <Btn onClick={() => setShow(!show)} filled={show}>+ 원두 추가</Btn>
+    <main className="inventory">
+      <div className="inventory-intro"><div><p className="eyebrow">MY BEAN SHELF</p><h2>지금, 내 원두</h2><p>좋아하는 맛을 기록하고, 남은 원두를 한눈에.</p></div>
+        <div className="intro-actions"><button className="secondary-button" onClick={onBrew}>브루잉 기록하기</button><button className="primary-button" onClick={() => { close(); setShow(true); }}>+ 원두 추가</button></div></div>
+      <div className="inventory-summary">
+        <div><span>보유 중인 원두</span><strong>{active.length}<small>종</small></strong></div>
+        <div><span>총 남은 무게</span><strong>{fmt(Math.round(active.reduce((sum, b) => sum + b.remaining, 0) * 10) / 10)}<small>g</small></strong></div>
       </div>
+      {deletedId !== null && <div className="delete-notice" role="status"><span>원두를 삭제했어요.</span><button type="button" onClick={undoRemove}>되돌리기</button></div>}
+      {show && <form className="bean-form" onSubmit={save}>
+        <h3>{editingId === null ? "새 원두 등록" : "원두 정보 수정"}</h3>
+        <div className="bean-form-grid">
+          <fieldset className="origin-field full-width"><legend>원산지 *</legend>
+            <div className="origin-options">{origins.map(origin => <button type="button" key={origin} aria-pressed={form.origin === origin} onClick={() => setForm({ ...form, origin })}>{origin}</button>)}<button type="button" aria-expanded={addingOrigin} onClick={() => setAddingOrigin(!addingOrigin)}>+ 원산지 추가</button></div>
+            {addingOrigin && <div className="origin-add"><label>새 원산지<input value={newOrigin} onChange={e => setNewOrigin(e.target.value)} placeholder="예: 과테말라" onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addOrigin(); } }} /></label><button type="button" className="quiet-button" disabled={!newOrigin.trim()} onClick={addOrigin}>추가</button></div>}
+          </fieldset>
+          {([["farm", "농장 및 지역", "예: 세로아줄"], ["variety", "품종", "예: 게이샤"]] as const).map(([key, label, placeholder]) => <label key={key} className="full-width">{label}<input value={form[key] ?? ""} placeholder={placeholder} onChange={e => setForm({ ...form, [key]: e.target.value })} /></label>)}
+          <fieldset className="origin-field full-width"><legend>가공방식</legend>
+            <div className="origin-options">{DEFAULT_PROCESSES.map(process => <button type="button" key={process} aria-pressed={form.process === process} onClick={() => setForm({ ...form, process })}>{process}</button>)}</div>
+            <label className="process-custom">가공방식 직접 입력<input value={DEFAULT_PROCESSES.includes(form.process) ? "" : form.process} placeholder="예: 카보닉 매서레이션" onChange={e => setForm({ ...form, process: e.target.value })} /><span>이 원두에만 적용돼요.</span></label>
+          </fieldset>
+          <div className="generated-name full-width"><span>자동으로 만들어지는 원두 이름</span><output>{beanName(form) || "원두 정보를 입력해주세요"}</output></div>
+          <label className="full-width">로스터리<input value={form.roastery} placeholder="로스터리 이름" onChange={e => setForm({ ...form, roastery: e.target.value })} /></label>
+          <div className="bean-dates full-width">
+          <label>구매량 (g) *<input type="number" min="0.1" step="0.1" required value={form.purchased} placeholder="200" onChange={e => setForm({ ...form, purchased: e.target.value })} /></label>
+          <label>소비량 (g)<input type="number" min="0" step="0.1" value={form.consumed} placeholder="0" onChange={e => setForm({ ...form, consumed: e.target.value })} /><span className="input-hint">브루잉에 기록하지 않은 소비량</span></label>
+          </div>
+          <label className="full-width">로스터리 컵노트<input value={form.roasteryNotes ?? ""} placeholder="예: 자스민, 복숭아, 꿀" onChange={e => setForm({ ...form, roasteryNotes: e.target.value })} /></label>
+          <div className="bean-dates full-width">
+            <label>구매일<input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} /></label>
+            <label>로스팅 날짜<input type="date" value={form.roastDate ?? ""} onChange={e => setForm({ ...form, roastDate: e.target.value })} /></label>
+          </div>
 
-      {show && (
-        <FormCard>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            {beanTextFields.map(([k, label]) => (
-              <Field key={k} label={label}><input type="text" value={form[k]} onChange={e => setForm({ ...form, [k]: e.target.value })} style={{ width: "100%", boxSizing: "border-box", fontFamily: FONT }} /></Field>
-            ))}
-            <Field label="구매일"><input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} style={{ width: "100%", boxSizing: "border-box", fontFamily: FONT }} /></Field>
-            <Field label="구매량(g)*"><input type="number" value={form.purchased} onChange={e => setForm({ ...form, purchased: e.target.value })} style={{ width: "100%", boxSizing: "border-box", fontFamily: FONT }} /></Field>
-          </div>
-          <FormActions onSave={add} onCancel={() => setShow(false)} saveLabel="저장" />
-        </FormCard>
-      )}
-
-      {beans.length === 0 ? <Empty text="원두를 추가해보세요" /> : beans.map(bean => (
-        <div key={bean.id} style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.25rem", marginBottom: 10 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div>
-              <p style={{ margin: "0 0 2px", fontSize: 15, fontWeight: 500, fontFamily: FONT }}>{bean.name}</p>
-              <p style={{ margin: 0, fontSize: 12, color: "var(--color-text-secondary)", fontFamily: FONT }}>
-                {[bean.origin, bean.process, bean.roastery].filter(Boolean).join(" · ")}
-                {bean.date && ` · ${bean.date}`}
-                {bean.price && ` · ₩${fmt(bean.price)}`}
-              </p>
-            </div>
-            <button onClick={() => remove(bean.id)} style={{ fontSize: 12, border: "none", background: "none", color: "var(--color-text-tertiary)", cursor: "pointer", padding: 0, fontFamily: FONT }}>삭제</button>
-          </div>
-          <div style={{ marginTop: 12 }}>
-            <BeanGauge bean={bean} />
-          </div>
         </div>
-      ))}
-    </div>
+        {error && <p role="alert">{error}</p>}
+        <div className="form-buttons">{editingId !== null && <button type="button" className="delete-bean-button" onClick={remove}>삭제</button>}<button type="button" className="quiet-button" onClick={close}>취소</button><button type="submit" className="primary-button">저장</button></div>
+      </form>}
+      <div className="inventory-toolbar"><div className="inventory-filters" aria-label="원두 재고 필터">
+        {[["active", "보유 중"], ["finished", "다 마신 원두"], ["all", "전체"]].map(([value, label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}
+      </div><span>{visible.length}종</span></div>
+      <div className="bean-list">
+        {visible.map(bean => {
+          const pct = bean.purchased > 0 ? Math.max(0, Math.min(100, bean.remaining / bean.purchased * 100)) : 0;
+          return <article className="inventory-card" key={bean.id}>
+            <div className="bean-info">
+              <p className="roastery">{bean.roastery || "로스터리 미입력"}</p>
+              <h3>{bean.name}</h3>
+              <BeanDates bean={bean} />
+              {bean.roasteryNotes && <div className="roastery-cup-notes"><span className="detail-label">로스터리 컵노트</span><div className="flavor-tags">{bean.roasteryNotes.split(/[\s,·、\n]+/).map(value => value.trim()).filter(Boolean).map((note, index) => <span key={index}>{note}</span>)}</div></div>}
+              <button className="edit-bean" onClick={() => edit(bean)} aria-label={`${bean.name} 기본 정보 수정`}>기본 정보 수정 ↗</button>
+              <BeanComments bean={bean} notes={notes.filter(note => note.beanId === bean.id)} onAdd={note => setNotes([...notes, note])} />
+            </div>
+            <div className="bean-stock">
+              <span className={`stock-status ${pct <= 20 ? "low" : ""}`}>{bean.remaining <= 0 ? "다 마셨어요" : pct <= 20 ? "얼마 남지 않았어요" : "보유 중"}</span>
+              <p className="remaining-label">남은 원두</p>
+              <p className="remaining-weight">{fmt(bean.remaining)}<span>g</span></p>
+              <p className="purchased-weight">구매 {fmt(bean.purchased)}g</p>
+              <div className="stock-meter" role="progressbar" aria-label={`${bean.name} 잔량`} aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}><div style={{ width: `${pct}%` }} /></div>
+              <p className="stock-percent">{Math.round(pct)}% 남음</p>
+
+            </div>
+          </article>;
+        })}
+        {visible.length === 0 && <div className="inventory-empty"><span aria-hidden="true">☕</span><h3>{available.length === 0 ? "나의 첫 원두를 올려보세요" : "해당하는 원두가 없어요"}</h3><p>원두 정보와 향미 노트, 남은 양을 한곳에서 관리해요.</p>{available.length === 0 && <button className="primary-button" onClick={() => { close(); setShow(true); }}>+ 원두 추가</button>}</div>}
+      </div>
+    </main>
   );
 }
 
-function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes }: {
+function BeanDates({ bean }: { bean: Bean }) {
+  const [today, setToday] = useState(localDate);
+  useEffect(() => {
+    const timer = window.setInterval(() => setToday(localDate()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const days = bean.roastDate ? Math.round((Date.parse(today) - Date.parse(bean.roastDate)) / 86_400_000) : null;
+  if (!bean.date && !bean.roastDate) return null;
+  return <div className="title-dates">
+    {bean.date && <span>구매일 <time dateTime={bean.date}>{bean.date}</time></span>}
+    {bean.roastDate && <span>로스팅 <time dateTime={bean.roastDate}>{bean.roastDate}</time>{days !== null && Number.isFinite(days) && <strong aria-label={days >= 0 ? `로스팅 후 ${days}일` : `로스팅까지 ${-days}일`}>{days >= 0 ? `D+${days}` : `D${days}`}</strong>}</span>}
+  </div>;
+}
+
+function BeanComments({ bean, notes, onAdd }: { bean: Bean; notes: TastingNote[]; onAdd: (note: TastingNote) => void }) {
+  const [open, setOpen] = useState(false);
+  const [date, setDate] = useState(localDate);
+  const [flavor, setFlavor] = useState("");
+  const [memo, setMemo] = useState("");
+  const [error, setError] = useState("");
+  const [expanded, setExpanded] = useState(false);
+  const legacy = Boolean(bean.flavor || bean.memo);
+  const sorted = [...notes].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+  const save = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!date || (!flavor.trim() && !memo.trim())) { setError("내린 날짜와 향미 또는 감상을 입력해주세요."); return; }
+    onAdd({ ...emptyNoteForm(), id: Date.now(), beanId: bean.id, date, flavor: flavor.trim(), memo: memo.trim() });
+    setFlavor(""); setMemo(""); setError(""); setOpen(false);
+  };
+  return <section className="bean-comments" aria-label={`${bean.name} 기록`}>
+    <div className="comments-heading"><h4>기록 <span>{notes.length + Number(legacy)}</span></h4><button type="button" className="edit-bean" aria-expanded={open} onClick={() => setOpen(!open)}>+ 기록 남기기</button></div>
+    {open && <form className="comment-form" onSubmit={save}>
+      <label>내린 날짜<input type="date" required value={date} onChange={e => setDate(e.target.value)} /></label>
+      <label>향미 노트<input value={flavor} onChange={e => setFlavor(e.target.value)} placeholder="예: 자스민, 복숭아, 꿀" /></label>
+      <label>오늘의 감상<textarea rows={3} value={memo} onChange={e => setMemo(e.target.value)} placeholder="오늘 내린 커피는 어땠나요?" /></label>
+      {error && <p role="alert">{error}</p>}
+      <div className="form-buttons"><button type="button" className="quiet-button" onClick={() => { setOpen(false); setError(""); }}>취소</button><button className="primary-button" type="submit">기록 저장</button></div>
+    </form>}
+    {!notes.length && !legacy && <p className="placeholder-note">마실 때마다 달라지는 맛을 남겨보세요.</p>}
+    <div className={`comment-list ${expanded ? "expanded" : "collapsed"}`}>{(expanded ? sorted : sorted.slice(0, 1)).map(note => <div className="taste-comment" key={note.id}><time dateTime={note.date}>{note.date}</time>{note.flavor && <div className="flavor-tags">{note.flavor.split(/[,·、\n]+/).map(v => v.trim()).filter(Boolean).map((tag, index) => <span key={index}>{tag}</span>)}</div>}{note.memo && <p className="bean-memo">{note.memo}</p>}</div>)}
+      {legacy && (expanded || !sorted.length) && <div className="taste-comment legacy-comment"><span className="detail-label">이전에 저장한 노트 · 날짜 미지정</span>{bean.flavor && <p className="bean-memo">{bean.flavor}</p>}{bean.memo && <p className="bean-memo">{bean.memo}</p>}</div>}
+    </div>
+    {notes.length + Number(legacy) > 1 && <button type="button" className="more-records" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? "접기" : `더보기 · 이전 기록 ${notes.length + Number(legacy) - 1}개`}</button>}
+  </section>;
+}
+
+function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes, openInitially, onOpened }: {
   beans: Bean[];
   setBeans: StorageSetter<Bean[]>;
   brews: Brew[];
   setBrews: StorageSetter<Brew[]>;
   goToNotes: (brewId: number) => void;
   notes: TastingNote[];
+  openInitially: boolean;
+  onOpened: () => void;
 }) {
-  const [show, setShow] = useState(false);
+  const [show, setShow] = useState(openInitially);
+  useEffect(() => { if (openInitially) onOpened(); }, [openInitially, onOpened]);
   const [form, setForm] = useState<BrewForm>(emptyBrewForm);
 
   const add = () => {
@@ -302,7 +341,7 @@ function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes }: {
   };
 
   const sorted = sortByDateDesc(brews);
-  const activeBeans = beans.filter(b => b.remaining > 0);
+  const activeBeans = beans.filter(b => !b.deleted && b.remaining > 0);
 
   return (
     <div>
@@ -317,11 +356,10 @@ function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes }: {
             <Field label="원두 선택*">
               <select value={form.beanId} onChange={e => setForm({ ...form, beanId: e.target.value })} style={{ width: "100%", boxSizing: "border-box", fontFamily: FONT }}>
                 <option value="">선택하세요</option>
-                {activeBeans.map(b => <option key={b.id} value={b.id}>{b.name} ({fmt(b.remaining)}g 남음)</option>)}
+                {activeBeans.map(b => <option key={b.id} value={b.id}>{[b.roastery, b.name].filter(Boolean).join(" ")} ({fmt(b.remaining)}g 남음)</option>)}
               </select>
             </Field>
             <Field label="사용량(g)*"><input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} style={{ width: "100%", boxSizing: "border-box", fontFamily: FONT }} /></Field>
-            <Field label="추출 방식"><input type="text" placeholder="Pour over, Espresso..." value={form.method} onChange={e => setForm({ ...form, method: e.target.value })} style={{ width: "100%", boxSizing: "border-box", fontFamily: FONT }} /></Field>
             <Field label="날짜*"><input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} style={{ width: "100%", boxSizing: "border-box", fontFamily: FONT }} /></Field>
           </div>
           <div style={{ marginTop: 10 }}>
