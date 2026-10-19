@@ -42,14 +42,16 @@ type Brew = {
   id: number;
   beanId: number;
   amount: number;
+  waterAmount?: number;
   method: string;
   date: string;
   recipe: string;
 };
 
-type BrewForm = Omit<Brew, "id" | "beanId" | "amount"> & {
+type BrewForm = Omit<Brew, "id" | "beanId" | "amount" | "waterAmount"> & {
   beanId: string;
   amount: string;
+  waterAmount: string;
 };
 
 type TastingNote = {
@@ -110,7 +112,8 @@ const sortByDateDesc = <T extends { date: string }>(items: T[]) =>
   [...items].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 const emptyBeanForm: BeanForm = { name: "", origin: "", process: "", roastery: "", date: "", purchased: "", consumed: "", price: "", roasteryNotes: "", roastDate: "", farm: "", variety: "", flavor: "", memo: "" };
-const emptyBrewForm = (): BrewForm => ({ beanId: "", amount: "", method: "", date: new Date().toISOString().slice(0, 10), recipe: "" });
+const emptyBrewForm = (): BrewForm => ({ beanId: "", amount: "", waterAmount: "", method: "", date: new Date().toISOString().slice(0, 10), recipe: "" });
+const brewRatio = (amount: number, waterAmount?: number) => waterAmount && amount > 0 ? `1:${Number((waterAmount / amount).toFixed(1)).toLocaleString()}` : "";
 const emptyNoteForm = (): TastingNoteForm => ({
   beanId: "",
   brewId: null,
@@ -367,7 +370,9 @@ function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes, openIniti
     if (!bean) return;
     if (Number.isNaN(amt) || amt <= 0) return;
     if (bean.remaining < amt) { alert(`잔여량(${fmt(bean.remaining)}g)이 부족해요!`); return; }
-    const brew = { ...form, id: Date.now(), beanId: Number(form.beanId), amount: amt };
+    const water = form.waterAmount.trim() ? parseFloat(form.waterAmount) : undefined;
+    if (water !== undefined && (Number.isNaN(water) || water <= 0)) return;
+    const brew = { ...form, id: Date.now(), beanId: Number(form.beanId), amount: amt, waterAmount: water };
     setBrews([...brews, brew]);
     setBeans(beans.map(b => b.id === bean.id ? { ...b, remaining: Math.round((b.remaining - amt) * 10) / 10 } : b));
     setForm(emptyBrewForm());
@@ -391,7 +396,7 @@ function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes, openIniti
 
       {show && (
         <FormCard>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div className="brew-form-grid">
             <Field label="원두 선택*">
               <select value={form.beanId} onChange={e => setForm({ ...form, beanId: e.target.value })} style={{ width: "100%", boxSizing: "border-box", fontFamily: FONT }}>
                 <option value="">선택하세요</option>
@@ -399,6 +404,7 @@ function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes, openIniti
               </select>
             </Field>
             <Field label="사용량(g)*"><input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} style={{ width: "100%", boxSizing: "border-box", fontFamily: FONT }} /></Field>
+            <Field label="투입 물 양(g)"><input type="number" min="0" step="0.1" value={form.waterAmount} onChange={e => setForm({ ...form, waterAmount: e.target.value })} style={{ width: "100%", boxSizing: "border-box", fontFamily: FONT }} placeholder="예: 300" /></Field>
             <Field label="날짜*"><input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} style={{ width: "100%", boxSizing: "border-box", fontFamily: FONT }} /></Field>
           </div>
           <div style={{ marginTop: 10 }}>
@@ -419,7 +425,7 @@ function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes, openIniti
               <div style={{ flex: 1 }}>
                 <p style={{ margin: "0 0 2px", fontSize: 15, fontWeight: 500, fontFamily: FONT }}>{bean?.name || "삭제된 원두"}</p>
                 <p style={{ margin: 0, fontSize: 12, color: "var(--color-text-secondary)", fontFamily: FONT }}>
-                  {brew.date} · {fmt(brew.amount)}g {brew.method && `· ${brew.method}`}
+                  {brew.date} · 원두 {fmt(brew.amount)}g {brew.waterAmount ? `· 물 ${fmt(brew.waterAmount)}g · ${brewRatio(brew.amount, brew.waterAmount)}` : ""}
                 </p>
                 {brew.recipe && <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--color-text-secondary)", fontStyle: "italic", fontFamily: FONT }}>{brew.recipe}</p>}
                 <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
@@ -496,7 +502,7 @@ function TastingNotes({ beans, notes, setNotes, brews, linkedBrewId, setLinkedBr
       {linkedBrew && !notes.some(n => n.brewId === linkedBrewId) && (
         <div style={{ background: "#E1F5EE", border: "0.5px solid #9FE1CB", borderRadius: "var(--border-radius-md)", padding: "10px 14px", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: 13, color: "#085041", fontFamily: FONT }}>
-            <strong>{linkedBean?.name}</strong> 브루잉 기록에서 연결됐어요 — {linkedBrew.date} · {fmt(linkedBrew.amount)}g {linkedBrew.method && `· ${linkedBrew.method}`}
+            <strong>{linkedBean?.name}</strong> 브루잉 기록에서 연결됐어요 — {linkedBrew.date} · 원두 {fmt(linkedBrew.amount)}g {linkedBrew.waterAmount ? `· 물 ${fmt(linkedBrew.waterAmount)}g · ${brewRatio(linkedBrew.amount, linkedBrew.waterAmount)}` : ""}
           </span>
         </div>
       )}

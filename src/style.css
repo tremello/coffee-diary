@@ -140,7 +140,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .remaining-weight { font-size: 36px; font-weight: 650; letter-spacing: -1.5px; margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; max-width: 100%; }
 .remaining-weight span { font-size: 16px; font-weight: 400; margin-left: 5px; letter-spacing: 0; }
 .purchased-weight { font-size: 12px; color: #94816b; margin: 4px 0 20px; }
-.stock-meter { width: 100%; height: 6px; border-radius: 4px; background: #e1d6c7; overflow: hidden; }
+.stock-meter { width: 100%; height: 10px; border-radius: 6px; background: #e1d6c7; overflow: hidden; }
 .stock-meter > div { height: 100%; background: #96774f; border-radius: inherit; }
 .stock-percent { font-size: 10px; color: #8b765d; margin: 7px 0 0; }
 .bean-form { border: 1px solid #ded0bd; background: #fffdf9; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
@@ -229,10 +229,12 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .comments-heading { margin-bottom: 8px; }
 .more-records { border: none; background: none; color: #806444; padding: 9px 0 0; font-size: 11px; }
 .input-hint { font-size: 11px; color: #94816b; }
+.brew-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 @media (max-width: 540px) { .bean-info { padding: 16px; } }
 
 /* Compact inventory rows for a long mobile bean shelf. */
 @media (max-width: 540px) {
+  .brew-form-grid { grid-template-columns: 1fr; }
   .inventory-card { grid-template-columns: minmax(0, 1fr) 92px; border-radius: 10px; }
   .bean-info { padding: 11px 12px; }
   .roastery { font-size: 14px; margin-bottom: 4px; }
@@ -260,5 +262,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .remaining-weight span { font-size: 10px; margin-left: 3px; }
   .purchased-weight { font-size: 9px; margin: 3px 0 10px; }
   .stock-percent { font-size: 8px; margin-top: 4px; }
+  .stock-meter { height: 8px; }
   .stock-dates { font-size: 8px; margin-top: 10px; gap: 4px; }
 }
