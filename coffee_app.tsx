@@ -246,7 +246,7 @@ function BeansPage({ beans, setBeans, notes, setNotes, userId, onBrew }: { beans
       <div className="inventory-summary">
         <div><span>보유 중인 원두</span><strong>{active.length}<small>종</small></strong></div>
         <div><span>총 남은 무게</span><strong>{fmt(Math.round(active.reduce((sum, b) => sum + b.remaining, 0) * 10) / 10)}<small>g</small></strong></div>
-        <div className="summary-details"><span>세부사항</span><div className="summary-status-breakdown"><span>배송·디개싱 중 <b>{fmt(Math.round(shippingAndDegassingWeight * 10) / 10)}g</b></span><span>소비 중 <b>{fmt(Math.round(consumingWeight * 10) / 10)}g</b></span></div></div>
+        <div className="summary-details"><div className="summary-status-breakdown"><span>배송·디개싱 중 <b>{fmt(Math.round(shippingAndDegassingWeight * 10) / 10)}g</b></span><span>소비 중 <b>{fmt(Math.round(consumingWeight * 10) / 10)}g</b></span></div></div>
       </div>
       {deletedId !== null && <div className="delete-notice" role="status"><span>원두를 삭제했어요.</span><button type="button" onClick={undoRemove}>되돌리기</button></div>}
       {show && <form className="bean-form" onSubmit={save}>

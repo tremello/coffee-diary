@@ -113,7 +113,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .inventory-summary > div { display: flex; align-items: center; justify-content: flex-start; gap: 16px; padding-right: 28px; }
 .inventory-summary > div + div { border-left: 1px solid #dcd0c1; padding: 0 0 0 28px; }
 .inventory-summary span { font-size: 13px; color: #756653; }
-.inventory-summary strong { font-size: 27px; font-weight: 550; font-variant-numeric: tabular-nums; }
+.inventory-summary strong { font-size: 27px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .inventory-summary small { margin-left: 6px; font-size: 13px; font-weight: 400; }
 .summary-status-breakdown { display: grid; gap: 4px; margin-top: 9px; color: #8b7a64; font-size: 10px; }
 .summary-details { display: block !important; }
