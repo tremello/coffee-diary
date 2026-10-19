@@ -159,7 +159,7 @@ function Header({ page, setPage, user, authLoading }: { page: Page; setPage: (pa
           <p style={{ fontSize: 11, color: "var(--color-text-tertiary)", margin: 0, letterSpacing: 1, textTransform: "uppercase", fontFamily: FONT }}>My Coffee Diary</p>
           <h1 style={{ fontSize: 22, fontWeight: 500, margin: "2px 0 0", color: "var(--color-text-primary)", fontFamily: FONT }}>{PAGE_LABELS[page]}</h1>
         </div>
-        <div className="account-actions">{!authLoading && (user ? <button className="account-button" onClick={signOut}>{user.email?.split("@")[0] ?? "내 계정"} · 로그아웃</button> : <button className="account-button" onClick={signIn}>기기 동기화 로그인</button>)}<div style={{ fontSize: 22 }}>☕</div></div>
+        <div className="account-actions">{user ? <button className="account-button" onClick={signOut}>{user.email?.split("@")[0] ?? "내 계정"} · 로그아웃</button> : <button className="account-button" onClick={signIn}>기기 동기화 로그인</button>}<div style={{ fontSize: 22 }}>☕</div></div>
       </div>
       <nav style={{ display: "flex", gap: 4, marginTop: "1rem" }}>
         {PAGES.map(p => (
