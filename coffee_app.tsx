@@ -78,17 +78,18 @@ function useStorage<T>(key: string, init: T, userId: string | null = null): [T, 
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
-    supabase.from("coffee_data").select("data").eq("key", key).maybeSingle().then(({ data }) => {
+    supabase.from("coffee_data").select("data").eq("key", key).maybeSingle().then(({ data, error }) => {
       if (cancelled) return;
+      if (error) { console.error("Coffee sync read failed", error); return; }
       if (data?.data !== undefined) setVal(data.data as T);
-      else if (Array.isArray(val) && val.length > 0) void supabase.from("coffee_data").upsert({ key, data: val, user_id: userId }, { onConflict: "user_id,key" });
+      else if (Array.isArray(val) && val.length > 0) void supabase.from("coffee_data").upsert({ key, data: val, user_id: userId }, { onConflict: "user_id,key" }).then(({ error: saveError }) => { if (saveError) console.error("Coffee sync migration failed", saveError); });
     });
     return () => { cancelled = true; };
   }, [key, userId]);
   const set = (v: T) => {
     setVal(v);
     try { localStorage.setItem(key, JSON.stringify(v)); } catch {}
-    if (userId) void supabase.from("coffee_data").upsert({ key, data: v, user_id: userId }, { onConflict: "user_id,key" });
+    if (userId) void supabase.from("coffee_data").upsert({ key, data: v, user_id: userId }, { onConflict: "user_id,key" }).then(({ error }) => { if (error) console.error("Coffee sync save failed", error); });
   };
   return [val, set];
 }
