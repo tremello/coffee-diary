@@ -14,6 +14,7 @@ const PAGE_LABELS = { Beans: "원두 재고", "Brew Log": "브루잉 기록", "T
 
 type Page = (typeof PAGES)[number];
 type StorageSetter<T> = (value: T) => void;
+type BeanSort = "registered" | "latest" | "roastOldest" | "remaining";
 
 type Bean = {
   id: number;
@@ -186,6 +187,7 @@ function BeansPage({ beans, setBeans, notes, setNotes, userId, onBrew }: { beans
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<BeanForm>(emptyBeanForm);
   const [filter, setFilter] = useState("active");
+  const [sort, setSort] = useState<BeanSort>("registered");
   const [error, setError] = useState("");
   const [customOrigins, setCustomOrigins] = useStorage<string[]>("cf_origins", [], userId);
   const [addingOrigin, setAddingOrigin] = useState(false);
@@ -205,6 +207,17 @@ function BeansPage({ beans, setBeans, notes, setNotes, userId, onBrew }: { beans
   const shippingAndDegassingWeight = active.filter(bean => bean.status === "배송 중" || bean.status === "디개싱 중").reduce((sum, bean) => sum + bean.remaining, 0);
   const consumingWeight = active.filter(bean => (bean.status ?? "소비 중") === "소비 중").reduce((sum, bean) => sum + bean.remaining, 0);
   const visible = available.filter(b => filter === "all" || (filter === "active" ? b.remaining > 0 : b.remaining <= 0));
+  const sortedVisible = [...visible].sort((a, b) => {
+    if (sort === "latest") return b.id - a.id;
+    if (sort === "remaining") return a.remaining - b.remaining || b.id - a.id;
+    if (sort === "roastOldest") {
+      if (!a.roastDate && !b.roastDate) return a.id - b.id;
+      if (!a.roastDate) return 1;
+      if (!b.roastDate) return -1;
+      return a.roastDate.localeCompare(b.roastDate) || a.id - b.id;
+    }
+    return a.id - b.id;
+  });
   const close = () => { setShow(false); setEditingId(null); setForm(emptyBeanForm); setError(""); setAddingOrigin(false); setNewOrigin(""); };
   const edit = (bean: Bean) => {
     setForm({ ...bean, status: bean.status ?? "소비 중", purchased: String(bean.purchased), consumed: String(bean.consumed ?? 0) });
@@ -280,9 +293,9 @@ function BeansPage({ beans, setBeans, notes, setNotes, userId, onBrew }: { beans
       </form>}
       <div className="inventory-toolbar"><div className="inventory-filters" aria-label="원두 재고 필터">
         {[["active", "보유 중"], ["finished", "다 마신 원두"], ["all", "전체"]].map(([value, label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}
-      </div><span>{visible.length}종</span></div>
+      </div><div className="inventory-toolbar-meta"><label htmlFor="bean-sort">정렬</label><select id="bean-sort" className="inventory-sort" value={sort} onChange={event => setSort(event.target.value as BeanSort)}><option value="registered">등록순</option><option value="latest">최신순</option><option value="roastOldest">로스팅 날짜가 빠른 순</option><option value="remaining">재고가 적은 순</option></select><span>{visible.length}종</span></div></div>
       <div className="bean-list">
-        {visible.map(bean => {
+        {sortedVisible.map(bean => {
           const pct = bean.purchased > 0 ? Math.max(0, Math.min(100, bean.remaining / bean.purchased * 100)) : 0;
           return <article className="inventory-card" key={bean.id}>
             <div className="bean-info">
