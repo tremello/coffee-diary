@@ -118,7 +118,7 @@ const fmt = (n: number | string) => Number(n).toLocaleString();
 const sortByDateDesc = <T extends { date: string }>(items: T[]) =>
   [...items].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-const emptyBeanForm: BeanForm = { name: "", origin: "", process: "", roastery: "", date: "", purchased: "", consumed: "", price: "", roasteryNotes: "", roastDate: "", farm: "", variety: "", flavor: "", memo: "", status: "소비 중", quality: undefined };
+const emptyBeanForm: BeanForm = { name: "", origin: "", process: "", roastery: "", date: "", purchased: "", consumed: "", price: "", roasteryNotes: "", roastDate: "", farm: "", variety: "", flavor: "", memo: "", status: undefined, quality: undefined };
 const emptyBrewForm = (): BrewForm => ({ beanId: "", amount: "", waterAmount: "", method: "", date: new Date().toISOString().slice(0, 10), recipe: "" });
 const brewRatio = (amount: number, waterAmount?: number) => waterAmount && amount > 0 ? `1:${Number((waterAmount / amount).toFixed(1)).toLocaleString()}` : "";
 const emptyNoteForm = (): TastingNoteForm => ({
@@ -276,7 +276,7 @@ function BeansPage({ beans, setBeans, notes, setNotes, userId, onBrew }: { beans
           </fieldset>
           <div className="generated-name full-width"><span>자동으로 만들어지는 원두 이름</span><output>{beanName(form) || "원두 정보를 입력해주세요"}</output></div>
           <label className="full-width">로스터리<input value={form.roastery} placeholder="로스터리 이름" onChange={e => setForm({ ...form, roastery: e.target.value })} />{editingId === null && roasteries.length > 0 && <span className="existing-purchasers"><span>기존 구매처</span><span className="existing-purchaser-options">{roasteries.map(roastery => <button type="button" key={roastery} onClick={() => setForm({ ...form, roastery })}>{roastery}</button>)}</span></span>}</label>
-          <fieldset className="origin-field full-width"><legend>원두 상태</legend><div className="origin-options">{BEAN_STATUSES.map(status => <button type="button" key={status} aria-pressed={(form.status ?? "소비 중") === status} onClick={() => setForm({ ...form, status })}>{status}</button>)}</div></fieldset>
+          <fieldset className="origin-field full-width"><legend>원두 상태</legend><div className="origin-options">{BEAN_STATUSES.map(status => <button type="button" key={status} aria-pressed={form.status === status} onClick={() => setForm({ ...form, status })}>{status}</button>)}</div></fieldset>
           <div className="bean-dates full-width">
           <label>구매량 (g) *<input type="number" min="0.1" step="0.1" required value={form.purchased} placeholder="200" onChange={e => setForm({ ...form, purchased: e.target.value })} /></label>
           <label>소비량 (g)<input type="number" min="0" step="0.1" value={form.consumed} placeholder="0" onChange={e => setForm({ ...form, consumed: e.target.value })} /><span className="input-hint">이미 소비한 원두</span></label>
