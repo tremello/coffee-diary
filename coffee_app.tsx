@@ -383,28 +383,39 @@ function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes, openIniti
   const [show, setShow] = useState(openInitially);
   useEffect(() => { if (openInitially) onOpened(); }, [openInitially, onOpened]);
   const [form, setForm] = useState<BrewForm>(emptyBrewForm);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [query, setQuery] = useState("");
   const [brewSort, setBrewSort] = useState<"latest" | "oldest" | "amount">("latest");
 
   const add = () => {
     if (!form.beanId || !form.amount || !form.date) return;
-    const bean = beans.find(b => b.id === Number(form.beanId));
+    const nextBeanId = Number(form.beanId);
+    const bean = beans.find(b => b.id === nextBeanId);
     const amt = parseFloat(form.amount);
     if (!bean) return;
     if (Number.isNaN(amt) || amt <= 0) return;
-    if (bean.remaining < amt) { alert(`잔여량(${fmt(bean.remaining)}g)이 부족해요!`); return; }
     const water = form.waterAmount.trim() ? parseFloat(form.waterAmount) : undefined;
     if (water !== undefined && (Number.isNaN(water) || water <= 0)) return;
-    const brew = { ...form, id: Date.now(), beanId: Number(form.beanId), amount: amt, waterAmount: water };
-    setBrews([...brews, brew]);
-    setBeans(beans.map(b => b.id === bean.id ? { ...b, remaining: Math.round((b.remaining - amt) * 10) / 10 } : b));
+    const previous = editingId === null ? null : brews.find(item => item.id === editingId) ?? null;
+    const restoredBeans = previous ? beans.map(item => item.id === previous.beanId ? { ...item, remaining: Math.round((item.remaining + previous.amount) * 10) / 10 } : item) : beans;
+    const available = restoredBeans.find(item => item.id === nextBeanId);
+    if (!available || available.remaining < amt) { alert(`잔여량(${fmt(available?.remaining ?? 0)}g)이 부족해요!`); return; }
+    const brew = { ...form, id: editingId ?? Date.now(), beanId: nextBeanId, amount: amt, waterAmount: water };
+    setBrews(editingId === null ? [...brews, brew] : brews.map(item => item.id === editingId ? brew : item));
+    setBeans(restoredBeans.map(item => item.id === nextBeanId ? { ...item, remaining: Math.round((item.remaining - amt) * 10) / 10 } : item));
     setForm(emptyBrewForm());
-    setShow(false);
+    setEditingId(null); setShow(false);
   };
 
   const remove = (brew: Brew) => {
     setBrews(brews.filter(b => b.id !== brew.id));
     setBeans(beans.map(b => b.id === brew.beanId ? { ...b, remaining: Math.round((b.remaining + brew.amount) * 10) / 10 } : b));
+  };
+  const edit = (brew: Brew) => {
+    setEditingId(brew.id);
+    setForm({ beanId: String(brew.beanId), amount: String(brew.amount), waterAmount: brew.waterAmount ? String(brew.waterAmount) : "", method: brew.method, date: brew.date, recipe: brew.recipe });
+    setShow(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const normalizedQuery = query.trim().toLowerCase();
@@ -444,7 +455,7 @@ function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes, openIniti
               <textarea value={form.recipe} onChange={e => setForm({ ...form, recipe: e.target.value })} rows={2} style={{ width: "100%", boxSizing: "border-box", resize: "vertical", fontFamily: FONT }} placeholder="레시피, 추출 파라미터 등..." />
             </Field>
           </div>
-          <FormActions onSave={add} onCancel={() => setShow(false)} saveLabel="저장 (재고 차감)" />
+          <FormActions onSave={add} onCancel={() => { setShow(false); setEditingId(null); setForm(emptyBrewForm()); }} saveLabel={editingId === null ? "저장 (재고 차감)" : "수정 저장"} />
         </FormCard>
       )}
 
@@ -460,6 +471,7 @@ function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes, openIniti
           <div key={brew.id} style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.25rem", marginBottom: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div style={{ flex: 1 }}>
+                {bean?.roastery && <p className="brew-roastery">{bean.roastery}</p>}
                 <p style={{ margin: "0 0 2px", fontSize: 15, fontWeight: 500, fontFamily: FONT }}>{bean?.name || "삭제된 원두"}</p>
                 <p style={{ margin: 0, fontSize: 12, color: "var(--color-text-secondary)", fontFamily: FONT }}>
                   {brew.date} · 원두 {fmt(brew.amount)}g {brew.waterAmount ? `· 물 ${fmt(brew.waterAmount)}g · ${brewRatio(brew.amount, brew.waterAmount)}` : ""}
@@ -472,7 +484,7 @@ function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes, openIniti
                   }
                 </div>
               </div>
-              <button onClick={() => remove(brew)} style={{ fontSize: 12, border: "none", background: "none", color: "#D85A30", cursor: "pointer", padding: 0, fontFamily: FONT }}>삭제</button>
+              <div className="brew-card-actions"><button onClick={() => edit(brew)} className="brew-edit-button">수정</button><button onClick={() => remove(brew)} className="brew-delete-button">삭제</button></div>
             </div>
           </div>
         );
