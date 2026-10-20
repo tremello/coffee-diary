@@ -132,6 +132,13 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .brew-search input { width: 100%; box-sizing: border-box; }
 .brew-log-tools select, .stats-header select { border: 1px solid #d9cbb9; border-radius: 7px; background: #fffdf9; color: #75634d; padding: 9px 10px; font: inherit; }
 .brew-roastery { margin: 0 0 3px; color: #8a765c; font-size: 11px; font-weight: 600; font-family: inherit; }
+.brew-recipe-block, .brew-note-block { margin-top: 9px; padding: 9px 11px; border-radius: 8px; }
+.brew-recipe-block { background: #f6f1ea; color: #806f5d; }
+.brew-note-block { background: #fbf8f3; border: 1px solid #e8ddd0; color: #6f5a43; }
+.brew-detail-label { display: block; margin-bottom: 5px; font-size: 10px; color: #967e63; letter-spacing: .02em; }
+.brew-recipe-block p, .brew-note-block p { margin: 0; font-size: 12px; line-height: 1.5; }
+.brew-recipe-block p { font-style: italic; }
+.brew-note-block .flavor-tags { margin-bottom: 5px; }
 .brew-card-actions { display: flex; gap: 8px; align-items: flex-start; }
 .brew-edit-button, .brew-delete-button { font-size: 12px; border: none; background: none; cursor: pointer; padding: 0; font-family: inherit; }
 .brew-edit-button { color: #806444; }

@@ -476,7 +476,8 @@ function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes, openIniti
                 <p style={{ margin: 0, fontSize: 12, color: "var(--color-text-secondary)", fontFamily: FONT }}>
                   {brew.date} · 원두 {fmt(brew.amount)}g {brew.waterAmount ? `· 물 ${fmt(brew.waterAmount)}g · ${brewRatio(brew.amount, brew.waterAmount)}` : ""}
                 </p>
-                {brew.recipe && <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--color-text-secondary)", fontStyle: "italic", fontFamily: FONT }}>{brew.recipe}</p>}
+                {brew.recipe && <div className="brew-recipe-block"><span className="brew-detail-label">레시피</span><p>{brew.recipe}</p></div>}
+                {hasNote && (() => { const note = notes.find(item => item.brewId === brew.id); return note ? <div className="brew-note-block"><span className="brew-detail-label">컵 노트</span>{note.flavor && <div className="flavor-tags">{note.flavor.split(/[,·、\n]+/).map(value => value.trim()).filter(Boolean).map((value, index) => <span key={index}>{value}</span>)}</div>}{note.memo && <p>{note.memo}</p>}</div> : null; })()}
                 <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
                   {hasNote
                     ? <button onClick={() => goToNotes(brew.id)} style={{ fontSize: 11, padding: "3px 10px", borderRadius: 10, border: "0.5px solid #0F6E56", background: "#E1F5EE", color: "#0F6E56", cursor: "pointer", fontFamily: FONT }}>컵 노트 작성됨 ✓</button>
