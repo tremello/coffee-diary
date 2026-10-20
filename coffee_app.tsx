@@ -167,10 +167,10 @@ function Header({ page, setPage, user, authLoading }: { page: Page; setPage: (pa
         </div>
         <div className="account-actions">{user ? <button className="account-button" onClick={signOut}>{user.email?.split("@")[0] ?? "내 계정"} · 로그아웃</button> : <button className="google-button" onClick={signInGoogle}>Google 로그인</button>}<button className="refresh-button" onClick={() => window.location.reload()} aria-label="새로고침" title="새로고침">↻</button><img className="brand-mark" src="/coffee-diary-logo-brown.png" alt="커피 기록 로고" /></div>
       </div>
-      <nav style={{ display: "flex", gap: 4, marginTop: "1rem" }}>
+      <nav className="page-tabs">
         {PAGES.map(p => (
-          <button key={p} onClick={() => setPage(p)} style={{
-            padding: "6px 14px", fontSize: 13, borderRadius: 20, fontFamily: FONT,
+          <button key={p} className="page-tab" onClick={() => setPage(p)} style={{
+            padding: "8px 16px", fontSize: 14, borderRadius: 10, fontFamily: FONT,
             border: page === p ? "1px solid #8B6F47" : "0.5px solid var(--color-border-tertiary)",
             background: page === p ? "#8B6F47" : "transparent",
             color: page === p ? "#fff" : "var(--color-text-secondary)",
