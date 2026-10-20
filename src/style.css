@@ -138,7 +138,18 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .brew-detail-label { display: block; margin-bottom: 5px; font-size: 10px; color: #967e63; letter-spacing: .02em; }
 .brew-recipe-block p, .brew-note-block p { margin: 0; font-size: 12px; line-height: 1.5; }
 .brew-recipe-block p { font-style: italic; }
+.brew-recipe-block .brew-metrics { margin-bottom: 4px; color: #6f5a43; font-style: normal; font-weight: 600; }
 .brew-note-block .flavor-tags { margin-bottom: 5px; }
+.brew-note-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: end; margin-top: 10px; }
+.brew-rating-label { display: block; margin-bottom: 4px; font-size: 12px; color: var(--color-text-secondary); font-family: inherit; }
+.star-rating { display: flex; gap: 1px; height: 32px; align-items: center; }
+.star-rating-star { position: relative; display: inline-block; width: 24px; height: 30px; color: #d7c8b5; font-size: 26px; line-height: 30px; }
+.star-rating-star.full { color: #9b774d; }
+.star-rating-star.half { color: #d7c8b5; }
+.star-rating-star.half > span { background: linear-gradient(90deg, #9b774d 50%, #d7c8b5 50%); background-clip: text; -webkit-background-clip: text; color: transparent; }
+.star-rating-star button { position: absolute; top: 0; bottom: 0; width: 50%; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.star-rating-star button:first-of-type { left: 0; }
+.star-rating-star button:last-of-type { right: 0; }
 .brew-card-actions { display: flex; gap: 8px; align-items: flex-start; }
 .brew-edit-button, .brew-delete-button { font-size: 12px; border: none; background: none; cursor: pointer; padding: 0; font-family: inherit; }
 .brew-edit-button { color: #806444; }
@@ -229,6 +240,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .inventory-sort { max-width: 145px; padding: 6px 5px; font-size: 10px; }
   .brew-log-tools { align-items: stretch; flex-direction: column; }
   .brew-log-tools select { width: 100%; }
+  .brew-note-form { grid-template-columns: 1fr; gap: 10px; }
   .stats-header { align-items: stretch; flex-direction: column; }
   .stats-header h2 { font-size: 25px; }
   .stats-header select { width: 100%; }

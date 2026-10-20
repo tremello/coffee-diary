@@ -146,7 +146,7 @@ export default function App() {
     <div style={{ fontFamily: FONT, maxWidth: 960, margin: "0 auto", padding: "0 0 3rem" }}>
       <Header page={page} setPage={setPage} user={user} authLoading={authLoading} />
       {page === "Beans" && <BeansPage beans={beans} setBeans={setBeans} notes={notes} setNotes={setNotes} userId={user?.id ?? null} onBrew={() => { setOpenBrewForm(true); setPage("Brew Log"); }} />}
-      {page === "Brew Log" && <BrewLog beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} goToNotes={goToNotes} notes={notes} openInitially={openBrewForm} onOpened={() => setOpenBrewForm(false)} />}
+      {page === "Brew Log" && <BrewLog beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} goToNotes={goToNotes} notes={notes} setNotes={setNotes} openInitially={openBrewForm} onOpened={() => setOpenBrewForm(false)} />}
       {page === "Brew Stats" && <BrewStats beans={beans} brews={brews} />}
       {page === "Tasting Notes" && <TastingNotes beans={beans} notes={notes} setNotes={setNotes} brews={brews} linkedBrewId={linkedBrewId} setLinkedBrewId={setLinkedBrewId} />}
     </div>
@@ -370,13 +370,14 @@ function BeanComments({ bean, notes, onAdd }: { bean: Bean; notes: TastingNote[]
   </section>;
 }
 
-function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes, openInitially, onOpened }: {
+function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes, setNotes, openInitially, onOpened }: {
   beans: Bean[];
   setBeans: StorageSetter<Bean[]>;
   brews: Brew[];
   setBrews: StorageSetter<Brew[]>;
   goToNotes: (brewId: number) => void;
   notes: TastingNote[];
+  setNotes: StorageSetter<TastingNote[]>;
   openInitially: boolean;
   onOpened: () => void;
 }) {
@@ -384,6 +385,8 @@ function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes, openIniti
   useEffect(() => { if (openInitially) onOpened(); }, [openInitially, onOpened]);
   const [form, setForm] = useState<BrewForm>(emptyBrewForm);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [noteMemo, setNoteMemo] = useState("");
+  const [noteRating, setNoteRating] = useState(0);
   const [query, setQuery] = useState("");
   const [brewSort, setBrewSort] = useState<"latest" | "oldest" | "amount">("latest");
 
@@ -397,14 +400,19 @@ function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes, openIniti
     const water = form.waterAmount.trim() ? parseFloat(form.waterAmount) : undefined;
     if (water !== undefined && (Number.isNaN(water) || water <= 0)) return;
     const previous = editingId === null ? null : brews.find(item => item.id === editingId) ?? null;
+    const previousNote = previous ? notes.find(note => note.brewId === previous.id) : null;
     const restoredBeans = previous ? beans.map(item => item.id === previous.beanId ? { ...item, remaining: Math.round((item.remaining + previous.amount) * 10) / 10 } : item) : beans;
     const available = restoredBeans.find(item => item.id === nextBeanId);
     if (!available || available.remaining < amt) { alert(`잔여량(${fmt(available?.remaining ?? 0)}g)이 부족해요!`); return; }
     const brew = { ...form, id: editingId ?? Date.now(), beanId: nextBeanId, amount: amt, waterAmount: water };
     setBrews(editingId === null ? [...brews, brew] : brews.map(item => item.id === editingId ? brew : item));
     setBeans(restoredBeans.map(item => item.id === nextBeanId ? { ...item, remaining: Math.round((item.remaining - amt) * 10) / 10 } : item));
+    if (noteMemo.trim() || noteRating > 0 || previousNote) {
+      const note = { ...(previousNote ?? emptyNoteForm()), id: previousNote?.id ?? Date.now() + 1, beanId: nextBeanId, brewId: brew.id, rating: noteRating, memo: noteMemo.trim(), date: form.date };
+      setNotes(previousNote ? notes.map(item => item.id === previousNote.id ? note : item) : [...notes, note]);
+    }
     setForm(emptyBrewForm());
-    setEditingId(null); setShow(false);
+    setNoteMemo(""); setNoteRating(0); setEditingId(null); setShow(false);
   };
 
   const remove = (brew: Brew) => {
@@ -414,6 +422,8 @@ function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes, openIniti
   const edit = (brew: Brew) => {
     setEditingId(brew.id);
     setForm({ beanId: String(brew.beanId), amount: String(brew.amount), waterAmount: brew.waterAmount ? String(brew.waterAmount) : "", method: brew.method, date: brew.date, recipe: brew.recipe });
+    const note = notes.find(item => item.brewId === brew.id);
+    setNoteMemo(note?.memo ?? ""); setNoteRating(note?.rating ?? 0);
     setShow(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -455,7 +465,8 @@ function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes, openIniti
               <textarea value={form.recipe} onChange={e => setForm({ ...form, recipe: e.target.value })} rows={2} style={{ width: "100%", boxSizing: "border-box", resize: "vertical", fontFamily: FONT }} placeholder="레시피, 추출 파라미터 등..." />
             </Field>
           </div>
-          <FormActions onSave={add} onCancel={() => { setShow(false); setEditingId(null); setForm(emptyBrewForm()); }} saveLabel={editingId === null ? "저장 (재고 차감)" : "수정 저장"} />
+          <div className="brew-note-form"><Field label="컵 노트 / 느낀점"><textarea value={noteMemo} onChange={e => setNoteMemo(e.target.value)} rows={2} style={{ width: "100%", boxSizing: "border-box", resize: "vertical", fontFamily: FONT }} placeholder="오늘의 맛과 느낌을 자유롭게 기록해보세요..." /></Field><div><span className="brew-rating-label">별점</span><StarRating value={noteRating} onChange={setNoteRating} /></div></div>
+          <FormActions onSave={add} onCancel={() => { setShow(false); setEditingId(null); setForm(emptyBrewForm()); setNoteMemo(""); setNoteRating(0); }} saveLabel={editingId === null ? "저장 (재고 차감)" : "수정 저장"} />
         </FormCard>
       )}
 
@@ -473,10 +484,8 @@ function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes, openIniti
               <div style={{ flex: 1 }}>
                 {bean?.roastery && <p className="brew-roastery">{bean.roastery}</p>}
                 <p style={{ margin: "0 0 2px", fontSize: 15, fontWeight: 500, fontFamily: FONT }}>{bean?.name || "삭제된 원두"}</p>
-                <p style={{ margin: 0, fontSize: 12, color: "var(--color-text-secondary)", fontFamily: FONT }}>
-                  {brew.date} · 원두 {fmt(brew.amount)}g {brew.waterAmount ? `· 물 ${fmt(brew.waterAmount)}g · ${brewRatio(brew.amount, brew.waterAmount)}` : ""}
-                </p>
-                {brew.recipe && <div className="brew-recipe-block"><span className="brew-detail-label">레시피</span><p>{brew.recipe}</p></div>}
+                <p style={{ margin: 0, fontSize: 12, color: "var(--color-text-secondary)", fontFamily: FONT }}>{brew.date}</p>
+                <div className="brew-recipe-block"><p className="brew-metrics">원두 {fmt(brew.amount)}g {brew.waterAmount ? `· 물 ${fmt(brew.waterAmount)}g · ${brewRatio(brew.amount, brew.waterAmount)}` : ""}</p>{brew.recipe && <p>{brew.recipe}</p>}</div>
                 {hasNote && (() => { const note = notes.find(item => item.brewId === brew.id); return note ? <div className="brew-note-block"><span className="brew-detail-label">컵 노트</span>{note.flavor && <div className="flavor-tags">{note.flavor.split(/[,·、\n]+/).map(value => value.trim()).filter(Boolean).map((value, index) => <span key={index}>{value}</span>)}</div>}{note.memo && <p>{note.memo}</p>}</div> : null; })()}
                 <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
                   {hasNote
@@ -668,6 +677,10 @@ function Section({ title, children, onMore }: { title: string; children: ReactNo
 
 function FormCard({ children }: { children: ReactNode }) {
   return <div style={{ background: "var(--color-background-secondary)", borderRadius: "var(--border-radius-lg)", padding: "1rem", marginBottom: "1rem", border: "0.5px solid var(--color-border-tertiary)" }}>{children}</div>;
+}
+
+function StarRating({ value, onChange }: { value: number; onChange: (value: number) => void }) {
+  return <div className="star-rating" aria-label={`별점 ${value}점`}>{[1, 2, 3, 4, 5].map(star => <span className={`star-rating-star ${value >= star ? "full" : value >= star - 0.5 ? "half" : "empty"}`} key={star}><span aria-hidden="true">★</span><button type="button" aria-label={`${star - 0.5}점`} onClick={() => onChange(star - 0.5)} /><button type="button" aria-label={`${star}점`} onClick={() => onChange(star)} /></span>)}</div>;
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
