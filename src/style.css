@@ -333,6 +333,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .brew-form-grid > :nth-child(3) { grid-column: 2; grid-row: 2; }
 .brew-form-grid > :nth-child(4) { grid-column: 2; grid-row: 1; }
 .brew-form-grid input[type="date"], .bean-dates input[type="date"] { width: 100%; min-height: 42px; box-sizing: border-box; appearance: none; -webkit-appearance: none; }
+.brew-form-grid select, .brew-form-grid input[type="date"] { height: 42px; box-sizing: border-box; }
 @media (max-width: 540px) { .bean-info { padding: 16px; } }
 
 /* Compact inventory rows for a long mobile bean shelf. */
