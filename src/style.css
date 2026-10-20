@@ -315,6 +315,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .title-dates { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 16px; margin: 0 0 13px; font-size: 11px; color: #85745f; }
 .title-dates > span { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 .title-dates strong { background: #eadecc; color: #705331; border-radius: 5px; padding: 3px 7px; font-size: 11px; }
+.bean-purchase-meta { flex-basis: 100%; color: #8a765c; }
+.bean-purchase-meta b { background: #f0e8dc; color: #806444; border-radius: 5px; padding: 3px 7px; font-size: 10px; font-weight: 600; }
 .bean-comments { margin-top: 12px; padding-top: 12px; }
 .edit-bean { margin-top: 12px; }
 .taste-comment { margin: 10px 0 0; }

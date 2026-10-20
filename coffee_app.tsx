@@ -331,10 +331,12 @@ function BeanDates({ bean }: { bean: Bean }) {
     return () => window.clearInterval(timer);
   }, []);
   const days = bean.roastDate ? Math.round((Date.parse(today) - Date.parse(bean.roastDate)) / 86_400_000) : null;
-  if (!bean.date && !bean.roastDate) return null;
+  const priceLabel = bean.price ? (Number.isFinite(Number(bean.price)) ? `₩${fmt(bean.price)}` : bean.price) : null;
+  if (!bean.date && !bean.roastDate && !priceLabel && !bean.quality) return null;
   return <div className="title-dates">
     {bean.date && <span>구매일 <time dateTime={bean.date}>{bean.date}</time></span>}
     {bean.roastDate && <span>로스팅 <time dateTime={bean.roastDate}>{bean.roastDate}</time>{days !== null && Number.isFinite(days) && <strong aria-label={days >= 0 ? `로스팅 후 ${days}일` : `로스팅까지 ${-days}일`}>{days >= 0 ? `D+${days}` : `D${days}`}</strong>}</span>}
+    {(priceLabel || bean.quality) && <span className="bean-purchase-meta">{priceLabel && <span>구매 {priceLabel}</span>}{bean.quality && <b>{bean.quality}</b>}</span>}
   </div>;
 }
 
