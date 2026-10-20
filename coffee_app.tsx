@@ -6,6 +6,8 @@ const DEFAULT_PROCESSES = ["워시드", "내추럴", "허니", "무산소 내추
 const DEFAULT_ORIGINS = ["에티오피아", "파나마", "콜롬비아", "케냐", "코스타리카"];
 const BEAN_STATUSES = ["배송 중", "디개싱 중", "소비 중"] as const;
 type BeanStatus = (typeof BEAN_STATUSES)[number];
+const BEAN_QUALITIES = ["특식", "준특식", "사료"] as const;
+type BeanQuality = (typeof BEAN_QUALITIES)[number];
 const localDate = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`; };
 const beanName = (bean: BeanForm) => [bean.origin, bean.farm, bean.variety, bean.process].map(value => value?.trim()).filter(Boolean).join(" ");
 const FONT = "'Nanum Barun Gothic', 'Apple SD Gothic Neo', sans-serif";
@@ -35,6 +37,7 @@ type Bean = {
   flavor?: string;
   memo?: string;
   status?: BeanStatus;
+  quality?: BeanQuality;
 };
 
 type BeanForm = Omit<Bean, "id" | "purchased" | "remaining" | "consumed"> & {
@@ -115,7 +118,7 @@ const fmt = (n: number | string) => Number(n).toLocaleString();
 const sortByDateDesc = <T extends { date: string }>(items: T[]) =>
   [...items].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-const emptyBeanForm: BeanForm = { name: "", origin: "", process: "", roastery: "", date: "", purchased: "", consumed: "", price: "", roasteryNotes: "", roastDate: "", farm: "", variety: "", flavor: "", memo: "", status: "소비 중" };
+const emptyBeanForm: BeanForm = { name: "", origin: "", process: "", roastery: "", date: "", purchased: "", consumed: "", price: "", roasteryNotes: "", roastDate: "", farm: "", variety: "", flavor: "", memo: "", status: "소비 중", quality: undefined };
 const emptyBrewForm = (): BrewForm => ({ beanId: "", amount: "", waterAmount: "", method: "", date: new Date().toISOString().slice(0, 10), recipe: "" });
 const brewRatio = (amount: number, waterAmount?: number) => waterAmount && amount > 0 ? `1:${Number((waterAmount / amount).toFixed(1)).toLocaleString()}` : "";
 const emptyNoteForm = (): TastingNoteForm => ({
@@ -276,9 +279,10 @@ function BeansPage({ beans, setBeans, notes, setNotes, userId, onBrew }: { beans
           <fieldset className="origin-field full-width"><legend>원두 상태</legend><div className="origin-options">{BEAN_STATUSES.map(status => <button type="button" key={status} aria-pressed={(form.status ?? "소비 중") === status} onClick={() => setForm({ ...form, status })}>{status}</button>)}</div></fieldset>
           <div className="bean-dates full-width">
           <label>구매량 (g) *<input type="number" min="0.1" step="0.1" required value={form.purchased} placeholder="200" onChange={e => setForm({ ...form, purchased: e.target.value })} /></label>
-          <label>소비량 (g)<input type="number" min="0" step="0.1" value={form.consumed} placeholder="0" onChange={e => setForm({ ...form, consumed: e.target.value })} /><span className="input-hint">브루잉에 기록하지 않은 소비량</span></label>
+          <label>소비량 (g)<input type="number" min="0" step="0.1" value={form.consumed} placeholder="0" onChange={e => setForm({ ...form, consumed: e.target.value })} /><span className="input-hint">이미 소비한 원두</span></label>
           </div>
           <label className="full-width">로스터리 컵노트<input value={form.roasteryNotes ?? ""} placeholder="예: 자스민, 복숭아, 꿀" onChange={e => setForm({ ...form, roasteryNotes: e.target.value })} /></label>
+          <div className="bean-purchase-row full-width"><label>구매가격 (원)<input type="number" min="0" step="100" value={form.price} placeholder="예: 28000" onChange={e => setForm({ ...form, price: e.target.value })} /></label><fieldset className="origin-field"><legend>내 기준 분류</legend><div className="origin-options">{BEAN_QUALITIES.map(quality => <button type="button" key={quality} aria-pressed={form.quality === quality} onClick={() => setForm({ ...form, quality })}>{quality}</button>)}</div></fieldset></div>
           <div className="bean-dates full-width">
             <label>구매일<input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} /></label>
             <label>로스팅 날짜<input type="date" value={form.roastDate ?? ""} onChange={e => setForm({ ...form, roastDate: e.target.value })} /></label>
