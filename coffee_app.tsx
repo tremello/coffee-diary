@@ -479,7 +479,7 @@ function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes, openIniti
                 {brew.recipe && <p style={{ margin: "6px 0 0", fontSize: 12, color: "var(--color-text-secondary)", fontStyle: "italic", fontFamily: FONT }}>{brew.recipe}</p>}
                 <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
                   {hasNote
-                    ? <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 10, background: "#E1F5EE", color: "#0F6E56", fontFamily: FONT }}>컵 노트 작성됨 ✓</span>
+                    ? <button onClick={() => goToNotes(brew.id)} style={{ fontSize: 11, padding: "3px 10px", borderRadius: 10, border: "0.5px solid #0F6E56", background: "#E1F5EE", color: "#0F6E56", cursor: "pointer", fontFamily: FONT }}>컵 노트 작성됨 ✓</button>
                     : <button onClick={() => goToNotes(brew.id)} style={{ fontSize: 11, padding: "3px 10px", borderRadius: 10, border: "0.5px solid #8B6F47", background: "transparent", color: "#8B6F47", cursor: "pointer", fontFamily: FONT }}>컵 노트 작성 →</button>
                   }
                 </div>
@@ -527,6 +527,7 @@ function TastingNotes({ beans, notes, setNotes, brews, linkedBrewId, setLinkedBr
   const noteTextFields: Array<[TastingNoteTextKey, string, string]> = [["flavor","Flavor","Fruity, Chocolate..."],["aroma","Aroma","Floral, Nutty..."],["acidity","Acidity","Bright, Mild..."],["body","Body","Light, Full..."],["finish","Finish","Clean, Long..."]];
 
   const [show, setShow] = useState(!!linkedBrewId);
+  const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
   const [form, setForm] = useState<TastingNoteForm>({
     beanId: linkedBean?.id?.toString() || "",
     brewId: linkedBrewId || null,
@@ -536,21 +537,23 @@ function TastingNotes({ beans, notes, setNotes, brews, linkedBrewId, setLinkedBr
 
   useEffect(() => {
     if (!linkedBrewId || !linkedBrew) return;
+    const existing = notes.find(note => note.brewId === linkedBrewId);
+    setEditingNoteId(existing?.id ?? null);
     setForm({
-      ...emptyNoteForm(),
+      ...(existing ?? emptyNoteForm()),
       beanId: linkedBrew.beanId.toString(),
       brewId: linkedBrewId,
-      date: linkedBrew.date
+      date: existing?.date ?? linkedBrew.date
     });
     setShow(true);
-  }, [linkedBrewId, linkedBrew]);
+  }, [linkedBrewId, linkedBrew, notes]);
 
   const add = () => {
     if (!form.beanId) return;
-    setNotes([...notes, { ...form, id: Date.now(), beanId: Number(form.beanId), rating: Number(form.rating) }]);
+    const note = { ...form, id: editingNoteId ?? Date.now(), beanId: Number(form.beanId), rating: Number(form.rating) };
+    setNotes(editingNoteId === null ? [...notes, note] : notes.map(item => item.id === editingNoteId ? note : item));
     setForm(emptyNoteForm());
-    setLinkedBrewId(null);
-    setShow(false);
+    setEditingNoteId(null); setLinkedBrewId(null); setShow(false);
   };
 
   const remove = (id: number) => setNotes(notes.filter(n => n.id !== id));
@@ -558,8 +561,16 @@ function TastingNotes({ beans, notes, setNotes, brews, linkedBrewId, setLinkedBr
 
   const openNew = () => {
     setLinkedBrewId(null);
+    setEditingNoteId(null);
     setForm(emptyNoteForm());
     setShow(true);
+  };
+  const editNote = (note: TastingNote) => {
+    setEditingNoteId(note.id);
+    setLinkedBrewId(null);
+    setForm({ ...note, beanId: String(note.beanId) });
+    setShow(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
@@ -602,7 +613,7 @@ function TastingNotes({ beans, notes, setNotes, brews, linkedBrewId, setLinkedBr
               <textarea value={form.memo} onChange={e => setForm({ ...form, memo: e.target.value })} rows={2} style={{ width: "100%", boxSizing: "border-box", resize: "vertical", fontFamily: FONT }} placeholder="자유롭게 기록..." />
             </Field>
           </div>
-          <FormActions onSave={add} onCancel={() => { setShow(false); setLinkedBrewId(null); }} saveLabel="저장" />
+          <FormActions onSave={add} onCancel={() => { setShow(false); setEditingNoteId(null); setLinkedBrewId(null); }} saveLabel={editingNoteId === null ? "저장" : "수정 저장"} />
         </FormCard>
       )}
 
@@ -633,7 +644,7 @@ function TastingNotes({ beans, notes, setNotes, brews, linkedBrewId, setLinkedBr
                 )}
                 {n.memo && <p style={{ margin: 0, fontSize: 12, color: "var(--color-text-secondary)", fontStyle: "italic", fontFamily: FONT }}>{n.memo}</p>}
               </div>
-              <button onClick={() => remove(n.id)} style={{ fontSize: 12, border: "none", background: "none", color: "var(--color-text-tertiary)", cursor: "pointer", padding: 0, alignSelf: "flex-start", fontFamily: FONT }}>삭제</button>
+              <div className="note-actions"><button onClick={() => editNote(n)} className="note-edit-button">수정</button><button onClick={() => remove(n.id)} className="note-delete-button">삭제</button></div>
             </div>
           </div>
         );

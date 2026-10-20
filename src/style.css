@@ -136,6 +136,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .brew-edit-button, .brew-delete-button { font-size: 12px; border: none; background: none; cursor: pointer; padding: 0; font-family: inherit; }
 .brew-edit-button { color: #806444; }
 .brew-delete-button { color: #d85a30; }
+.note-actions { display: flex; gap: 8px; align-self: flex-start; }
+.note-edit-button, .note-delete-button { font-size: 12px; border: none; background: none; cursor: pointer; padding: 0; font-family: inherit; }
+.note-edit-button { color: #806444; }
+.note-delete-button { color: #d85a30; }
 .brew-stats { padding-top: 10px; }
 .stats-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin: 14px 0 24px; }
 .stats-header h2 { font-size: 30px; letter-spacing: -1px; margin: 0 0 9px; font-weight: 600; }
