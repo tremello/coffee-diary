@@ -145,7 +145,7 @@ export default function App() {
   return (
     <div style={{ fontFamily: FONT, maxWidth: 960, margin: "0 auto", padding: "0 0 3rem" }}>
       <Header page={page} setPage={setPage} user={user} authLoading={authLoading} />
-      {page === "Beans" && <BeansPage beans={beans} setBeans={setBeans} notes={notes} setNotes={setNotes} userId={user?.id ?? null} onBrew={() => { setOpenBrewForm(true); setPage("Brew Log"); }} />}
+      {page === "Beans" && <BeansPage beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} userId={user?.id ?? null} onBrew={() => { setOpenBrewForm(true); setPage("Brew Log"); }} />}
       {page === "Brew Log" && <BrewLog beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} openInitially={openBrewForm} onOpened={() => setOpenBrewForm(false)} />}
       {page === "Brew Stats" && <BrewStats beans={beans} brews={brews} />}
     </div>
@@ -182,7 +182,7 @@ function Header({ page, setPage, user, authLoading }: { page: Page; setPage: (pa
   );
 }
 
-function BeansPage({ beans, setBeans, notes, setNotes, userId, onBrew }: { beans: Bean[]; setBeans: StorageSetter<Bean[]>; notes: TastingNote[]; setNotes: StorageSetter<TastingNote[]>; userId: string | null; onBrew: () => void }) {
+function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, onBrew }: { beans: Bean[]; setBeans: StorageSetter<Bean[]>; brews: Brew[]; setBrews: StorageSetter<Brew[]>; notes: TastingNote[]; setNotes: StorageSetter<TastingNote[]>; userId: string | null; onBrew: () => void }) {
   const [show, setShow] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<BeanForm>(emptyBeanForm);
@@ -202,6 +202,8 @@ function BeansPage({ beans, setBeans, notes, setNotes, userId, onBrew }: { beans
     setForm({ ...form, origin }); setNewOrigin(""); setAddingOrigin(false);
   };
   const [deletedId, setDeletedId] = useState<number | null>(null);
+  const [deletedBrews, setDeletedBrews] = useState<Brew[]>([]);
+  const [deletedNotes, setDeletedNotes] = useState<TastingNote[]>([]);
   const available = beans.filter(b => !b.deleted);
   const active = available.filter(b => b.remaining > 0);
   const shippingAndDegassingWeight = active.filter(bean => bean.status === "배송 중" || bean.status === "디개싱 중").reduce((sum, bean) => sum + bean.remaining, 0);
@@ -226,11 +228,22 @@ function BeansPage({ beans, setBeans, notes, setNotes, userId, onBrew }: { beans
   };
   const remove = () => {
     if (editingId === null) return;
+    const relatedBrews = brews.filter(brew => brew.beanId === editingId);
+    const relatedNotes = notes.filter(note => note.beanId === editingId);
+    const warning = relatedBrews.length > 0 ? `이 원두에 연결된 브루잉 기록 ${relatedBrews.length}개도 함께 삭제돼요.` : "연결된 브루잉 기록은 없어요.";
+    if (!window.confirm(`${warning}\n계속 삭제할까요?`)) return;
+    if (!window.confirm("원두와 관련 기록을 모두 삭제합니다. 정말 삭제할까요?")) return;
     setBeans(beans.map(bean => bean.id === editingId ? { ...bean, deleted: true } : bean));
+    setBrews(brews.filter(brew => brew.beanId !== editingId));
+    setNotes(notes.filter(note => note.beanId !== editingId));
+    setDeletedBrews(relatedBrews); setDeletedNotes(relatedNotes);
     setDeletedId(editingId); close();
   };
   const undoRemove = () => {
     setBeans(beans.map(bean => bean.id === deletedId ? { ...bean, deleted: false } : bean));
+    setBrews([...brews, ...deletedBrews]);
+    setNotes([...notes, ...deletedNotes]);
+    setDeletedBrews([]); setDeletedNotes([]);
     setDeletedId(null);
   };
   const updateStatus = (beanId: number, status: BeanStatus) => {
