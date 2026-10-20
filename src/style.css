@@ -127,6 +127,26 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .inventory-filters button[aria-pressed="true"] { background: #e9dfd0; color: #59432c; font-weight: 600; }
 .inventory-toolbar-meta { display: flex; align-items: center; gap: 8px; }
 .inventory-sort { border: 1px solid #d9cbb9; border-radius: 7px; background: #fffdf9; color: #75634d; padding: 7px 9px; font: inherit; }
+.brew-log-tools { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; }
+.brew-search { flex: 1; }
+.brew-search input { width: 100%; box-sizing: border-box; }
+.brew-log-tools select, .stats-header select { border: 1px solid #d9cbb9; border-radius: 7px; background: #fffdf9; color: #75634d; padding: 9px 10px; font: inherit; }
+.brew-stats { padding-top: 10px; }
+.stats-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin: 14px 0 24px; }
+.stats-header h2 { font-size: 30px; letter-spacing: -1px; margin: 0 0 9px; font-weight: 600; }
+.stats-header p:last-child { color: #827363; font-size: 13px; margin: 0; }
+.stats-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 24px; }
+.stats-cards > div { padding: 18px; background: #f0e9df; border-radius: 12px; }
+.stats-cards span { display: block; color: #756653; font-size: 12px; margin-bottom: 8px; }
+.stats-cards strong { font-size: 25px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stats-cards small { margin-left: 4px; font-size: 12px; font-weight: 400; }
+.stats-section { padding: 20px; border: 1px solid #e3d9cc; border-radius: 12px; background: #fffdf9; margin-bottom: 12px; }
+.stats-section h3 { margin: 0 0 14px; font-size: 15px; font-weight: 600; }
+.usage-list { display: grid; gap: 10px; }
+.usage-row { display: flex; justify-content: space-between; gap: 12px; color: #75634d; font-size: 12px; }
+.usage-row b { color: #59432c; font-variant-numeric: tabular-nums; }
+.stats-empty, .ratio-summary { margin: 0; color: #8b7a64; font-size: 12px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .bean-list { display: grid; gap: 16px; }
 .inventory-card { display: grid; grid-template-columns: minmax(0, 1fr) 210px; background: #fffdf9; border: 1px solid #e3d9cc; border-radius: 14px; overflow: hidden; }
 .inventory-card { box-shadow: 0 4px 16px rgba(92, 68, 42, 0.045); transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease; }
@@ -177,7 +197,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .google-button { padding: 6px 8px; font-size: 10px; }
   .refresh-button { width: 27px; height: 27px; font-size: 17px; }
   .page-tabs { gap: 5px; }
-  .page-tab { min-height: 36px; padding: 7px 12px !important; font-size: 12px !important; }
+  .page-tab { min-height: 36px; padding: 7px 10px !important; font-size: 11px !important; }
   .intro-actions { align-items: stretch; flex-direction: column; gap: 5px; }
   .intro-actions button { padding: 8px 10px; font-size: 11px; }
   .inventory-intro h2 { font-size: 25px; }
@@ -191,6 +211,15 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .summary-status-breakdown { width: 100%; font-size: 8px; gap: 5px; }
   .inventory-toolbar-meta { gap: 4px; font-size: 10px; }
   .inventory-sort { max-width: 145px; padding: 6px 5px; font-size: 10px; }
+  .brew-log-tools { align-items: stretch; flex-direction: column; }
+  .brew-log-tools select { width: 100%; }
+  .stats-header { align-items: stretch; flex-direction: column; }
+  .stats-header h2 { font-size: 25px; }
+  .stats-header select { width: 100%; }
+  .stats-cards { gap: 6px; }
+  .stats-cards > div { padding: 13px 10px; }
+  .stats-cards span { font-size: 10px; }
+  .stats-cards strong { font-size: 20px; }
   .inventory-card { grid-template-columns: minmax(0, 1fr) 116px; }
   .bean-info { padding: 20px 16px; }
   .bean-info h3 { font-size: 18px; }

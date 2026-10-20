@@ -9,8 +9,8 @@ type BeanStatus = (typeof BEAN_STATUSES)[number];
 const localDate = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`; };
 const beanName = (bean: BeanForm) => [bean.origin, bean.farm, bean.variety, bean.process].map(value => value?.trim()).filter(Boolean).join(" ");
 const FONT = "'Nanum Barun Gothic', 'Apple SD Gothic Neo', sans-serif";
-const PAGES = ["Beans", "Brew Log", "Tasting Notes"] as const;
-const PAGE_LABELS = { Beans: "원두 재고", "Brew Log": "브루잉 기록", "Tasting Notes": "테이스팅 노트" };
+const PAGES = ["Beans", "Brew Log", "Brew Stats", "Tasting Notes"] as const;
+const PAGE_LABELS = { Beans: "원두 재고", "Brew Log": "브루잉 기록", "Brew Stats": "브루잉 통계", "Tasting Notes": "테이스팅 노트" };
 
 type Page = (typeof PAGES)[number];
 type StorageSetter<T> = (value: T) => void;
@@ -147,6 +147,7 @@ export default function App() {
       <Header page={page} setPage={setPage} user={user} authLoading={authLoading} />
       {page === "Beans" && <BeansPage beans={beans} setBeans={setBeans} notes={notes} setNotes={setNotes} userId={user?.id ?? null} onBrew={() => { setOpenBrewForm(true); setPage("Brew Log"); }} />}
       {page === "Brew Log" && <BrewLog beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} goToNotes={goToNotes} notes={notes} openInitially={openBrewForm} onOpened={() => setOpenBrewForm(false)} />}
+      {page === "Brew Stats" && <BrewStats beans={beans} brews={brews} />}
       {page === "Tasting Notes" && <TastingNotes beans={beans} notes={notes} setNotes={setNotes} brews={brews} linkedBrewId={linkedBrewId} setLinkedBrewId={setLinkedBrewId} />}
     </div>
   );
@@ -382,6 +383,8 @@ function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes, openIniti
   const [show, setShow] = useState(openInitially);
   useEffect(() => { if (openInitially) onOpened(); }, [openInitially, onOpened]);
   const [form, setForm] = useState<BrewForm>(emptyBrewForm);
+  const [query, setQuery] = useState("");
+  const [brewSort, setBrewSort] = useState<"latest" | "oldest" | "amount">("latest");
 
   const add = () => {
     if (!form.beanId || !form.amount || !form.date) return;
@@ -404,7 +407,16 @@ function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes, openIniti
     setBeans(beans.map(b => b.id === brew.beanId ? { ...b, remaining: Math.round((b.remaining + brew.amount) * 10) / 10 } : b));
   };
 
-  const sorted = sortByDateDesc(brews);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredBrews = brews.filter(brew => {
+    if (!normalizedQuery) return true;
+    const bean = beans.find(b => b.id === brew.beanId);
+    return [bean?.name, bean?.roastery, brew.recipe, brew.date].filter(Boolean).join(" ").toLowerCase().includes(normalizedQuery);
+  });
+  const sorted = [...filteredBrews].sort((a, b) => {
+    if (brewSort === "amount") return b.amount - a.amount || b.date.localeCompare(a.date);
+    return brewSort === "latest" ? b.date.localeCompare(a.date) || b.id - a.id : a.date.localeCompare(b.date) || a.id - b.id;
+  });
   const activeBeans = beans.filter(b => !b.deleted && b.remaining > 0);
 
   return (
@@ -436,7 +448,12 @@ function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes, openIniti
         </FormCard>
       )}
 
-      {sorted.length === 0 ? <Empty text="브루잉 기록을 추가해보세요" /> : sorted.map(brew => {
+      <div className="brew-log-tools">
+        <label className="brew-search"><span className="sr-only">브루잉 기록 검색</span><input value={query} onChange={event => setQuery(event.target.value)} placeholder="원두, 로스터리, 레시피 검색" /></label>
+        <select aria-label="브루잉 기록 정렬" value={brewSort} onChange={event => setBrewSort(event.target.value as "latest" | "oldest" | "amount")}><option value="latest">최신순</option><option value="oldest">오래된 순</option><option value="amount">사용량 많은 순</option></select>
+      </div>
+
+      {sorted.length === 0 ? <Empty text={brews.length === 0 ? "브루잉 기록을 추가해보세요" : "검색 결과가 없어요"} /> : sorted.map(brew => {
         const bean = beans.find(b => b.id === brew.beanId);
         const hasNote = notes.some(n => n.brewId === brew.id);
         return (
@@ -462,6 +479,27 @@ function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes, openIniti
       })}
     </div>
   );
+}
+
+function BrewStats({ beans, brews }: { beans: Bean[]; brews: Brew[] }) {
+  const [period, setPeriod] = useState<"all" | "7" | "30" | "90">("30");
+  const days = period === "all" ? null : Number(period);
+  const cutoff = days === null ? null : Date.parse(localDate()) - (days - 1) * 86_400_000;
+  const filtered = brews.filter(brew => cutoff === null || Date.parse(brew.date) >= cutoff);
+  const totalAmount = filtered.reduce((sum, brew) => sum + brew.amount, 0);
+  const totalWater = filtered.reduce((sum, brew) => sum + (brew.waterAmount ?? 0), 0);
+  const withWater = filtered.filter(brew => brew.waterAmount && brew.waterAmount > 0);
+  const averageRatio = withWater.length ? totalWater / withWater.reduce((sum, brew) => sum + brew.amount, 0) : null;
+  const beanUsage = [...new Set(filtered.map(brew => brew.beanId))].map(beanId => {
+    const bean = beans.find(item => item.id === beanId);
+    return { name: bean?.name || "삭제된 원두", amount: filtered.filter(brew => brew.beanId === beanId).reduce((sum, brew) => sum + brew.amount, 0) };
+  }).sort((a, b) => b.amount - a.amount);
+  return <div className="brew-stats">
+    <div className="stats-header"><div><p className="eyebrow">BREWING INSIGHTS</p><h2>브루잉 통계</h2><p>기간을 골라 내 기록을 가볍게 돌아봐요.</p></div><select aria-label="통계 기간" value={period} onChange={event => setPeriod(event.target.value as "all" | "7" | "30" | "90")}><option value="7">최근 7일</option><option value="30">최근 30일</option><option value="90">최근 90일</option><option value="all">전체 기간</option></select></div>
+    <div className="stats-cards"><div><span>브루잉 횟수</span><strong>{filtered.length}<small>회</small></strong></div><div><span>사용한 원두</span><strong>{beanUsage.length}<small>종</small></strong></div><div><span>사용량</span><strong>{fmt(Math.round(totalAmount * 10) / 10)}<small>g</small></strong></div></div>
+    <section className="stats-section"><h3>원두별 사용량</h3>{beanUsage.length === 0 ? <p className="stats-empty">선택한 기간에 브루잉 기록이 없어요.</p> : <div className="usage-list">{beanUsage.map(item => <div className="usage-row" key={item.name}><span>{item.name}</span><b>{fmt(Math.round(item.amount * 10) / 10)}g</b></div>)}</div>}</section>
+    <section className="stats-section"><h3>물 비율</h3><p className="ratio-summary">{averageRatio === null ? "물 투입량이 기록된 브루잉이 아직 없어요." : `평균 1:${averageRatio.toFixed(1)} · 물 투입량 ${fmt(Math.round(totalWater * 10) / 10)}g`}</p></section>
+  </div>;
 }
 
 function TastingNotes({ beans, notes, setNotes, brews, linkedBrewId, setLinkedBrewId }: {
