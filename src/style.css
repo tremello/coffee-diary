@@ -316,7 +316,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .title-dates > span { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 .title-dates strong { background: #eadecc; color: #705331; border-radius: 5px; padding: 3px 7px; font-size: 11px; }
 .bean-purchase-meta { flex-basis: 100%; color: #8a765c; }
-.bean-purchase-meta b { background: #f0e8dc; color: #806444; border-radius: 5px; padding: 3px 7px; font-size: 10px; font-weight: 600; }
+.bean-purchase-meta b { border-radius: 5px; padding: 3px 7px; font-size: 10px; font-weight: 600; }
+.quality-특식 { background: #806444; color: #fffdf9; }
+.quality-준특식 { background: #b49a79; color: #fffdf9; }
+.quality-사료 { background: #ded1bf; color: #705b43; }
 .bean-comments { margin-top: 12px; padding-top: 12px; }
 .edit-bean { margin-top: 12px; }
 .taste-comment { margin: 10px 0 0; }
@@ -325,12 +328,20 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .input-hint { font-size: 11px; color: #94816b; }
 .brew-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .brew-form-grid label { min-width: 0; }
-.brew-form-grid input[type="date"] { width: 100%; }
+.brew-form-grid > :nth-child(1) { grid-column: 1; grid-row: 1; }
+.brew-form-grid > :nth-child(2) { grid-column: 1; grid-row: 2; }
+.brew-form-grid > :nth-child(3) { grid-column: 2; grid-row: 2; }
+.brew-form-grid > :nth-child(4) { grid-column: 2; grid-row: 1; }
+.brew-form-grid input[type="date"], .bean-dates input[type="date"] { width: 100%; min-height: 42px; box-sizing: border-box; appearance: none; -webkit-appearance: none; }
 @media (max-width: 540px) { .bean-info { padding: 16px; } }
 
 /* Compact inventory rows for a long mobile bean shelf. */
 @media (max-width: 540px) {
-  .brew-form-grid { grid-template-columns: 1fr; }
+  .brew-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .brew-form-grid > :nth-child(1) { grid-column: 1 / -1; grid-row: 1; }
+  .brew-form-grid > :nth-child(2) { grid-column: 1; grid-row: 2; }
+  .brew-form-grid > :nth-child(3) { grid-column: 2; grid-row: 2; }
+  .brew-form-grid > :nth-child(4) { grid-column: 1 / -1; grid-row: 3; }
   .inventory-card { grid-template-columns: minmax(0, 1fr) 92px; border-radius: 10px; }
   .bean-info { padding: 11px 12px; }
   .roastery { font-size: 14px; margin-bottom: 4px; }

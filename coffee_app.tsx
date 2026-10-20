@@ -3,7 +3,7 @@ import { supabase } from "./src/supabase";
 
 const STORAGE_KEYS = { beans: "cf_beans", brews: "cf_brews", notes: "cf_notes" };
 const DEFAULT_PROCESSES = ["워시드", "내추럴", "허니", "무산소 내추럴", "무산소 워시드"];
-const DEFAULT_ORIGINS = ["에티오피아", "파나마", "콜롬비아", "케냐", "코스타리카"];
+const DEFAULT_ORIGINS = ["에티오피아", "파나마", "콜롬비아", "케냐"];
 const BEAN_STATUSES = ["배송 중", "디개싱 중", "소비 중"] as const;
 type BeanStatus = (typeof BEAN_STATUSES)[number];
 const BEAN_QUALITIES = ["특식", "준특식", "사료"] as const;
@@ -336,7 +336,7 @@ function BeanDates({ bean }: { bean: Bean }) {
   return <div className="title-dates">
     {bean.date && <span>구매일 <time dateTime={bean.date}>{bean.date}</time></span>}
     {bean.roastDate && <span>로스팅 <time dateTime={bean.roastDate}>{bean.roastDate}</time>{days !== null && Number.isFinite(days) && <strong aria-label={days >= 0 ? `로스팅 후 ${days}일` : `로스팅까지 ${-days}일`}>{days >= 0 ? `D+${days}` : `D${days}`}</strong>}</span>}
-    {(priceLabel || bean.quality) && <span className="bean-purchase-meta">{priceLabel && <span>구매 {priceLabel}</span>}{bean.quality && <b>{bean.quality}</b>}</span>}
+    {(priceLabel || bean.quality) && <span className="bean-purchase-meta">{priceLabel && <span>구매 {priceLabel}</span>}{bean.quality && <b className={`quality-tag quality-${bean.quality}`}>{bean.quality}</b>}</span>}
   </div>;
 }
 
