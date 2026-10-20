@@ -138,7 +138,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .brew-detail-label { display: block; margin-bottom: 5px; font-size: 10px; color: #967e63; letter-spacing: .02em; }
 .brew-recipe-block p, .brew-note-block p { margin: 0; font-size: 12px; line-height: 1.5; }
 .brew-recipe-block p { font-style: italic; }
-.brew-recipe-block .brew-metrics { margin-bottom: 4px; color: #6f5a43; font-style: normal; font-weight: 600; }
+.brew-recipe-block .brew-metrics { margin-bottom: 4px; color: #6f5a43; font-size: 13px; font-style: normal; font-weight: 600; }
+.brew-recipe-block p:not(.brew-metrics) { font-size: 15px; }
 .brew-note-block .flavor-tags { margin-bottom: 5px; }
 .brew-note-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: end; margin-top: 10px; }
 .brew-rating-label { display: block; margin-bottom: 4px; font-size: 12px; color: var(--color-text-secondary); font-family: inherit; }

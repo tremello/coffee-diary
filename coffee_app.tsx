@@ -9,8 +9,8 @@ type BeanStatus = (typeof BEAN_STATUSES)[number];
 const localDate = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`; };
 const beanName = (bean: BeanForm) => [bean.origin, bean.farm, bean.variety, bean.process].map(value => value?.trim()).filter(Boolean).join(" ");
 const FONT = "'Nanum Barun Gothic', 'Apple SD Gothic Neo', sans-serif";
-const PAGES = ["Beans", "Brew Log", "Brew Stats", "Tasting Notes"] as const;
-const PAGE_LABELS = { Beans: "원두 재고", "Brew Log": "브루잉 기록", "Brew Stats": "브루잉 통계", "Tasting Notes": "테이스팅 노트" };
+const PAGES = ["Beans", "Brew Log", "Brew Stats"] as const;
+const PAGE_LABELS = { Beans: "원두 재고", "Brew Log": "브루잉 기록", "Brew Stats": "브루잉 통계" };
 
 type Page = (typeof PAGES)[number];
 type StorageSetter<T> = (value: T) => void;
@@ -135,20 +135,16 @@ export default function App() {
   const [page, setPage] = useState<Page>("Beans");
   const [openBrewForm, setOpenBrewForm] = useState(false);
   const { user, loading: authLoading } = useAuth();
-  const [linkedBrewId, setLinkedBrewId] = useState<number | null>(null);
   const [beans, setBeans] = useStorage<Bean[]>(STORAGE_KEYS.beans, [], user?.id ?? null);
   const [brews, setBrews] = useStorage<Brew[]>(STORAGE_KEYS.brews, [], user?.id ?? null);
   const [notes, setNotes] = useStorage<TastingNote[]>(STORAGE_KEYS.notes, [], user?.id ?? null);
-
-  const goToNotes = (brewId: number) => { setLinkedBrewId(brewId); setPage("Tasting Notes"); };
 
   return (
     <div style={{ fontFamily: FONT, maxWidth: 960, margin: "0 auto", padding: "0 0 3rem" }}>
       <Header page={page} setPage={setPage} user={user} authLoading={authLoading} />
       {page === "Beans" && <BeansPage beans={beans} setBeans={setBeans} notes={notes} setNotes={setNotes} userId={user?.id ?? null} onBrew={() => { setOpenBrewForm(true); setPage("Brew Log"); }} />}
-      {page === "Brew Log" && <BrewLog beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} goToNotes={goToNotes} notes={notes} setNotes={setNotes} openInitially={openBrewForm} onOpened={() => setOpenBrewForm(false)} />}
+      {page === "Brew Log" && <BrewLog beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} openInitially={openBrewForm} onOpened={() => setOpenBrewForm(false)} />}
       {page === "Brew Stats" && <BrewStats beans={beans} brews={brews} />}
-      {page === "Tasting Notes" && <TastingNotes beans={beans} notes={notes} setNotes={setNotes} brews={brews} linkedBrewId={linkedBrewId} setLinkedBrewId={setLinkedBrewId} />}
     </div>
   );
 }
@@ -370,12 +366,11 @@ function BeanComments({ bean, notes, onAdd }: { bean: Bean; notes: TastingNote[]
   </section>;
 }
 
-function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes, setNotes, openInitially, onOpened }: {
+function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, openInitially, onOpened }: {
   beans: Bean[];
   setBeans: StorageSetter<Bean[]>;
   brews: Brew[];
   setBrews: StorageSetter<Brew[]>;
-  goToNotes: (brewId: number) => void;
   notes: TastingNote[];
   setNotes: StorageSetter<TastingNote[]>;
   openInitially: boolean;
@@ -486,13 +481,7 @@ function BrewLog({ beans, setBeans, brews, setBrews, goToNotes, notes, setNotes,
                 <p style={{ margin: "0 0 2px", fontSize: 15, fontWeight: 500, fontFamily: FONT }}>{bean?.name || "삭제된 원두"}</p>
                 <p style={{ margin: 0, fontSize: 12, color: "var(--color-text-secondary)", fontFamily: FONT }}>{brew.date}</p>
                 <div className="brew-recipe-block"><p className="brew-metrics">원두 {fmt(brew.amount)}g {brew.waterAmount ? `· 물 ${fmt(brew.waterAmount)}g · ${brewRatio(brew.amount, brew.waterAmount)}` : ""}</p>{brew.recipe && <p>{brew.recipe}</p>}</div>
-                {hasNote && (() => { const note = notes.find(item => item.brewId === brew.id); return note ? <div className="brew-note-block"><span className="brew-detail-label">컵 노트</span>{note.flavor && <div className="flavor-tags">{note.flavor.split(/[,·、\n]+/).map(value => value.trim()).filter(Boolean).map((value, index) => <span key={index}>{value}</span>)}</div>}{note.memo && <p>{note.memo}</p>}</div> : null; })()}
-                <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
-                  {hasNote
-                    ? <button onClick={() => goToNotes(brew.id)} style={{ fontSize: 11, padding: "3px 10px", borderRadius: 10, border: "0.5px solid #0F6E56", background: "#E1F5EE", color: "#0F6E56", cursor: "pointer", fontFamily: FONT }}>컵 노트 작성됨 ✓</button>
-                    : <button onClick={() => goToNotes(brew.id)} style={{ fontSize: 11, padding: "3px 10px", borderRadius: 10, border: "0.5px solid #8B6F47", background: "transparent", color: "#8B6F47", cursor: "pointer", fontFamily: FONT }}>컵 노트 작성 →</button>
-                  }
-                </div>
+                {hasNote && (() => { const note = notes.find(item => item.brewId === brew.id); return note ? <div className="brew-note-block"><span className="brew-detail-label">노트</span>{note.flavor && <div className="flavor-tags">{note.flavor.split(/[,·、\n]+/).map(value => value.trim()).filter(Boolean).map((value, index) => <span key={index}>{value}</span>)}</div>}{note.memo && <p>{note.memo}</p>}</div> : null; })()}
               </div>
               <div className="brew-card-actions"><button onClick={() => edit(brew)} className="brew-edit-button">수정</button><button onClick={() => remove(brew)} className="brew-delete-button">삭제</button></div>
             </div>
