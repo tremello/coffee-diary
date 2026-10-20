@@ -16,7 +16,7 @@ const PAGE_LABELS = { Beans: "원두 재고", "Brew Log": "브루잉 기록", "B
 
 type Page = (typeof PAGES)[number];
 type StorageSetter<T> = (value: T) => void;
-type BeanSort = "registered" | "latest" | "roastOldest" | "remaining" | "unitPriceDesc" | "unitPriceAsc" | "priceDesc" | "priceAsc";
+type BeanSort = "registered" | "latest" | "roastOldest" | "remaining" | "unitPriceDesc" | "unitPriceAsc";
 
 type Bean = {
   id: number;
@@ -223,14 +223,6 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
       if (bUnit === null) return -1;
       return (sort === "unitPriceDesc" ? bUnit - aUnit : aUnit - bUnit) || b.id - a.id;
     }
-    if (sort === "priceDesc" || sort === "priceAsc") {
-      const aPrice = a.price ? Number(a.price) : null;
-      const bPrice = b.price ? Number(b.price) : null;
-      if (aPrice === null && bPrice === null) return a.id - b.id;
-      if (aPrice === null) return 1;
-      if (bPrice === null) return -1;
-      return (sort === "priceDesc" ? bPrice - aPrice : aPrice - bPrice) || b.id - a.id;
-    }
     if (sort === "roastOldest") {
       if (!a.roastDate && !b.roastDate) return a.id - b.id;
       if (!a.roastDate) return 1;
@@ -326,7 +318,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
       </form>}
       <div className="inventory-toolbar"><div className="inventory-filters" aria-label="원두 재고 필터">
         {[["active", "보유 중"], ["finished", "다 마신 원두"], ["all", "전체"]].map(([value, label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}
-      </div><div className="inventory-toolbar-meta"><label htmlFor="quality-filter">분류</label><select id="quality-filter" className="inventory-sort" value={qualityFilter} onChange={event => setQualityFilter(event.target.value as "all" | BeanQuality)}><option value="all">전체</option>{BEAN_QUALITIES.map(quality => <option key={quality} value={quality}>{quality}</option>)}</select><label htmlFor="bean-sort">정렬</label><select id="bean-sort" className="inventory-sort" value={sort} onChange={event => setSort(event.target.value as BeanSort)}><option value="registered">등록순</option><option value="latest">최신순</option><option value="roastOldest">로스팅 날짜가 빠른 순</option><option value="remaining">재고가 적은 순</option><option value="unitPriceDesc">단가 높은 순</option><option value="unitPriceAsc">단가 낮은 순</option><option value="priceDesc">구매가 높은 순</option><option value="priceAsc">구매가 낮은 순</option></select><span>{visible.length}종</span></div></div>
+      </div><div className="inventory-toolbar-meta"><label htmlFor="quality-filter">분류</label><select id="quality-filter" className="inventory-sort" value={qualityFilter} onChange={event => setQualityFilter(event.target.value as "all" | BeanQuality)}><option value="all">전체</option>{BEAN_QUALITIES.map(quality => <option key={quality} value={quality}>{quality}</option>)}</select><label htmlFor="bean-sort">정렬</label><select id="bean-sort" className="inventory-sort" value={sort} onChange={event => setSort(event.target.value as BeanSort)}><option value="registered">등록순</option><option value="latest">최신순</option><option value="roastOldest">로스팅 날짜가 빠른 순</option><option value="remaining">재고가 적은 순</option><option value="unitPriceDesc">단가 높은 순</option><option value="unitPriceAsc">단가 낮은 순</option></select><span>{visible.length}종</span></div></div>
       <div className="bean-list">
         {sortedVisible.map(bean => {
           const pct = bean.purchased > 0 ? Math.max(0, Math.min(100, bean.remaining / bean.purchased * 100)) : 0;
