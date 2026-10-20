@@ -420,9 +420,10 @@ function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, openInitia
     const restoredBeans = previous ? beans.map(item => item.id === previous.beanId ? { ...item, remaining: Math.round((item.remaining + previous.amount) * 10) / 10 } : item) : beans;
     const available = restoredBeans.find(item => item.id === nextBeanId);
     if (!available || available.remaining < amt) { alert(`잔여량(${fmt(available?.remaining ?? 0)}g)이 부족해요!`); return; }
+    const startsConsuming = available.status === "배송 중" || available.status === "디개싱 중";
     const brew = { ...form, id: editingId ?? Date.now(), beanId: nextBeanId, amount: amt, waterAmount: water };
     setBrews(editingId === null ? [...brews, brew] : brews.map(item => item.id === editingId ? brew : item));
-    setBeans(restoredBeans.map(item => item.id === nextBeanId ? { ...item, remaining: Math.round((item.remaining - amt) * 10) / 10 } : item));
+    setBeans(restoredBeans.map(item => item.id === nextBeanId ? { ...item, remaining: Math.round((item.remaining - amt) * 10) / 10, ...(startsConsuming ? { status: "소비 중" as BeanStatus } : {}) } : item));
     if (noteMemo.trim() || noteRating > 0 || previousNote) {
       const note = { ...(previousNote ?? emptyNoteForm()), id: previousNote?.id ?? Date.now() + 1, beanId: nextBeanId, brewId: brew.id, rating: noteRating, memo: noteMemo.trim(), date: form.date };
       setNotes(previousNote ? notes.map(item => item.id === previousNote.id ? note : item) : [...notes, note]);
