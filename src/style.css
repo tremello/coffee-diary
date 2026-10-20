@@ -273,8 +273,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .generated-name output { font-size: 16px; overflow-wrap: anywhere; }
 .existing-purchasers { display: grid; gap: 7px; margin-top: 8px; color: #94816b; font-size: 11px; }
 .existing-purchaser-options { display: flex; flex-wrap: wrap; gap: 6px; }
-.existing-purchaser-options button { border: 1px solid #dfd3c5; background: #f7f1e9; color: #806444; border-radius: 16px; padding: 6px 10px; font-size: 11px; cursor: pointer; }
-.existing-purchaser-options button:hover { background: #eee3d4; }
+.existing-purchaser-option { display: inline-flex; align-items: center; border: 1px solid #dfd3c5; background: #f7f1e9; border-radius: 16px; overflow: hidden; }
+.existing-purchaser-option > button:first-child { border: 0; background: transparent; color: #806444; padding: 6px 8px 6px 10px; font-size: 11px; cursor: pointer; }
+.existing-purchaser-option > button:first-child:hover { background: #eee3d4; }
+.existing-purchaser-option .remove-purchaser { border: 0; border-left: 1px solid #e4d9cc; background: transparent; color: #b49c83; padding: 3px 7px 4px 5px; font-size: 12px; line-height: 1; cursor: pointer; }
+.existing-purchaser-option .remove-purchaser:hover { color: #9b634f; background: #eee3d4; }
 .farm-detail { font-size: 12px; color: #756653; }
 .bean-comments { border-top: 1px solid #e9dfd1; margin-top: 20px; padding-top: 15px; }
 .comments-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
