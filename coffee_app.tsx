@@ -119,12 +119,6 @@ const parseLocalDate = (date: string) => {
   const [year, month, day] = date.split("-").map(Number);
   return new Date(year, (month || 1) - 1, day || 1);
 };
-const formatDateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-const weekStartKey = (date: string) => {
-  const value = parseLocalDate(date);
-  value.setDate(value.getDate() - ((value.getDay() + 6) % 7));
-  return formatDateKey(value);
-};
 const sortByDateDesc = <T extends { date: string }>(items: T[]) =>
   [...items].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -547,13 +541,7 @@ function BrewStats({ beans, brews }: { beans: Bean[]; brews: Brew[] }) {
     result[brew.date] = (result[brew.date] || 0) + brew.amount;
     return result;
   }, {})).sort(([a], [b]) => b.localeCompare(a)).slice(0, 14);
-  const weeklyUsage = Object.entries(filtered.reduce<Record<string, number>>((result, brew) => {
-    const week = weekStartKey(brew.date);
-    result[week] = (result[week] || 0) + brew.amount;
-    return result;
-  }, {})).sort(([a], [b]) => b.localeCompare(a));
   const dailyMax = Math.max(...dailyUsage.map(([, amount]) => amount), 1);
-  const weeklyMax = Math.max(...weeklyUsage.map(([, amount]) => amount), 1);
   const usageRows = (items: Array<[string, number]>, max: number, label: (key: string) => string) => items.length === 0
     ? <p className="stats-empty">선택한 기간에 브루잉 기록이 없어요.</p>
     : <div className="usage-list">{items.map(([key, amount]) => <div className="usage-row" key={key}><span>{label(key)}</span><div className="usage-row-value"><div className="usage-bar"><i style={{ width: `${Math.max(8, amount / max * 100)}%` }} /></div><b>{fmt(Math.round(amount * 10) / 10)}g</b></div></div>)}</div>;
@@ -562,7 +550,6 @@ function BrewStats({ beans, brews }: { beans: Bean[]; brews: Brew[] }) {
     <div className="stats-cards"><div><span>브루잉 횟수</span><strong>{filtered.length}<small>회</small></strong></div><div><span>사용한 원두</span><strong>{beanUsage.length}<small>종</small></strong></div><div><span>사용량</span><strong>{fmt(Math.round(totalAmount * 10) / 10)}<small>g</small></strong></div></div>
     <section className="stats-section"><h3>원두별 사용량</h3>{beanUsage.length === 0 ? <p className="stats-empty">선택한 기간에 브루잉 기록이 없어요.</p> : <div className="usage-list">{beanUsage.map(item => <div className="usage-row" key={item.name}><span>{item.name}</span><b>{fmt(Math.round(item.amount * 10) / 10)}g</b></div>)}</div>}</section>
     <section className="stats-section"><h3>일별 사용량</h3>{usageRows(dailyUsage, dailyMax, key => { const date = parseLocalDate(key); return `${date.getMonth() + 1}/${date.getDate()}`; })}</section>
-    <section className="stats-section"><h3>주별 사용량</h3>{usageRows(weeklyUsage, weeklyMax, key => { const date = parseLocalDate(key); return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")} 주`; })}</section>
   </div>;
 }
 
