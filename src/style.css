@@ -201,9 +201,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .placeholder-note { color: #938575; font-size: 12px; margin: 0; }
 .bean-memo { font-size: 13px; color: #7c6c5a; line-height: 1.7; margin: 13px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .edit-bean { background: none; border: 0; padding: 0; margin-top: 20px; font-size: 11px; color: #806444; }
-.bean-card-actions { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-top: 10px; }
+.bean-card-actions { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
 .bean-card-actions .edit-bean, .bean-card-actions .record-details { margin-top: 0; }
 .bean-card-actions .edit-bean { font-size: 11px; }
+.bean-card-actions .record-details[open] { display: contents; }
+.bean-card-actions .record-details[open] > .bean-comments { flex: 0 0 100%; width: 100%; }
 .record-details { margin-top: 10px; color: #806444; }
 .record-details > summary { cursor: pointer; list-style: none; font-size: 11px; }
 .record-details > summary::-webkit-details-marker { display: none; }
@@ -418,12 +420,12 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .bean-info { padding: 11px 12px; }
   .roastery { font-size: 14px; margin-bottom: 4px; }
   .bean-info h3 { font-size: 16px; margin-bottom: 6px; line-height: 1.35; }
-  .title-dates { gap: 4px 9px; margin-bottom: 7px; font-size: 9px; }
-  .title-dates strong { padding: 2px 5px; font-size: 9px; }
+  .title-dates { gap: 4px 9px; margin-bottom: 7px; font-size: 10px; }
+  .title-dates strong { padding: 2px 5px; font-size: 10px; }
   .roastery-cup-notes { gap: 4px; margin-top: 3px; }
-  .roastery-cup-notes .detail-label { font-size: 9px; }
+  .roastery-cup-notes .detail-label { font-size: 10px; }
   .flavor-tags { gap: 3px; }
-  .flavor-tags > span { padding: 3px 6px; font-size: 10px; }
+  .flavor-tags > span { padding: 3px 6px; font-size: 11px; }
   .edit-bean { margin-top: 7px; font-size: 9px; }
   .bean-card-actions { margin-top: 5px; }
   .bean-card-actions .edit-bean, .bean-card-actions .record-details > summary { font-size: 11px; }
