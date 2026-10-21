@@ -385,9 +385,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 @media (max-width: 540px) { .roastery { font-size: 16px; } }
 .bean-info { padding: 20px 24px; }
 .bean-info h3 { margin-bottom: 9px; }
-.title-dates { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 16px; margin: 0 0 13px; font-size: 11px; color: #85745f; }
+.title-dates { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 16px; margin: 0 0 13px; font-size: 12px; color: #85745f; }
 .title-dates > span { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; }
-.title-dates strong { background: #eadecc; color: #705331; border-radius: 5px; padding: 3px 7px; font-size: 11px; }
+.title-dates strong { background: #eadecc; color: #705331; border-radius: 5px; padding: 3px 7px; font-size: 12px; }
 .bean-purchase-meta { flex-basis: 100%; color: #8a765c; }
 .bean-purchase-meta b { border-radius: 5px; padding: 3px 7px; font-size: 10px; font-weight: 600; }
 .quality-특식 { background: #806444; color: #fffdf9; }
@@ -420,12 +420,12 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .bean-info { padding: 11px 12px; }
   .roastery { font-size: 14px; margin-bottom: 4px; }
   .bean-info h3 { font-size: 16px; margin-bottom: 6px; line-height: 1.35; }
-  .title-dates { gap: 4px 9px; margin-bottom: 7px; font-size: 10px; }
-  .title-dates strong { padding: 2px 5px; font-size: 10px; }
+  .title-dates { gap: 4px 9px; margin-bottom: 7px; font-size: 11px; }
+  .title-dates strong { padding: 2px 5px; font-size: 11px; }
   .roastery-cup-notes { gap: 4px; margin-top: 3px; }
-  .roastery-cup-notes .detail-label { font-size: 10px; }
+  .roastery-cup-notes .detail-label { font-size: 11px; }
   .flavor-tags { gap: 3px; }
-  .flavor-tags > span { padding: 3px 6px; font-size: 11px; }
+  .flavor-tags > span { padding: 3px 6px; font-size: 12px; }
   .edit-bean { margin-top: 7px; font-size: 9px; }
   .bean-card-actions { margin-top: 5px; padding: 0 12px 12px; }
   .bean-card-actions .edit-bean, .bean-card-actions .record-details > summary { font-size: 11px; }
