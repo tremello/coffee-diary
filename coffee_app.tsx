@@ -173,17 +173,24 @@ function Header({ page, setPage, user, authLoading }: { page: Page; setPage: (pa
       </div>
       <nav className="page-tabs">
         {PAGES.map(p => (
-          <button key={p} className="page-tab" onClick={() => setPage(p)} style={{
+          <button key={p} className="page-tab" onClick={() => setPage(p)} aria-current={page === p ? "page" : undefined} style={{
             padding: "8px 16px", fontSize: 14, borderRadius: 10, fontFamily: FONT,
             border: page === p ? "1px solid #8B6F47" : "0.5px solid var(--color-border-tertiary)",
             background: page === p ? "#8B6F47" : "transparent",
             color: page === p ? "#fff" : "var(--color-text-secondary)",
             cursor: "pointer"
-          }}>{PAGE_LABELS[p]}</button>
+          }}><span className="page-tab-icon" aria-hidden="true"><PageIcon page={p} /></span><span>{PAGE_LABELS[p]}</span></button>
         ))}
       </nav>
     </div>
   );
+}
+
+function PageIcon({ page }: { page: Page }) {
+  const props = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  if (page === "Beans") return <svg {...props}><ellipse cx="12" cy="12" rx="6.5" ry="9" transform="rotate(42 12 12)" /><path d="M8 17c2.8-3 4.4-6.3 4.7-10" /></svg>;
+  if (page === "Brew Log") return <svg {...props}><path d="m6 18 2.2-5.8L17.7 2.7a1.8 1.8 0 0 1 2.6 2.6L10.8 15.8 5 18Z" /><path d="m14.7 5.7 3.6 3.6M4 21h7" /></svg>;
+  return <svg {...props}><path d="M5 19V9M12 19V5M19 19v-7" /><path d="M3 19h18" /></svg>;
 }
 
 function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, onBrew }: { beans: Bean[]; setBeans: StorageSetter<Bean[]>; brews: Brew[]; setBrews: StorageSetter<Brew[]>; notes: TastingNote[]; setNotes: StorageSetter<TastingNote[]>; userId: string | null; onBrew: () => void }) {

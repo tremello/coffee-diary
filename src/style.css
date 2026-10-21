@@ -111,6 +111,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .quiet-button { background: transparent; color: #806444; }
 .page-tabs { display: flex; gap: 6px; margin-top: 1rem; }
 .page-tab { min-height: 38px; }
+.page-tab-icon { display: none; }
 .inventory-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 24px 30px; background: #f0e9df; border-radius: 14px; margin-bottom: 28px; }
 .inventory-summary > div { display: flex; align-items: center; justify-content: flex-start; gap: 16px; padding-right: 28px; }
 .inventory-summary > div + div { border-left: 1px solid #dcd0c1; padding: 0 0 0 28px; }
@@ -222,13 +223,15 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .inventory-empty p { color: #8b7a64; font-size: 13px; margin-bottom: 24px; }
 @media (min-width: 721px) { #root { padding: 0 32px; } }
 @media (max-width: 540px) {
+  #root { padding-bottom: 5.5rem !important; }
   .account-actions { gap: 6px; }
   .brand-mark { width: 34px; height: 34px; }
   .account-button { padding: 6px 8px; font-size: 10px; }
   .google-button { padding: 6px 8px; font-size: 10px; }
   .refresh-button { width: 27px; height: 27px; font-size: 17px; }
-  .page-tabs { gap: 5px; }
-  .page-tab { min-height: 36px; padding: 7px 10px !important; font-size: 11px !important; }
+  .page-tabs { position: fixed; z-index: 20; left: 0; bottom: 0; width: 100%; box-sizing: border-box; justify-content: space-around; gap: 0; margin: 0; padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid #ded2c3; background: rgba(255, 253, 249, .97); box-shadow: 0 -4px 16px rgba(92, 68, 42, .07); }
+  .page-tab { display: inline-flex; flex: 1; min-height: 44px; align-items: center; justify-content: center; gap: 5px; padding: 6px 5px !important; border-radius: 8px !important; font-size: 11px !important; }
+  .page-tab-icon { display: inline-flex; align-items: center; justify-content: center; }
   .intro-actions { align-items: stretch; flex-direction: column; gap: 5px; }
   .intro-actions button { padding: 8px 10px; font-size: 11px; }
   .inventory-intro h2 { font-size: 25px; }
