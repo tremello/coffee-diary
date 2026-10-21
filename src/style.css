@@ -203,7 +203,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .edit-bean { background: none; border: 0; padding: 0; margin-top: 20px; font-size: 11px; color: #806444; }
 .bean-card-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 12px; margin-top: 10px; }
 .bean-card-actions .edit-bean, .bean-card-actions .record-details { margin-top: 0; }
-.bean-card-actions .edit-bean { font-size: 11px; }
+.bean-card-actions .edit-bean { justify-self: start; text-align: left; font-size: 11px; }
+.bean-card-actions .record-details { justify-self: end; }
 .bean-card-actions .record-details[open] { display: contents; }
 .bean-card-actions .record-details[open] > summary { grid-column: 2; grid-row: 1; }
 .bean-card-actions .record-details[open] > .bean-comments { grid-column: 1 / -1; grid-row: 2; width: 100%; }
