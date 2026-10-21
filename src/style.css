@@ -112,7 +112,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .page-tabs { display: flex; gap: 6px; margin-top: 1rem; }
 .page-tab { min-height: 38px; }
 .page-tab-icon { display: none; }
-.inventory-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 12px 30px; background: #f0e9df; border-radius: 14px; margin-bottom: 28px; }
+.inventory-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 24px 30px; background: #f0e9df; border-radius: 14px; margin-bottom: 28px; }
 .inventory-summary > div { display: flex; align-items: center; justify-content: flex-start; gap: 16px; padding: 0 16px; }
 .inventory-summary span { font-size: 13px; color: #756653; }
 .inventory-summary strong { font-size: 27px; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -258,7 +258,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .intro-actions button { padding: 8px 10px; font-size: 11px; }
   .inventory-intro h2 { font-size: 25px; }
   .inventory-intro p:last-child { font-size: 11px; max-width: 190px; line-height: 1.6; }
-  .inventory-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 10px 20px; }
+  .inventory-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 20px; }
   .inventory-summary > div { align-items: flex-start; padding: 0 10px; gap: 6px; }
   .inventory-summary strong { font-size: 22px; }
   .inventory-summary small { font-size: 10px; margin-left: 3px; }
