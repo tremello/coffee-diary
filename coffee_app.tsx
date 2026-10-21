@@ -341,6 +341,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
               <BeanDates bean={bean} />
               <div className="compact-summary"><strong>{bean.roastery || "로스터리 미입력"}</strong><b>{bean.name}</b><div className="compact-meta"><span>로스팅 : {bean.roastDate || "날짜 미입력"}</span>{bean.roasteryNotes && <span className="compact-cup-notes">{bean.roasteryNotes.split(/[\s,·、\n]+/).map(value => value.trim()).filter(Boolean).map((note, index) => <i key={index}>{note}</i>)}</span>}</div></div>
               {bean.roasteryNotes && <div className="roastery-cup-notes"><span className="detail-label">로스터리 컵노트</span><div className="flavor-tags">{bean.roasteryNotes.split(/[\s,·、\n]+/).map(value => value.trim()).filter(Boolean).map((note, index) => <span key={index}>{note}</span>)}</div></div>}
+              <div className="bean-card-actions"><button className="edit-bean" onClick={() => edit(bean)} aria-label={`${bean.name} 기본 정보 수정`}>기본 정보 수정 ↗</button><details className="record-details"><summary>기록 보기</summary><BeanComments bean={bean} notes={notes.filter(note => note.beanId === bean.id)} onAdd={note => setNotes([...notes, note])} /></details></div>
             </div>
             <div className="bean-stock">
               <div className="stock-status-row">{editingStatusId === bean.id ? <select className="stock-status-select" value={bean.status ?? "소비 중"} aria-label={`${bean.name} 상태`} onChange={event => updateStatus(bean.id, event.target.value as BeanStatus)}>{BEAN_STATUSES.map(status => <option key={status} value={status}>{status}</option>)}</select> : <><span className={`stock-status ${pct <= 20 ? "low" : ""}`}>{bean.remaining <= 0 ? "다 마셨어요" : bean.status ?? "소비 중"}</span><button type="button" className="status-edit-button" onClick={() => setEditingStatusId(bean.id)}>수정</button></>}</div>
@@ -349,9 +350,8 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
               <p className="purchased-weight">구매 {fmt(bean.purchased)}g</p>
               <div className="stock-meter" role="progressbar" aria-label={`${bean.name} 잔량`} aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}><div style={{ width: `${pct}%` }} /></div>
               <p className="stock-percent">{Math.round(pct)}% 남음</p>
-
             </div>
-            <div className="bean-card-actions"><button className="edit-bean" onClick={() => edit(bean)} aria-label={`${bean.name} 기본 정보 수정`}>기본 정보 수정 ↗</button><details className="record-details"><summary>기록 보기</summary><BeanComments bean={bean} notes={notes.filter(note => note.beanId === bean.id)} onAdd={note => setNotes([...notes, note])} /></details></div>
+            
           </article>;
         })}
         {visible.length === 0 && <div className="inventory-empty"><span aria-hidden="true">☕</span><h3>{available.length === 0 ? "나의 첫 원두를 올려보세요" : "해당하는 원두가 없어요"}</h3><p>원두 정보와 향미 노트, 남은 양을 한곳에서 관리해요.</p>{available.length === 0 && <button className="primary-button" onClick={() => { close(); setShow(true); }}>+ 원두 추가</button>}</div>}
