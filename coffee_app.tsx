@@ -293,8 +293,8 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
       <div className="inventory-intro"><div><p className="eyebrow">MY BEAN SHELF</p><h2>지금, 내 원두</h2><p>좋아하는 맛을 기록하고, 남은 원두를 한눈에.</p></div>
         <div className="intro-actions"><button className="secondary-button" onClick={onBrew}>브루잉 기록하기</button><button className="primary-button" onClick={() => { close(); setShow(true); }}>+ 원두 추가</button></div></div>
       <div className="inventory-summary">
-        <div><span>보유 중인 원두</span><strong>{active.length}<small>종</small></strong></div>
-        <div><span>총 남은 무게</span><strong>{fmt(Math.round(active.reduce((sum, b) => sum + b.remaining, 0) * 10) / 10)}<small>g</small></strong></div>
+        <div className="summary-count"><span>보유 중인 원두</span><strong>{active.length}<small>종</small></strong></div>
+        <div className="summary-weight"><span>총 남은 무게</span><strong>{fmt(Math.round(active.reduce((sum, b) => sum + b.remaining, 0) * 10) / 10)}<small>g</small></strong></div>
         <div className="summary-details"><div className="summary-status-breakdown"><span>배송·디개싱 중 <b>{fmt(Math.round(shippingAndDegassingWeight * 10) / 10)}g</b></span><span>소비 중 <b>{fmt(Math.round(consumingWeight * 10) / 10)}g</b></span></div></div>
       </div>
       {deletedId !== null && <div className="delete-notice" role="status"><span>원두를 삭제했어요.</span><button type="button" onClick={undoRemove}>되돌리기</button></div>}
@@ -329,7 +329,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
         <div className="form-buttons">{editingId !== null && <button type="button" className="delete-bean-button" onClick={remove}>삭제</button>}<button type="button" className="quiet-button" onClick={close}>취소</button><button type="submit" className="primary-button">저장</button></div>
       </form>}
       <div className="inventory-toolbar"><label className="view-mode-control" htmlFor="bean-density">보기<select id="bean-density" className="inventory-sort" value={density} onChange={event => setDensity(event.target.value as "detail" | "compact")}><option value="detail">자세히</option><option value="compact">간략하게</option></select></label><div className="inventory-toolbar-row"><div className="inventory-filters" aria-label="원두 재고 필터">
-        {[["active", "보유 중"], ["finished", "다 마신 원두"], ["all", "전체"]].map(([value, label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}
+        {[["active", "보유 중"], ["finished", "소비 완료"], ["all", "전체"]].map(([value, label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}
       </div><div className="inventory-toolbar-meta"><label htmlFor="quality-filter">분류</label><select id="quality-filter" className="inventory-sort" value={qualityFilter} onChange={event => setQualityFilter(event.target.value as "all" | BeanQuality)}><option value="all">전체</option>{BEAN_QUALITIES.map(quality => <option key={quality} value={quality}>{quality}</option>)}</select><label htmlFor="bean-sort">정렬</label><select id="bean-sort" className="inventory-sort" value={sort} onChange={event => setSort(event.target.value as BeanSort)}><option value="registered">등록순</option><option value="latest">최신순</option><option value="roastOldest">로스팅 날짜 빠른 순</option><option value="remaining">재고 적은 순</option><option value="unitPriceDesc">단가 높은 순</option><option value="unitPriceAsc">단가 낮은 순</option></select></div></div></div>
       <div className={`bean-list density-${density}`}>
         {sortedVisible.map(bean => {
