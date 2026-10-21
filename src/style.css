@@ -231,6 +231,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .stock-meter { width: 100%; height: 10px; border-radius: 6px; background: #e1d6c7; overflow: hidden; }
 .stock-meter > div { height: 100%; background: #96774f; border-radius: inherit; }
 .stock-percent { font-size: 10px; color: #8b765d; margin: 7px 0 0; }
+.compact-stock-donut { display: none; }
 .bean-form { border: 1px solid #ded0bd; background: #fffdf9; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
 .bean-form h3 { margin-top: 0; font-size: 18px; }
 .bean-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -296,11 +297,19 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .bean-list.density-compact .bean-card-actions .record-details { margin-top: 0; }
   .bean-list.density-compact .record-details > summary { font-size: 11px; }
   .bean-list.density-compact .record-details .bean-comments { margin-top: 8px; padding-top: 8px; }
-  .bean-list.density-compact .bean-stock { padding: 14px 10px; }
-  .bean-list.density-compact .remaining-label { margin-bottom: 2px; font-size: 9px; }
-  .bean-list.density-compact .remaining-weight { font-size: 24px; }
+  .bean-list.density-compact .bean-stock { align-items: center; justify-content: flex-start; gap: 10px; padding: 14px 10px; }
+  .bean-list.density-compact .stock-status-row { align-self: stretch; justify-content: space-between; }
+  .bean-list.density-compact .remaining-label { display: none; }
+  .bean-list.density-compact .remaining-weight { display: none; }
   .bean-list.density-compact .purchased-weight { display: none; }
-  .bean-list.density-compact .stock-percent { font-size: 10px; }
+  .bean-list.density-compact .stock-meter { display: none; }
+  .bean-list.density-compact .stock-percent { display: none; }
+  .bean-list.density-compact .compact-stock-donut { --stock-progress: 0%; display: grid; position: relative; place-content: center; width: 68px; aspect-ratio: 1; margin-top: 2px; border-radius: 50%; background: conic-gradient(#96774f var(--stock-progress), #e1d6c7 0); }
+  .bean-list.density-compact .compact-stock-donut::before { content: ""; position: absolute; inset: 7px; border-radius: inherit; background: #f5efe6; }
+  .bean-list.density-compact .compact-stock-donut strong, .bean-list.density-compact .compact-stock-donut small { position: relative; z-index: 1; text-align: center; }
+  .bean-list.density-compact .compact-stock-donut strong { font-size: 19px; line-height: 1; letter-spacing: -1px; }
+  .bean-list.density-compact .compact-stock-donut strong span { margin-left: 1px; font-size: 8px; font-weight: 400; letter-spacing: 0; }
+  .bean-list.density-compact .compact-stock-donut small { display: none; }
   .bean-list.density-dense { gap: 7px; }
   .bean-list.density-dense .inventory-card { grid-template-columns: minmax(0, 1fr) 88px; }
   .bean-list.density-dense .bean-info { padding: 10px 11px; }
