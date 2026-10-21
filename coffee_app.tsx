@@ -293,8 +293,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
       <div className="inventory-intro"><div><p className="eyebrow">MY BEAN SHELF</p><h2>지금, 내 원두</h2><p>좋아하는 맛을 기록하고, 남은 원두를 한눈에.</p></div>
         <div className="intro-actions"><button className="secondary-button" onClick={onBrew}>브루잉 기록하기</button><button className="primary-button" onClick={() => { close(); setShow(true); }}>+ 원두 추가</button></div></div>
       <div className="inventory-summary">
-        <div className="summary-count"><span>보유 중인 원두</span><strong>{active.length}<small>종</small></strong></div>
-        <div className="summary-weight"><span>총 남은 무게</span><strong>{fmt(Math.round(active.reduce((sum, b) => sum + b.remaining, 0) * 10) / 10)}<small>g</small></strong></div>
+        <div className="summary-primary"><span>보유 중</span><strong>{active.length}<small>종</small>{fmt(Math.round(active.reduce((sum, b) => sum + b.remaining, 0) * 10) / 10)}<small>g</small></strong></div>
         <div className="summary-details"><div className="summary-status-breakdown"><span>배송·디개싱 중 <b>{fmt(Math.round(shippingAndDegassingWeight * 10) / 10)}g</b></span><span>소비 중 <b>{fmt(Math.round(consumingWeight * 10) / 10)}g</b></span></div></div>
       </div>
       {deletedId !== null && <div className="delete-notice" role="status"><span>원두를 삭제했어요.</span><button type="button" onClick={undoRemove}>되돌리기</button></div>}
