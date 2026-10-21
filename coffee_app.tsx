@@ -523,7 +523,7 @@ function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, openInitia
                 <p style={{ margin: "0 0 2px", fontSize: 15, fontWeight: 500, fontFamily: FONT }}>{bean?.name || "삭제된 원두"}</p>
                 <p style={{ margin: 0, fontSize: 12, color: "var(--color-text-secondary)", fontFamily: FONT }}>{brew.date}</p>
                 <div className="brew-recipe-block"><p className="brew-metrics">원두 {fmt(brew.amount)}g {brew.waterAmount ? `· 물 ${fmt(brew.waterAmount)}g · ${brewRatio(brew.amount, brew.waterAmount)}` : ""}</p>{brew.recipe && <p>{brew.recipe}</p>}</div>
-                {hasNote && (() => { const note = notes.find(item => item.brewId === brew.id); return note ? <div className="brew-note-block"><span className="brew-detail-label">노트</span>{note.flavor && <div className="flavor-tags">{note.flavor.split(/[,·、\n]+/).map(value => value.trim()).filter(Boolean).map((value, index) => <span key={index}>{value}</span>)}</div>}{note.memo && <p>{note.memo}</p>}</div> : null; })()}
+                {hasNote && (() => { const note = notes.find(item => item.brewId === brew.id); const memo = note ? [note.memo, note.flavor].filter(Boolean).join(" · ") : ""; return memo ? <p className="brew-note-inline"><span>메모</span> {memo}</p> : null; })()}
               </div>
               <div className="brew-card-actions"><button onClick={() => edit(brew)} className="brew-edit-button">수정</button><button onClick={() => remove(brew)} className="brew-delete-button">삭제</button></div>
             </div>
