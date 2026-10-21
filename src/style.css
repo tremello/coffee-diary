@@ -266,10 +266,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .bean-list.density-compact .bean-info > .title-dates,
   .bean-list.density-compact .bean-info > .edit-bean,
   .bean-list.density-compact .bean-info > .bean-comments { display: none; }
-  .bean-list.density-compact .compact-summary { display: grid; gap: 3px; padding: 10px 11px; border-radius: 8px; background: #f3ede4; color: #6f5a43; }
+  .bean-list.density-compact .compact-summary { display: grid; gap: 3px; color: #6f5a43; }
   .bean-list.density-compact .compact-summary strong { font-size: 12px; font-weight: 600; }
   .bean-list.density-compact .compact-summary b { font-size: 16px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .bean-list.density-compact .compact-summary span { color: #8b7a64; font-size: 11px; }
+  .bean-list.density-compact .compact-summary span { display: inline-block; width: fit-content; margin-top: 2px; padding: 4px 7px; border-radius: 5px; background: #f3ede4; color: #8b7a64; font-size: 11px; }
   .bean-list.density-compact .roastery-cup-notes { margin-top: 8px; }
   .bean-list.density-compact .roastery-cup-notes .detail-label { display: none; }
   .bean-list.density-compact .compact-extra { display: block; margin-top: 8px; color: #806444; font-size: 11px; }
