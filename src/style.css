@@ -136,7 +136,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .brew-recipe-block, .brew-note-block { margin-top: 9px; padding: 9px 11px; border-radius: 8px; }
 .brew-recipe-block { background: #f6f1ea; color: #806f5d; }
 .brew-note-block { background: #fbf8f3; border: 1px solid #e8ddd0; color: #6f5a43; }
-.brew-note-inline { margin: 8px 0 0; color: #6f5a43; font-size: 12px; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brew-note-inline { margin: 9px 0 0; padding: 9px 11px; border: 1px solid #eee5da; border-radius: 8px; background: #fbf8f3; color: #6f5a43; font-size: 12px; line-height: 1.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .brew-note-inline span { color: #967e63; margin-right: 5px; }
 .brew-detail-label { display: block; margin-bottom: 5px; font-size: 10px; color: #967e63; letter-spacing: .02em; }
 .brew-recipe-block p, .brew-note-block p { margin: 0; font-size: 12px; line-height: 1.5; }
