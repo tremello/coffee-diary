@@ -201,6 +201,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .placeholder-note { color: #938575; font-size: 12px; margin: 0; }
 .bean-memo { font-size: 13px; color: #7c6c5a; line-height: 1.7; margin: 13px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .edit-bean { background: none; border: 0; padding: 0; margin-top: 20px; font-size: 11px; color: #806444; }
+.record-details { margin-top: 10px; color: #806444; }
+.record-details > summary { cursor: pointer; list-style: none; font-size: 11px; }
+.record-details > summary::-webkit-details-marker { display: none; }
+.record-details > summary::before { content: "▸"; display: inline-block; margin-right: 5px; font-size: 12px; }
+.record-details[open] > summary::before { content: "▾"; }
 .bean-stock { background: #f5efe6; border-left: 1px solid #e7ddcf; padding: 26px 24px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; }
 .stock-status { font-size: 10px; border: 1px solid #d5c5b0; border-radius: 20px; padding: 4px 9px; color: #7b6446; }
 .stock-status.low { color: #975e38; border-color: #d8bda5; }
@@ -265,7 +270,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .bean-list.density-compact .bean-info > h3,
   .bean-list.density-compact .bean-info > .title-dates,
   .bean-list.density-compact .bean-info > .roastery-cup-notes,
-  .bean-list.density-compact .bean-info > .edit-bean,
   .bean-list.density-compact .bean-info > .bean-comments { display: none; }
   .bean-list.density-compact .compact-summary { display: grid; gap: 3px; color: #6f5a43; }
   .bean-list.density-compact .compact-summary strong { font-size: 12px; font-weight: 600; }
@@ -274,10 +278,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .bean-list.density-compact .compact-meta > span:first-child { flex: 0 0 auto; padding: 3px 6px; border-radius: 5px; background: #f3ede4; }
   .bean-list.density-compact .compact-cup-notes { display: flex; min-width: 0; gap: 4px; overflow: hidden; }
   .bean-list.density-compact .compact-cup-notes i { flex: 0 0 auto; max-width: 90px; overflow: hidden; text-overflow: ellipsis; padding: 3px 6px; border-radius: 5px; background: #f7f2eb; color: #806f5d; font-style: normal; white-space: nowrap; }
-  .bean-list.density-compact .compact-extra { display: block; margin-top: 8px; color: #806444; font-size: 11px; }
-  .bean-list.density-compact .compact-extra summary { cursor: pointer; list-style-position: inside; }
-  .bean-list.density-compact .compact-extra > .edit-bean { display: inline-block; margin-top: 8px; font-size: 11px; }
-  .bean-list.density-compact .compact-extra .bean-comments { margin-top: 8px; padding-top: 8px; }
+  .bean-list.density-compact .bean-info > .edit-bean { display: inline-block; margin-top: 9px; font-size: 11px; }
+  .bean-list.density-compact .record-details { margin-top: 8px; }
+  .bean-list.density-compact .record-details > summary { font-size: 11px; }
+  .bean-list.density-compact .record-details .bean-comments { margin-top: 8px; padding-top: 8px; }
   .bean-list.density-compact .bean-stock { padding: 14px 10px; }
   .bean-list.density-compact .remaining-label { margin-bottom: 2px; font-size: 9px; }
   .bean-list.density-compact .remaining-weight { font-size: 24px; }
