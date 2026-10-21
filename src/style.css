@@ -272,7 +272,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .bean-list.density-compact .compact-summary b { font-size: 16px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .bean-list.density-compact .compact-meta { display: flex; align-items: center; gap: 8px; min-width: 0; margin-top: 2px; color: #8b7a64; font-size: 10px; white-space: nowrap; overflow: hidden; }
   .bean-list.density-compact .compact-meta > span:first-child { flex: 0 0 auto; padding: 3px 6px; border-radius: 5px; background: #f3ede4; }
-  .bean-list.density-compact .compact-cup-note { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .bean-list.density-compact .compact-cup-notes { display: flex; min-width: 0; gap: 4px; overflow: hidden; }
+  .bean-list.density-compact .compact-cup-notes i { flex: 0 0 auto; max-width: 90px; overflow: hidden; text-overflow: ellipsis; padding: 3px 6px; border-radius: 5px; background: #f7f2eb; color: #806f5d; font-style: normal; white-space: nowrap; }
   .bean-list.density-compact .compact-extra { display: block; margin-top: 8px; color: #806444; font-size: 11px; }
   .bean-list.density-compact .compact-extra summary { cursor: pointer; list-style-position: inside; }
   .bean-list.density-compact .compact-extra > .edit-bean { display: inline-block; margin-top: 8px; font-size: 11px; }
