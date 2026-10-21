@@ -172,7 +172,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .stats-section h3 { margin: 0 0 14px; font-size: 15px; font-weight: 600; }
 .usage-list { display: grid; gap: 10px; }
 .usage-row { display: flex; justify-content: space-between; gap: 12px; color: #75634d; font-size: 12px; }
-.usage-row b { color: #59432c; font-variant-numeric: tabular-nums; }
+.usage-row-value { display: flex; align-items: center; justify-content: flex-end; gap: 10px; min-width: 52%; }
+.usage-bar { width: min(180px, 28vw); height: 7px; overflow: hidden; border-radius: 999px; background: #eee4d6; }
+.usage-bar i { display: block; height: 100%; border-radius: inherit; background: #9b774d; }
+.usage-row b { color: #59432c; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .stats-empty, .ratio-summary { margin: 0; color: #8b7a64; font-size: 12px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .bean-list { display: grid; gap: 16px; }

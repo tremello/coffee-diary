@@ -115,6 +115,16 @@ function useAuth() {
 }
 
 const fmt = (n: number | string) => Number(n).toLocaleString();
+const parseLocalDate = (date: string) => {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(year, (month || 1) - 1, day || 1);
+};
+const formatDateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+const weekStartKey = (date: string) => {
+  const value = parseLocalDate(date);
+  value.setDate(value.getDate() - ((value.getDay() + 6) % 7));
+  return formatDateKey(value);
+};
 const sortByDateDesc = <T extends { date: string }>(items: T[]) =>
   [...items].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -529,18 +539,30 @@ function BrewStats({ beans, brews }: { beans: Bean[]; brews: Brew[] }) {
   const cutoff = days === null ? null : Date.parse(localDate()) - (days - 1) * 86_400_000;
   const filtered = brews.filter(brew => cutoff === null || Date.parse(brew.date) >= cutoff);
   const totalAmount = filtered.reduce((sum, brew) => sum + brew.amount, 0);
-  const totalWater = filtered.reduce((sum, brew) => sum + (brew.waterAmount ?? 0), 0);
-  const withWater = filtered.filter(brew => brew.waterAmount && brew.waterAmount > 0);
-  const averageRatio = withWater.length ? totalWater / withWater.reduce((sum, brew) => sum + brew.amount, 0) : null;
   const beanUsage = [...new Set(filtered.map(brew => brew.beanId))].map(beanId => {
     const bean = beans.find(item => item.id === beanId);
     return { name: bean?.name || "삭제된 원두", amount: filtered.filter(brew => brew.beanId === beanId).reduce((sum, brew) => sum + brew.amount, 0) };
   }).sort((a, b) => b.amount - a.amount);
+  const dailyUsage = Object.entries(filtered.reduce<Record<string, number>>((result, brew) => {
+    result[brew.date] = (result[brew.date] || 0) + brew.amount;
+    return result;
+  }, {})).sort(([a], [b]) => b.localeCompare(a)).slice(0, 14);
+  const weeklyUsage = Object.entries(filtered.reduce<Record<string, number>>((result, brew) => {
+    const week = weekStartKey(brew.date);
+    result[week] = (result[week] || 0) + brew.amount;
+    return result;
+  }, {})).sort(([a], [b]) => b.localeCompare(a));
+  const dailyMax = Math.max(...dailyUsage.map(([, amount]) => amount), 1);
+  const weeklyMax = Math.max(...weeklyUsage.map(([, amount]) => amount), 1);
+  const usageRows = (items: Array<[string, number]>, max: number, label: (key: string) => string) => items.length === 0
+    ? <p className="stats-empty">선택한 기간에 브루잉 기록이 없어요.</p>
+    : <div className="usage-list">{items.map(([key, amount]) => <div className="usage-row" key={key}><span>{label(key)}</span><div className="usage-row-value"><div className="usage-bar"><i style={{ width: `${Math.max(8, amount / max * 100)}%` }} /></div><b>{fmt(Math.round(amount * 10) / 10)}g</b></div></div>)}</div>;
   return <div className="brew-stats">
     <div className="stats-header"><div><p className="eyebrow">BREWING INSIGHTS</p><h2>브루잉 통계</h2><p>기간을 골라 내 기록을 가볍게 돌아봐요.</p></div><select aria-label="통계 기간" value={period} onChange={event => setPeriod(event.target.value as "all" | "7" | "30" | "90")}><option value="7">최근 7일</option><option value="30">최근 30일</option><option value="90">최근 90일</option><option value="all">전체 기간</option></select></div>
     <div className="stats-cards"><div><span>브루잉 횟수</span><strong>{filtered.length}<small>회</small></strong></div><div><span>사용한 원두</span><strong>{beanUsage.length}<small>종</small></strong></div><div><span>사용량</span><strong>{fmt(Math.round(totalAmount * 10) / 10)}<small>g</small></strong></div></div>
     <section className="stats-section"><h3>원두별 사용량</h3>{beanUsage.length === 0 ? <p className="stats-empty">선택한 기간에 브루잉 기록이 없어요.</p> : <div className="usage-list">{beanUsage.map(item => <div className="usage-row" key={item.name}><span>{item.name}</span><b>{fmt(Math.round(item.amount * 10) / 10)}g</b></div>)}</div>}</section>
-    <section className="stats-section"><h3>물 비율</h3><p className="ratio-summary">{averageRatio === null ? "물 투입량이 기록된 브루잉이 아직 없어요." : `평균 1:${averageRatio.toFixed(1)} · 물 투입량 ${fmt(Math.round(totalWater * 10) / 10)}g`}</p></section>
+    <section className="stats-section"><h3>일별 사용량</h3>{usageRows(dailyUsage, dailyMax, key => { const date = parseLocalDate(key); return `${date.getMonth() + 1}/${date.getDate()}`; })}</section>
+    <section className="stats-section"><h3>주별 사용량</h3>{usageRows(weeklyUsage, weeklyMax, key => { const date = parseLocalDate(key); return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")} 주`; })}</section>
   </div>;
 }
 
