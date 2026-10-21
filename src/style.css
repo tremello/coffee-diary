@@ -201,7 +201,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .placeholder-note { color: #938575; font-size: 12px; margin: 0; }
 .bean-memo { font-size: 13px; color: #7c6c5a; line-height: 1.7; margin: 13px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .edit-bean { background: none; border: 0; padding: 0; margin-top: 20px; font-size: 11px; color: #806444; }
-.bean-card-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 12px; margin-top: 10px; }
+.bean-card-actions { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 12px; margin-top: 10px; padding: 0 28px 24px; }
 .bean-card-actions .edit-bean, .bean-card-actions .record-details { margin-top: 0; }
 .bean-card-actions .edit-bean { font-size: 11px; }
 .bean-card-actions .record-details[open] { display: contents; }
@@ -284,7 +284,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .bean-list.density-compact .compact-meta > span:first-child { flex: 0 0 auto; padding: 3px 6px; border-radius: 5px; background: #f3ede4; }
   .bean-list.density-compact .compact-cup-notes { display: flex; min-width: 0; gap: 4px; overflow: hidden; }
   .bean-list.density-compact .compact-cup-notes i { flex: 0 0 auto; max-width: 90px; overflow: hidden; text-overflow: ellipsis; padding: 3px 6px; border-radius: 5px; background: #f7f2eb; color: #806f5d; font-style: normal; white-space: nowrap; }
-  .bean-list.density-compact .bean-card-actions { margin-top: 9px; font-size: 11px; }
+  .bean-list.density-compact .bean-card-actions { margin-top: 9px; padding: 0 13px 14px; font-size: 11px; }
   .bean-list.density-compact .bean-card-actions .edit-bean { display: inline-block; margin-top: 0; font-size: 11px; }
   .bean-list.density-compact .bean-card-actions .record-details { margin-top: 0; }
   .bean-list.density-compact .record-details > summary { font-size: 11px; }
@@ -428,7 +428,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .flavor-tags { gap: 3px; }
   .flavor-tags > span { padding: 3px 6px; font-size: 12px; }
   .edit-bean { margin-top: 7px; font-size: 9px; }
-  .bean-card-actions { margin-top: 5px; }
+  .bean-card-actions { margin-top: 5px; padding: 0 12px 12px; }
   .bean-card-actions .edit-bean, .bean-card-actions .record-details > summary { font-size: 11px; }
   .bean-comments { margin-top: 7px; padding-top: 7px; }
   .comments-heading { margin-bottom: 4px; }
