@@ -339,7 +339,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
               <p className="roastery">{bean.roastery || "로스터리 미입력"}</p>
               <h3>{bean.name}</h3>
               <BeanDates bean={bean} />
-              <div className="compact-summary"><strong>{bean.roastery || "로스터리 미입력"}</strong><b>{bean.name}</b><span>{bean.roastDate || "날짜 미입력"}</span></div>
+              <div className="compact-summary"><strong>{bean.roastery || "로스터리 미입력"}</strong><b>{bean.name}</b><div className="compact-meta"><span>로스팅 : {bean.roastDate || "날짜 미입력"}</span>{bean.roasteryNotes && <span className="compact-cup-note">컵노트 {bean.roasteryNotes}</span>}</div></div>
               {bean.roasteryNotes && <div className="roastery-cup-notes"><span className="detail-label">로스터리 컵노트</span><div className="flavor-tags">{bean.roasteryNotes.split(/[\s,·、\n]+/).map(value => value.trim()).filter(Boolean).map((note, index) => <span key={index}>{note}</span>)}</div></div>}
               <button className="edit-bean" onClick={() => edit(bean)} aria-label={`${bean.name} 기본 정보 수정`}>기본 정보 수정 ↗</button>
               <BeanComments bean={bean} notes={notes.filter(note => note.beanId === bean.id)} onAdd={note => setNotes([...notes, note])} />
