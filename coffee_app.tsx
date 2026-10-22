@@ -15,6 +15,8 @@ const PAGES = ["Beans", "Brew Log", "Brew Stats"] as const;
 const PAGE_LABELS = { Beans: "원두 재고", "Brew Log": "브루잉 기록", "Brew Stats": "브루잉 통계" };
 
 type Page = (typeof PAGES)[number];
+const PAGE_HASHES: Record<Page, string> = { Beans: "#beans", "Brew Log": "#brews", "Brew Stats": "#stats" };
+const pageFromHash = (hash: string): Page => ({ "#beans": "Beans", "#brews": "Brew Log", "#stats": "Brew Stats" }[hash.toLowerCase()] as Page | undefined) ?? "Beans";
 type StorageSetter<T> = (value: T) => void;
 type BeanSort = "registered" | "latest" | "roastOldest" | "remaining" | "unitPriceDesc" | "unitPriceAsc";
 
@@ -139,17 +141,34 @@ const emptyNoteForm = (): TastingNoteForm => ({
 });
 
 export default function App() {
-  const [page, setPage] = useState<Page>("Beans");
+  const [page, setPage] = useState<Page>(() => pageFromHash(window.location.hash));
   const [openBrewForm, setOpenBrewForm] = useState(false);
   const { user, loading: authLoading } = useAuth();
   const [beans, setBeans] = useStorage<Bean[]>(STORAGE_KEYS.beans, [], user?.id ?? null);
   const [brews, setBrews] = useStorage<Brew[]>(STORAGE_KEYS.brews, [], user?.id ?? null);
   const [notes, setNotes] = useStorage<TastingNote[]>(STORAGE_KEYS.notes, [], user?.id ?? null);
+  const navigate = (nextPage: Page) => {
+    const nextHash = PAGE_HASHES[nextPage];
+    if (window.location.hash !== nextHash) window.history.pushState({ page: nextPage }, "", nextHash);
+    setPage(nextPage);
+  };
+
+  useEffect(() => {
+    const syncPageFromUrl = () => setPage(pageFromHash(window.location.hash));
+    const resolvedPage = pageFromHash(window.location.hash);
+    if (window.location.hash !== PAGE_HASHES[resolvedPage]) window.history.replaceState({ page: resolvedPage }, "", PAGE_HASHES[resolvedPage]);
+    window.addEventListener("popstate", syncPageFromUrl);
+    window.addEventListener("hashchange", syncPageFromUrl);
+    return () => {
+      window.removeEventListener("popstate", syncPageFromUrl);
+      window.removeEventListener("hashchange", syncPageFromUrl);
+    };
+  }, []);
 
   return (
     <div style={{ fontFamily: FONT, maxWidth: 960, margin: "0 auto", padding: "0 0 3rem" }}>
-      <Header page={page} setPage={setPage} user={user} authLoading={authLoading} />
-      {page === "Beans" && <BeansPage beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} userId={user?.id ?? null} onBrew={() => { setOpenBrewForm(true); setPage("Brew Log"); }} />}
+      <Header page={page} setPage={navigate} user={user} authLoading={authLoading} />
+      {page === "Beans" && <BeansPage beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} userId={user?.id ?? null} onBrew={() => { setOpenBrewForm(true); navigate("Brew Log"); }} />}
       {page === "Brew Log" && <BrewLog beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} openInitially={openBrewForm} onOpened={() => setOpenBrewForm(false)} />}
       {page === "Brew Stats" && <BrewStats beans={beans} brews={brews} />}
     </div>
