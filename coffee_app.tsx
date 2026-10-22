@@ -495,6 +495,11 @@ function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, openInitia
     return brewSort === "latest" ? b.date.localeCompare(a.date) || b.id - a.id : a.date.localeCompare(b.date) || a.id - b.id;
   });
   const activeBeans = beans.filter(b => !b.deleted && b.remaining > 0);
+  const recentRecipes = [...new Map([...brews]
+    .sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)
+    .map(brew => brew.recipe.trim())
+    .filter(Boolean)
+    .map(recipe => [recipe, recipe])).values()].slice(0, 5);
 
   return (
     <div>
@@ -516,12 +521,13 @@ function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, openInitia
             <Field label="투입 물 양(g)"><input type="number" min="0" step="0.1" value={form.waterAmount} onChange={e => setForm({ ...form, waterAmount: e.target.value })} style={{ width: "100%", boxSizing: "border-box", fontFamily: FONT }} placeholder="예: 300" /></Field>
             <Field label="날짜*"><input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} style={{ width: "100%", boxSizing: "border-box", fontFamily: FONT }} /></Field>
           </div>
-          <div style={{ marginTop: 10 }}>
+          <div className="recipe-memo-field">
             <Field label="레시피 메모">
-              <textarea value={form.recipe} onChange={e => setForm({ ...form, recipe: e.target.value })} rows={2} style={{ width: "100%", boxSizing: "border-box", resize: "vertical", fontFamily: FONT }} placeholder="레시피, 추출 파라미터 등..." />
+              <textarea value={form.recipe} onChange={e => setForm({ ...form, recipe: e.target.value })} rows={1} style={{ width: "100%", boxSizing: "border-box", resize: "vertical", fontFamily: FONT }} placeholder="레시피, 추출 파라미터 등..." />
             </Field>
+            {recentRecipes.length > 0 && <div className="recent-recipes" aria-label="최근 사용한 레시피"><span>최근 레시피</span><div>{recentRecipes.map(recipe => <button type="button" key={recipe} title={recipe} onClick={() => setForm({ ...form, recipe })}>{recipe}</button>)}</div></div>}
           </div>
-          <div className="brew-note-form"><Field label="컵 노트 / 느낀점"><textarea value={noteMemo} onChange={e => setNoteMemo(e.target.value)} rows={2} style={{ width: "100%", boxSizing: "border-box", resize: "vertical", fontFamily: FONT }} placeholder="오늘의 맛과 느낌을 자유롭게 기록해보세요..." /></Field><div><span className="brew-rating-label">별점</span><StarRating value={noteRating} onChange={setNoteRating} /></div></div>
+          <div className="brew-note-form"><Field label="컵 노트 / 느낀점"><textarea value={noteMemo} onChange={e => setNoteMemo(e.target.value)} rows={1} style={{ width: "100%", boxSizing: "border-box", resize: "vertical", fontFamily: FONT }} placeholder="오늘의 맛과 느낌을 자유롭게 기록해보세요..." /></Field><div><span className="brew-rating-label">별점</span><StarRating value={noteRating} onChange={setNoteRating} /></div></div>
           <FormActions onSave={add} onCancel={() => { setShow(false); setEditingId(null); setForm(emptyBrewForm()); setNoteMemo(""); setNoteRating(0); }} saveLabel={editingId === null ? "저장 (재고 차감)" : "수정 저장"} />
         </FormCard>
       )}

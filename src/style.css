@@ -150,6 +150,13 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .brew-recipe-block p:not(.brew-metrics) { font-size: 15px; }
 .brew-note-block .flavor-tags { margin-bottom: 5px; }
 .brew-note-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: end; margin-top: 10px; }
+.recipe-memo-field { margin-top: 10px; }
+.brew-form-grid input[type="number"], .brew-form-grid input[type="date"], .brew-form-grid select, .recipe-memo-field textarea, .brew-note-form textarea { min-height: 42px; height: 42px; line-height: 20px; padding-top: 10px; padding-bottom: 10px; }
+.recent-recipes { display: grid; gap: 6px; margin-top: 9px; }
+.recent-recipes > span { color: #8b7a64; font-size: 11px; }
+.recent-recipes > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.recent-recipes button { max-width: min(260px, 100%); overflow: hidden; border: 1px solid #e0d2c0; border-radius: 999px; background: #faf6f0; color: #765d42; padding: 6px 10px; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.recent-recipes button:hover { border-color: #ae9272; background: #f0e6d8; color: #5f452c; }
 .brew-rating-label { display: block; margin-bottom: 4px; font-size: 12px; color: var(--color-text-secondary); font-family: inherit; }
 .star-rating { display: flex; gap: 1px; height: 32px; align-items: center; }
 .star-rating-star { position: relative; display: inline-block; width: 24px; height: 30px; color: #d7c8b5; font-size: 26px; line-height: 30px; }
@@ -465,3 +472,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .stock-meter { height: 8px; }
   .stock-dates { font-size: 8px; margin-top: 10px; gap: 4px; }
 }
+
+/* Keep the compact brewing form controls on one consistent baseline. */
+.brew-form-grid input[type="number"], .brew-form-grid input[type="date"], .brew-form-grid select, .recipe-memo-field textarea, .brew-note-form textarea { min-height: 38px; height: 38px; padding-top: 8px; padding-bottom: 8px; }
+.recipe-memo-field textarea::placeholder, .brew-note-form textarea::placeholder { font-size: 12px; }
