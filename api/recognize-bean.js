@@ -1,6 +1,6 @@
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
 const SUPPORTED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
 
 const beanSchema = {
   type: "object",
@@ -24,6 +24,16 @@ function getBody(request) {
 
 function errorMessage(payload) {
   return payload?.error?.message || "Gemini가 사진을 읽지 못했어요. 잠시 후 다시 시도해주세요.";
+}
+
+function interactionText(payload) {
+  if (typeof payload?.output_text === "string") return payload.output_text;
+  return payload?.steps
+    ?.filter(step => step?.type === "model_output")
+    .flatMap(step => step.content ?? [])
+    .filter(content => content?.type === "text" && typeof content.text === "string")
+    .map(content => content.text)
+    .join("") ?? "";
 }
 
 export default async function handler(request, response) {
@@ -51,7 +61,7 @@ export default async function handler(request, response) {
     }
 
     const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`,
+      "https://generativelanguage.googleapis.com/v1beta/interactions",
       {
         method: "POST",
         headers: {
@@ -59,26 +69,23 @@ export default async function handler(request, response) {
           "x-goog-api-key": process.env.GEMINI_API_KEY
         },
         body: JSON.stringify({
-          contents: [{
-            parts: [
-              {
-                text: "이 사진은 커피 원두 봉투 라벨입니다. 라벨에서 명확히 읽을 수 있는 정보만 추출하세요. 추측하거나 번역해서 보완하지 마세요. 원산지, 농장·지역, 품종, 가공방식, 로스터리, 컵노트, 구매량(g), 로스팅 날짜, 가격(원)을 찾습니다. 컵노트는 쉼표로 나눕니다. 날짜가 연·월·일까지 명확하면 YYYY-MM-DD로 정규화하고, 그렇지 않으면 필드를 생략하세요. 값이 없거나 불확실하면 해당 필드를 생략하세요."
-              },
-              { inlineData: { mimeType, data: base64 } }
-            ]
-          }],
-          generationConfig: {
-            responseMimeType: "application/json",
-            responseJsonSchema: beanSchema,
-            temperature: 0
-          }
+          model: GEMINI_MODEL,
+          input: [
+            { type: "image", mime_type: mimeType, data: base64 },
+            {
+              type: "text",
+              text: "이 사진은 커피 원두 봉투 라벨입니다. 라벨에서 명확히 읽을 수 있는 정보만 추출하세요. 추측하거나 번역해서 보완하지 마세요. 원산지, 농장·지역, 품종, 가공방식, 로스터리, 컵노트, 구매량(g), 로스팅 날짜, 가격(원)을 찾습니다. 컵노트는 쉼표로 나눕니다. 날짜가 연·월·일까지 명확하면 YYYY-MM-DD로 정규화하고, 그렇지 않으면 필드를 생략하세요. 값이 없거나 불확실하면 해당 필드를 생략하세요."
+            }
+          ],
+          response_format: { type: "text", mime_type: "application/json", schema: beanSchema },
+          store: false
         })
       }
     );
     const payload = await geminiResponse.json();
     if (!geminiResponse.ok) return response.status(geminiResponse.status).json({ error: errorMessage(payload) });
 
-    const text = payload?.candidates?.[0]?.content?.parts?.find(part => typeof part.text === "string")?.text;
+    const text = interactionText(payload);
     if (!text) return response.status(422).json({ error: "사진에서 원두 정보를 찾지 못했어요." });
     return response.status(200).json({ bean: JSON.parse(text) });
   } catch (error) {
