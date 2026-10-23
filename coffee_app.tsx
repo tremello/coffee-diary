@@ -60,9 +60,13 @@ const PAGE_HASHES: Record<Page, string> = { Beans: "#beans", "Brew Log": "#brews
 const pageFromHash = (hash: string): Page => ({ "#beans": "Beans", "#brews": "Brew Log", "#recipes": "Recipes", "#stats": "Brew Stats" }[hash.toLowerCase()] as Page | undefined) ?? "Beans";
 type StorageSetter<T> = (value: T) => void;
 type BeanSort = "registered" | "latest" | "roastOldest" | "remaining" | "unitPriceDesc" | "unitPriceAsc";
-type BeanFacetKey = "origin" | "roastery" | "variety" | "process" | "status";
+type BeanFacetKey = "origin" | "roastery" | "variety" | "process" | "note" | "status" | "remaining" | "age";
 type BeanFacetFilters = Record<BeanFacetKey, string[]>;
-const emptyBeanFacetFilters = (): BeanFacetFilters => ({ origin: [], roastery: [], variety: [], process: [], status: [] });
+const BEAN_FACET_KEYS: BeanFacetKey[] = ["origin", "variety", "process", "roastery", "note", "status", "remaining", "age"];
+const emptyBeanFacetFilters = (): BeanFacetFilters => ({ origin: [], roastery: [], variety: [], process: [], note: [], status: [], remaining: [], age: [] });
+const REMAINING_OPTIONS = ["100g 이하", "100~200g", "200g 이상"];
+const AGE_OPTIONS = ["D+7 이내", "D+8~30", "D+31 이상"];
+const splitCupNotes = (value?: string) => (value ?? "").split(/[\s,·、\n]+/).map(note => note.trim()).filter(Boolean);
 
 type Bean = {
   id: number;
@@ -358,6 +362,9 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
   const [priceMax, setPriceMax] = useState("");
   const [roastFrom, setRoastFrom] = useState("");
   const [roastTo, setRoastTo] = useState("");
+  const [purchaseFrom, setPurchaseFrom] = useState("");
+  const [purchaseTo, setPurchaseTo] = useState("");
+  const [beanQuery, setBeanQuery] = useState("");
   const [error, setError] = useState("");
   const [roastDateTouched, setRoastDateTouched] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -389,30 +396,70 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
   const active = available.filter(b => b.remaining > 0);
   const shippingAndDegassingWeight = active.filter(bean => bean.status === "배송 중" || bean.status === "디개싱 중").reduce((sum, bean) => sum + bean.remaining, 0);
   const consumingWeight = active.filter(bean => (bean.status ?? "소비 중") === "소비 중").reduce((sum, bean) => sum + bean.remaining, 0);
-  const facetValue = (bean: Bean, key: BeanFacetKey) => {
-    if (key === "origin") return bean.origin?.trim() ?? "";
-    if (key === "roastery") return bean.roastery?.trim() ?? "";
-    if (key === "variety") return bean.variety?.trim() ?? "";
-    if (key === "process") return bean.process?.trim() ?? "";
-    return bean.status ?? "소비 중";
+  const today = localDate();
+  const beanFacetValues = (bean: Bean, key: BeanFacetKey): string[] => {
+    if (key === "status") return [bean.status ?? "소비 중"];
+    if (key === "note") return splitCupNotes(bean.roasteryNotes);
+    if (key === "remaining") return [bean.remaining <= 100 ? REMAINING_OPTIONS[0] : bean.remaining <= 200 ? REMAINING_OPTIONS[1] : REMAINING_OPTIONS[2]];
+    if (key === "age") {
+      if (!bean.roastDate) return [];
+      const days = Math.round((Date.parse(today) - Date.parse(bean.roastDate)) / 86_400_000);
+      if (!Number.isFinite(days)) return [];
+      return [days <= 7 ? AGE_OPTIONS[0] : days <= 30 ? AGE_OPTIONS[1] : AGE_OPTIONS[2]];
+    }
+    const value = bean[key]?.trim();
+    return value ? [value] : [];
   };
-  const facetValues = (key: BeanFacetKey) => [...new Set(available.map(bean => facetValue(bean, key)).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko"));
   const toggleFacet = (key: BeanFacetKey, value: string) => setFacetFilters(current => ({ ...current, [key]: current[key].includes(value) ? current[key].filter(item => item !== value) : [...current[key], value] }));
-  const activeFacetCount = Object.values(facetFilters).reduce((sum, values) => sum + values.length, 0);
-  const activeRangeCount = Number(Boolean(priceMin || priceMax)) + Number(Boolean(roastFrom || roastTo));
-  const activeDetailCount = activeFacetCount + activeRangeCount;
-  const facetMatches = (bean: Bean) => (Object.keys(facetFilters) as BeanFacetKey[]).every(key => facetFilters[key].length === 0 || facetFilters[key].includes(facetValue(bean, key)));
+  const queryTerms = beanQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const queryMatches = (bean: Bean) => {
+    if (!queryTerms.length) return true;
+    const text = [bean.name, bean.origin, bean.farm, bean.variety, bean.process, bean.roastery, bean.roasteryNotes, bean.flavor, bean.memo, ...notes.filter(note => note.beanId === bean.id).flatMap(note => [note.flavor, note.memo])].filter(Boolean).join(" ").toLowerCase();
+    return queryTerms.every(term => text.includes(term));
+  };
   const rangeMatches = (bean: Bean) => {
-    const price = Number(bean.price);
-    const minimumPrice = priceMin === "" ? 0 : Number(priceMin);
-    const maximumPrice = priceMax === "" ? Infinity : Number(priceMax);
-    if (!Number.isFinite(price) || price < minimumPrice || price > maximumPrice) return false;
+    if (priceMin !== "" || priceMax !== "") {
+      const price = Number(bean.price);
+      const minimumPrice = priceMin === "" ? 0 : Number(priceMin);
+      const maximumPrice = priceMax === "" ? Infinity : Number(priceMax);
+      if (!bean.price || !Number.isFinite(price) || price < minimumPrice || price > maximumPrice) return false;
+    }
     if (roastFrom && (!bean.roastDate || bean.roastDate < roastFrom)) return false;
     if (roastTo && (!bean.roastDate || bean.roastDate > roastTo)) return false;
+    if (purchaseFrom && (!bean.date || bean.date < purchaseFrom)) return false;
+    if (purchaseTo && (!bean.date || bean.date > purchaseTo)) return false;
     return true;
   };
-  const clearDetailFilters = () => { setFacetFilters(emptyBeanFacetFilters()); setPriceMin(""); setPriceMax(""); setRoastFrom(""); setRoastTo(""); };
-  const visible = available.filter(b => (filter === "all" || (filter === "active" ? b.remaining > 0 : b.remaining <= 0)) && (qualityFilter === "all" || b.quality === qualityFilter) && facetMatches(b) && rangeMatches(b));
+  const tabMatches = (bean: Bean) => filter === "all" || (filter === "active" ? bean.remaining > 0 : bean.remaining <= 0);
+  // A facet's own selection is ignored when counting its options, so each chip shows how many beans picking it would add.
+  const beanMatches = (bean: Bean, exceptFacet?: BeanFacetKey) => tabMatches(bean) && queryMatches(bean) && rangeMatches(bean) && (qualityFilter === "all" || bean.quality === qualityFilter)
+    && BEAN_FACET_KEYS.every(key => key === exceptFacet || facetFilters[key].length === 0 || beanFacetValues(bean, key).some(value => facetFilters[key].includes(value)));
+  const facetOptions = (key: BeanFacetKey) => {
+    const fixed: Partial<Record<BeanFacetKey, readonly string[]>> = { process: DEFAULT_PROCESSES, status: BEAN_STATUSES, remaining: REMAINING_OPTIONS, age: AGE_OPTIONS };
+    const usage = new Map<string, number>();
+    available.forEach(bean => beanFacetValues(bean, key).forEach(value => usage.set(value, (usage.get(value) ?? 0) + 1)));
+    let values = [...new Set([...(fixed[key] ?? []), ...(key === "origin" ? origins : []), ...usage.keys()])];
+    if (!fixed[key]) values.sort((a, b) => a.localeCompare(b, "ko"));
+    if (key === "note") values = values.sort((a, b) => (usage.get(b) ?? 0) - (usage.get(a) ?? 0)).slice(0, 12);
+    values = [...new Set([...values, ...facetFilters[key]])];
+    const counts = new Map<string, number>();
+    available.filter(bean => beanMatches(bean, key)).forEach(bean => beanFacetValues(bean, key).forEach(value => counts.set(value, (counts.get(value) ?? 0) + 1)));
+    return values.map(value => ({ value, count: counts.get(value) ?? 0 }));
+  };
+  const qualityCount = (quality: BeanQuality) => available.filter(bean => tabMatches(bean) && queryMatches(bean) && rangeMatches(bean) && bean.quality === quality
+    && BEAN_FACET_KEYS.every(key => facetFilters[key].length === 0 || beanFacetValues(bean, key).some(value => facetFilters[key].includes(value)))).length;
+  const rangeLabel = (from: string, to: string, after: string, before: string) => from && to ? `${from} ~ ${to}` : from ? `${from} ${after}` : `${to} ${before}`;
+  const activeFilterChips = [
+    ...(beanQuery.trim() ? [{ key: "query", label: `"${beanQuery.trim()}" 검색`, clear: () => setBeanQuery("") }] : []),
+    ...BEAN_FACET_KEYS.flatMap(key => facetFilters[key].map(value => ({ key: `${key}:${value}`, label: key === "note" ? `#${value}` : value, clear: () => toggleFacet(key, value) }))),
+    ...(qualityFilter !== "all" ? [{ key: "quality", label: qualityFilter, clear: () => setQualityFilter("all") }] : []),
+    ...(priceMin || priceMax ? [{ key: "price", label: `구매가 ${rangeLabel(priceMin && `₩${fmt(priceMin)}`, priceMax && `₩${fmt(priceMax)}`, "이상", "이하")}`, clear: () => { setPriceMin(""); setPriceMax(""); } }] : []),
+    ...(roastFrom || roastTo ? [{ key: "roast", label: `로스팅 ${rangeLabel(roastFrom, roastTo, "이후", "이전")}`, clear: () => { setRoastFrom(""); setRoastTo(""); } }] : []),
+    ...(purchaseFrom || purchaseTo ? [{ key: "purchase", label: `구매일 ${rangeLabel(purchaseFrom, purchaseTo, "이후", "이전")}`, clear: () => { setPurchaseFrom(""); setPurchaseTo(""); } }] : []),
+  ];
+  const activeDetailCount = activeFilterChips.length;
+  const clearDetailFilters = () => { setFacetFilters(emptyBeanFacetFilters()); setQualityFilter("all"); setBeanQuery(""); setPriceMin(""); setPriceMax(""); setRoastFrom(""); setRoastTo(""); setPurchaseFrom(""); setPurchaseTo(""); };
+  const visible = available.filter(bean => beanMatches(bean));
   const sortedVisible = [...visible].sort((a, b) => {
     if (sort === "latest") return b.id - a.id;
     if (sort === "remaining") return a.remaining - b.remaining || b.id - a.id;
@@ -519,11 +566,14 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
     setBeans(beans.map(bean => bean.id === beanId ? { ...bean, status } : bean));
     setEditingStatusId(null);
   };
-  const facetGroup = (key: BeanFacetKey, label: string) => {
-    const values = facetValues(key);
-    if (!values.length) return null;
-    return <fieldset className="facet-group" key={key}><legend>{label}</legend><div className="facet-options">{values.map(value => <button type="button" key={value} aria-pressed={facetFilters[key].includes(value)} onClick={() => toggleFacet(key, value)}>{value}</button>)}</div></fieldset>;
+  const facetGroup = (key: BeanFacetKey, label: string, emptyText = "등록된 정보 없음") => {
+    const options = facetOptions(key);
+    return <fieldset className="facet-group" key={key}><legend>{label}</legend>{options.length ? <div className="facet-options">{options.map(({ value, count }) => {
+      const pressed = facetFilters[key].includes(value);
+      return <button type="button" key={value} aria-pressed={pressed} disabled={!pressed && count === 0} onClick={() => toggleFacet(key, value)}>{key === "note" ? `#${value}` : value}<small>{count}</small></button>;
+    })}</div> : <p className="facet-empty">{emptyText}</p>}</fieldset>;
   };
+  const dateRange = (label: string, from: string, setFrom: (value: string) => void, to: string, setTo: (value: string) => void) => <fieldset className="range-filter-group"><legend>{label}</legend><div><input type="date" value={from} onChange={event => setFrom(event.target.value)} aria-label={`${label} 시작일`} /><span>~</span><input type="date" value={to} onChange={event => setTo(event.target.value)} aria-label={`${label} 종료일`} /></div></fieldset>;
   const save = (event: React.FormEvent) => {
     event.preventDefault();
     const purchased = Number(form.purchased);
@@ -541,8 +591,8 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
   };
   return (
     <main className="inventory">
-      <div className="inventory-intro"><div><p className="eyebrow">MY BEAN SHELF</p><h2>지금, 내 원두</h2><p>좋아하는 맛을 기록하고, 남은 원두를 한눈에.</p></div>
-        <div className="intro-actions"><button className="secondary-button" onClick={onBrew}>브루잉 기록하기</button><button className="primary-button" onClick={() => { close(); setShow(true); }}>+ 원두 추가</button></div></div>
+      <div className="inventory-intro"><div><p>좋아하는 맛을 기록하고, 남은 원두를 한눈에.</p></div>
+        <div className="intro-actions"><button className="secondary-button" onClick={onBrew}>브루잉 추가</button><button className="primary-button" onClick={() => { close(); setShow(true); }}>+ 원두 추가</button></div></div>
       <div className="inventory-summary">
         <div className="summary-primary"><span>보유 중</span><strong>{active.length}<small>종</small>{fmt(Math.round(active.reduce((sum, b) => sum + b.remaining, 0) * 10) / 10)}<small>g</small></strong></div>
         <div className="summary-details"><div className="summary-status-breakdown"><span>배송·디개싱 중 <b>{fmt(Math.round(shippingAndDegassingWeight * 10) / 10)}g</b></span><span>소비 중 <b>{fmt(Math.round(consumingWeight * 10) / 10)}g</b></span></div></div>
@@ -586,8 +636,21 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
       </form>}
       <div className="inventory-toolbar"><div className="inventory-toolbar-top"><label className="view-mode-control" htmlFor="bean-density">보기<select id="bean-density" className="inventory-sort" value={density} onChange={event => setDensity(event.target.value as "detail" | "compact")}><option value="detail">자세히</option><option value="compact">간략하게</option></select></label><button type="button" className="advanced-filter-button" aria-expanded={advancedFiltersOpen} onClick={() => setAdvancedFiltersOpen(!advancedFiltersOpen)}>세부 검색{activeDetailCount > 0 && <b>{activeDetailCount}</b>}</button></div><div className="inventory-toolbar-row"><div className="inventory-filters" aria-label="원두 재고 필터">
         {[["active", "보유 중"], ["finished", "소비 완료"], ["all", "전체"]].map(([value, label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}
-      </div><div className="inventory-toolbar-meta"><label htmlFor="quality-filter">분류</label><select id="quality-filter" className="inventory-sort" value={qualityFilter} onChange={event => setQualityFilter(event.target.value as "all" | BeanQuality)}><option value="all">전체</option>{BEAN_QUALITIES.map(quality => <option key={quality} value={quality}>{quality}</option>)}</select><label htmlFor="bean-sort">정렬</label><select id="bean-sort" className="inventory-sort" value={sort} onChange={event => setSort(event.target.value as BeanSort)}><option value="registered">등록순</option><option value="latest">최신순</option><option value="roastOldest">로스팅 날짜 빠른 순</option><option value="remaining">재고 적은 순</option><option value="unitPriceDesc">단가 높은 순</option><option value="unitPriceAsc">단가 낮은 순</option></select></div></div></div>
-      {advancedFiltersOpen && <section className="advanced-filter-panel" aria-label="원두 세부 검색"><div className="advanced-filter-header"><div><strong>세부 검색</strong><span>여러 조건을 함께 선택할 수 있어요.</span></div>{activeDetailCount > 0 && <button type="button" onClick={clearDetailFilters}>초기화</button>}</div><div className="facet-grid">{facetGroup("origin", "원산지")}{facetGroup("roastery", "로스터리")}{facetGroup("variety", "품종")}{facetGroup("process", "가공방식")}{facetGroup("status", "원두 상태")}</div><div className="range-filter-grid"><fieldset className="range-filter-group"><legend>구매가 (원)</legend><div><input type="number" min="0" value={priceMin} onChange={event => setPriceMin(event.target.value)} placeholder="최소" aria-label="최소 구매가" /><span>~</span><input type="number" min="0" value={priceMax} onChange={event => setPriceMax(event.target.value)} placeholder="최대" aria-label="최대 구매가" /></div></fieldset><fieldset className="range-filter-group range-filter-quality"><legend>가격 구분</legend><div className="facet-options">{BEAN_QUALITIES.map(quality => <button type="button" key={quality} aria-pressed={qualityFilter === quality} onClick={() => setQualityFilter(qualityFilter === quality ? "all" : quality)}>{quality}</button>)}</div></fieldset><fieldset className="range-filter-group"><legend>로스팅 날짜</legend><div><input type="date" value={roastFrom} onChange={event => setRoastFrom(event.target.value)} aria-label="로스팅 시작일" /><span>~</span><input type="date" value={roastTo} onChange={event => setRoastTo(event.target.value)} aria-label="로스팅 종료일" /></div></fieldset></div></section>}
+      </div><div className="inventory-toolbar-meta"><label htmlFor="bean-sort">정렬</label><select id="bean-sort" className="inventory-sort" value={sort} onChange={event => setSort(event.target.value as BeanSort)}><option value="registered">등록순</option><option value="latest">최신순</option><option value="roastOldest">로스팅 날짜 빠른 순</option><option value="remaining">재고 적은 순</option><option value="unitPriceDesc">단가 높은 순</option><option value="unitPriceAsc">단가 낮은 순</option></select></div></div></div>
+      {advancedFiltersOpen && <section className="advanced-filter-panel" aria-label="원두 세부 검색">
+        <div className="advanced-filter-header"><div><strong>세부 검색</strong><span>여러 조건을 함께 고를 수 있어요. 숫자는 해당하는 원두 수예요.</span></div></div>
+        <label className="advanced-filter-search"><span className="sr-only">원두 검색</span><input type="search" value={beanQuery} onChange={event => setBeanQuery(event.target.value)} placeholder="원두 이름, 농장, 로스터리, 컵노트, 메모 검색" /></label>
+        <section className="filter-section" aria-label="원두 정보"><h4>원두 정보</h4><div className="facet-grid">{facetGroup("origin", "원산지")}{facetGroup("variety", "품종")}{facetGroup("process", "가공방식")}{facetGroup("roastery", "로스터리")}{facetGroup("note", "컵노트")}</div></section>
+        <section className="filter-section" aria-label="상태·재고"><h4>상태·재고</h4><div className="facet-grid">{facetGroup("status", "원두 상태")}{facetGroup("remaining", "남은 양")}{facetGroup("age", "로스팅 후", "로스팅 날짜 정보 없음")}</div></section>
+        <section className="filter-section" aria-label="가격·날짜"><h4>가격·날짜</h4><div className="facet-grid">
+          <fieldset className="facet-group"><legend>가격 구분</legend><div className="facet-options">{BEAN_QUALITIES.map(quality => { const pressed = qualityFilter === quality; const count = qualityCount(quality); return <button type="button" key={quality} aria-pressed={pressed} disabled={!pressed && count === 0} onClick={() => setQualityFilter(pressed ? "all" : quality)}>{quality}<small>{count}</small></button>; })}</div></fieldset>
+          <fieldset className="range-filter-group"><legend>구매가 (원)</legend><div><input type="number" min="0" inputMode="numeric" value={priceMin} onChange={event => setPriceMin(event.target.value)} placeholder="최소" aria-label="최소 구매가" /><span>~</span><input type="number" min="0" inputMode="numeric" value={priceMax} onChange={event => setPriceMax(event.target.value)} placeholder="최대" aria-label="최대 구매가" /></div></fieldset>
+          {dateRange("로스팅 날짜", roastFrom, setRoastFrom, roastTo, setRoastTo)}
+          {dateRange("구매일", purchaseFrom, setPurchaseFrom, purchaseTo, setPurchaseTo)}
+        </div></section>
+        <div className="advanced-filter-footer"><span role="status">원두 <b>{visible.length}</b>개 찾음</span><div><button type="button" className="quiet-button" onClick={clearDetailFilters} disabled={activeDetailCount === 0}>초기화</button><button type="button" className="primary-button" onClick={() => setAdvancedFiltersOpen(false)}>닫기</button></div></div>
+      </section>}
+      {!advancedFiltersOpen && activeFilterChips.length > 0 && <div className="active-filter-chips" aria-label="적용된 세부 검색 조건">{activeFilterChips.map(chip => <button type="button" key={chip.key} onClick={chip.clear} aria-label={`${chip.label} 조건 해제`}>{chip.label}<span aria-hidden="true">×</span></button>)}<button type="button" className="active-filter-clear" onClick={clearDetailFilters}>모두 지우기</button></div>}
       <div className={`bean-list density-${density}`}>
         {sortedVisible.map(bean => {
           const pct = bean.purchased > 0 ? Math.max(0, Math.min(100, bean.remaining / bean.purchased * 100)) : 0;
@@ -598,10 +661,10 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
               <BeanDates bean={bean} />
               <div className="compact-summary"><strong>{bean.roastery || "로스터리 미입력"}</strong><time className="compact-roast" dateTime={bean.roastDate}>로스팅 : {bean.roastDate || "날짜 미입력"}</time><b>{bean.name}</b>{bean.roasteryNotes && <span className="compact-cup-notes">{bean.roasteryNotes.split(/[\s,·、\n]+/).map(value => value.trim()).filter(Boolean).map((note, index) => <i key={index}>{note}</i>)}</span>}</div>
               {bean.roasteryNotes && <div className="roastery-cup-notes"><span className="detail-label">로스터리 컵노트</span><div className="flavor-tags">{bean.roasteryNotes.split(/[\s,·、\n]+/).map(value => value.trim()).filter(Boolean).map((note, index) => <span key={index}>{note}</span>)}</div></div>}
-              <div className="bean-card-actions"><button className="edit-bean" onClick={() => edit(bean)} aria-label={`${bean.name} 기본 정보 수정`}>기본 정보 수정 ↗</button><details className="record-details"><summary>기록 보기</summary><BeanComments bean={bean} notes={notes.filter(note => note.beanId === bean.id)} onAdd={note => setNotes([...notes, note])} /></details></div>
+              <div className="bean-card-actions"><button className="edit-bean" onClick={() => edit(bean)} aria-label={`${bean.name} 원두 정보 수정`}>원두 정보 수정</button><details className="record-details"><summary>내 메모 보기</summary><BeanComments bean={bean} notes={notes.filter(note => note.beanId === bean.id)} onAdd={note => setNotes([...notes, note])} /></details></div>
             </div>
             <div className="bean-stock">
-              <div className="stock-status-row">{editingStatusId === bean.id ? <select className="stock-status-select" value={bean.status ?? "소비 중"} aria-label={`${bean.name} 상태`} onChange={event => updateStatus(bean.id, event.target.value as BeanStatus)}>{BEAN_STATUSES.map(status => <option key={status} value={status}>{status}</option>)}</select> : <><span className={`stock-status ${pct <= 20 ? "low" : ""}`}>{bean.remaining <= 0 ? "다 마셨어요" : bean.status ?? "소비 중"}</span><button type="button" className="status-edit-button" onClick={() => setEditingStatusId(bean.id)}>수정</button></>}</div>
+              <div className="stock-status-row">{editingStatusId === bean.id ? <select className="stock-status-select" value={bean.status ?? "소비 중"} aria-label={`${bean.name} 상태`} onChange={event => updateStatus(bean.id, event.target.value as BeanStatus)}>{BEAN_STATUSES.map(status => <option key={status} value={status}>{status}</option>)}</select> : <><span className={`stock-status ${pct <= 20 ? "low" : ""}`}>{bean.remaining <= 0 ? "다 마셨어요" : bean.status ?? "소비 중"}</span><button type="button" className="status-edit-button" onClick={() => setEditingStatusId(bean.id)}>상태 변경</button></>}</div>
               <p className="remaining-label">남은 원두</p>
               <p className="remaining-weight">{fmt(bean.remaining)}<span>g</span></p>
               <p className="purchased-weight">구매 {fmt(bean.purchased)}g</p>
@@ -648,14 +711,14 @@ function BeanComments({ bean, notes, onAdd }: { bean: Bean; notes: TastingNote[]
     onAdd({ ...emptyNoteForm(), id: Date.now(), beanId: bean.id, date, flavor: flavor.trim(), memo: memo.trim() });
     setFlavor(""); setMemo(""); setError(""); setOpen(false);
   };
-  return <section className="bean-comments" aria-label={`${bean.name} 기록`}>
-    <div className="comments-heading"><h4>기록 <span>{notes.length + Number(legacy)}</span></h4><button type="button" className="edit-bean" aria-expanded={open} onClick={() => setOpen(!open)}>+ 기록 남기기</button></div>
+  return <section className="bean-comments" aria-label={`${bean.name} 맛 메모`}>
+    <div className="comments-heading"><h4>맛 메모 <span>{notes.length + Number(legacy)}</span></h4><button type="button" className="edit-bean" aria-expanded={open} onClick={() => setOpen(!open)}>+ 맛 메모 추가</button></div>
     {open && <form className="comment-form" onSubmit={save}>
       <label>내린 날짜<input type="date" required value={date} onChange={e => setDate(e.target.value)} /></label>
       <label>향미 노트<input value={flavor} onChange={e => setFlavor(e.target.value)} placeholder="예: 자스민, 복숭아, 꿀" /></label>
       <label>오늘의 감상<textarea rows={3} value={memo} onChange={e => setMemo(e.target.value)} placeholder="오늘 내린 커피는 어땠나요?" /></label>
       {error && <p role="alert">{error}</p>}
-      <div className="form-buttons"><button type="button" className="quiet-button" onClick={() => { setOpen(false); setError(""); }}>취소</button><button className="primary-button" type="submit">기록 저장</button></div>
+      <div className="form-buttons"><button type="button" className="quiet-button" onClick={() => { setOpen(false); setError(""); }}>취소</button><button className="primary-button" type="submit">메모 저장</button></div>
     </form>}
     {!notes.length && !legacy && <p className="placeholder-note">마실 때마다 달라지는 맛을 남겨보세요.</p>}
     <div className={`comment-list ${expanded ? "expanded" : "collapsed"}`}>{(expanded ? sorted : sorted.slice(0, 1)).map(note => <div className="taste-comment" key={note.id}><time dateTime={note.date}>{note.date}</time>{note.flavor && <div className="flavor-tags">{note.flavor.split(/[,·、\n]+/).map(v => v.trim()).filter(Boolean).map((tag, index) => <span key={index}>{tag}</span>)}</div>}{note.memo && <p className="bean-memo">{note.memo}</p>}</div>)}
@@ -682,7 +745,7 @@ const defaultRecipeSteps = (): RecipeStep[] => [
 
 function RecipePage({ recipes, setRecipes }: { recipes: SavedRecipe[]; setRecipes: StorageSetter<SavedRecipe[]> }) {
   return <div className="recipe-page">
-    <div className="inventory-intro recipe-intro"><div><p className="eyebrow">MY RECIPES</p><h2>나의 레시피</h2><p>자주 쓰는 추출 흐름을 내 방식으로 저장해요.</p></div></div>
+    <div className="inventory-intro recipe-intro"><div><p>자주 쓰는 추출 흐름을 내 방식으로 저장해요.</p></div></div>
     <RecipeLibrary recipes={recipes} setRecipes={setRecipes} />
   </div>;
 }
@@ -863,8 +926,8 @@ function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, o
   return (
     <div className="brew-log">
       <div className="inventory-intro brew-log-heading">
-        <div><p className="eyebrow">BREWING LOG</p><h2>오늘의 브루잉</h2><p>총 {brews.length}회 브루잉을 기록했어요.</p></div>
-        <div className="brew-log-heading-actions"><button type="button" className="secondary-button brew-add-button" onClick={() => setShow(!show)}>+ 기록 추가</button></div>
+        <div><p>총 {brews.length}회 브루잉을 기록했어요.</p></div>
+        <div className="brew-log-heading-actions"><button type="button" className="primary-button brew-add-button" onClick={() => setShow(!show)}>+ 브루잉 추가</button></div>
       </div>
 
       {show && (
@@ -931,7 +994,7 @@ function BrewStats({ beans, brews }: { beans: Bean[]; brews: Brew[] }) {
     ? <p className="stats-empty">선택한 기간에 브루잉 기록이 없어요.</p>
     : <div className="usage-list">{items.map(([key, amount]) => <div className="usage-row" key={key}><span>{label(key)}</span><div className="usage-row-value"><div className="usage-bar"><i style={{ width: `${Math.max(8, amount / max * 100)}%` }} /></div><b>{fmt(Math.round(amount * 10) / 10)}g</b></div></div>)}</div>;
   return <div className="brew-stats">
-    <div className="inventory-intro stats-header"><div><p className="eyebrow">BREWING INSIGHTS</p><h2>나의 브루잉 흐름</h2><p>기간을 골라 내 기록을 가볍게 돌아봐요.</p></div><select aria-label="통계 기간" value={period} onChange={event => setPeriod(event.target.value as "all" | "7" | "30" | "90")}><option value="7">최근 7일</option><option value="30">최근 30일</option><option value="90">최근 90일</option><option value="all">전체 기간</option></select></div>
+    <div className="inventory-intro stats-header"><div><p>기간을 골라 내 기록을 가볍게 돌아봐요.</p></div><select aria-label="통계 기간" value={period} onChange={event => setPeriod(event.target.value as "all" | "7" | "30" | "90")}><option value="7">최근 7일</option><option value="30">최근 30일</option><option value="90">최근 90일</option><option value="all">전체 기간</option></select></div>
     <div className="stats-cards"><div><span>브루잉 횟수</span><strong>{filtered.length}<small>회</small></strong></div><div><span>사용한 원두</span><strong>{beanUsage.length}<small>종</small></strong></div><div><span>사용량</span><strong>{fmt(Math.round(totalAmount * 10) / 10)}<small>g</small></strong></div></div>
     <section className="stats-section"><h3>원두별 사용량</h3>{beanUsage.length === 0 ? <p className="stats-empty">선택한 기간에 브루잉 기록이 없어요.</p> : <div className="usage-list">{beanUsage.map(item => <div className="usage-row" key={item.name}><span>{item.name}</span><b>{fmt(Math.round(item.amount * 10) / 10)}g</b></div>)}</div>}</section>
     <section className="stats-section"><h3>일별 사용량</h3>{usageRows(dailyUsage, dailyMax, key => { const date = parseLocalDate(key); return `${date.getMonth() + 1}/${date.getDate()}`; })}</section>
@@ -1108,9 +1171,9 @@ function Field({ label, children, required = false, invalid = false }: { label: 
 
 function FormActions({ onSave, onCancel, saveLabel }: { onSave: () => void; onCancel: () => void; saveLabel: string }) {
   return (
-    <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-      <button onClick={onSave} style={{ padding: "6px 20px", fontSize: 13, border: "none", borderRadius: 20, background: "#8B6F47", color: "#fff", cursor: "pointer", fontFamily: FONT }}>{saveLabel}</button>
-      <button onClick={onCancel} style={{ padding: "6px 20px", fontSize: 13, border: "0.5px solid var(--color-border-tertiary)", borderRadius: 20, background: "transparent", cursor: "pointer", fontFamily: FONT }}>취소</button>
+    <div className="form-buttons">
+      <button type="button" className="quiet-button" onClick={onCancel}>취소</button>
+      <button type="button" className="primary-button" onClick={onSave}>{saveLabel}</button>
     </div>
   );
 }

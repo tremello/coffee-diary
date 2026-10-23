@@ -276,7 +276,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .getting-started b { display: grid; width: 24px; height: 24px; place-items: center; border-radius: 50%; color: #fffdf9; background: #806444; font-size: 12px; font-variant-numeric: tabular-nums; }
 @media (min-width: 721px) { #root { padding: 0 32px; } }
 @media (max-width: 540px) {
-  #root { padding-bottom: 7rem !important; }
+  #root { padding-bottom: calc(4rem + env(safe-area-inset-bottom)) !important; }
   .app-header { border-bottom: 0 !important; margin-bottom: 0 !important; }
   .account-actions { gap: 6px; }
   .brand-mark { width: 34px; height: 34px; }
@@ -309,53 +309,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .inventory-toolbar-meta { width: auto; gap: 3px; flex-wrap: nowrap; font-size: 10px; }
   .inventory-toolbar-meta .inventory-sort { max-width: 96px; }
   .bean-list { gap: 10px; }
-  .bean-list.density-compact .inventory-card { grid-template-columns: minmax(0, 1fr) 104px; }
-  .bean-list.density-compact .bean-info { padding: 14px 13px; }
-  .bean-list.density-compact .bean-info > .roastery,
-  .bean-list.density-compact .bean-info > h3,
-  .bean-list.density-compact .bean-info > .title-dates,
-  .bean-list.density-compact .bean-info > .roastery-cup-notes,
-  .bean-list.density-compact .bean-info > .bean-comments { display: none; }
-  .bean-list.density-compact .compact-summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 8px; color: #6f5a43; }
-  .bean-list.density-compact .compact-summary strong { min-width: 0; font-size: 12px; font-weight: 600; }
-  .bean-list.density-compact .compact-roast { align-self: start; padding: 2px 5px; border-radius: 5px; background: #f3ede4; color: #8b7a64; font-size: 9px; line-height: 1.3; white-space: nowrap; }
-  .bean-list.density-compact .compact-summary b { grid-column: 1 / -1; font-size: 16px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .bean-list.density-compact .compact-cup-notes { grid-column: 1 / -1; display: flex; min-width: 0; gap: 4px; overflow: hidden; }
-  .bean-list.density-compact .compact-cup-notes i { flex: 0 0 auto; max-width: 90px; overflow: hidden; text-overflow: ellipsis; padding: 3px 6px; border-radius: 5px; background: #f7f2eb; color: #806f5d; font-size: 12px; font-style: normal; line-height: 1.3; white-space: nowrap; }
-  .bean-list.density-compact .bean-card-actions { margin-top: 9px; font-size: 11px; }
-  .bean-list.density-compact .bean-card-actions .edit-bean { display: inline-block; margin-top: 0; font-size: 11px; }
-  .bean-list.density-compact .bean-card-actions .record-details { margin-top: 0; }
-  .bean-list.density-compact .record-details > summary { font-size: 11px; }
-  .bean-list.density-compact .record-details .bean-comments { margin-top: 8px; padding-top: 8px; }
-  .bean-list.density-compact .bean-stock { align-items: center; justify-content: flex-start; gap: 10px; padding: 14px 10px; }
-  .bean-list.density-compact .stock-status-row { align-self: stretch; justify-content: space-between; }
-  .bean-list.density-compact .remaining-label { display: none; }
-  .bean-list.density-compact .remaining-weight { display: none; }
-  .bean-list.density-compact .purchased-weight { display: none; }
-  .bean-list.density-compact .stock-meter { display: none; }
-  .bean-list.density-compact .stock-percent { display: none; }
-  .bean-list.density-compact .compact-stock-donut { --stock-progress: 0%; display: grid; position: relative; place-content: center; width: 68px; aspect-ratio: 1; margin-top: 2px; border-radius: 50%; background: conic-gradient(#96774f var(--stock-progress), #e1d6c7 0); }
-  .bean-list.density-compact .compact-stock-donut::before { content: ""; position: absolute; inset: 7px; border-radius: inherit; background: #f5efe6; }
-  .bean-list.density-compact .compact-stock-donut strong, .bean-list.density-compact .compact-stock-donut small { position: relative; z-index: 1; text-align: center; }
-  .bean-list.density-compact .compact-stock-donut strong { font-size: 19px; line-height: 1; letter-spacing: -1px; }
-  .bean-list.density-compact .compact-stock-donut strong span { margin-left: 1px; font-size: 8px; font-weight: 400; letter-spacing: 0; }
-  .bean-list.density-compact .compact-stock-donut small { display: none; }
-  .bean-list.density-dense { gap: 7px; }
-  .bean-list.density-dense .inventory-card { grid-template-columns: minmax(0, 1fr) 88px; }
-  .bean-list.density-dense .bean-info { padding: 10px 11px; }
-  .bean-list.density-dense .bean-info .title-dates,
-  .bean-list.density-dense .bean-info .roastery-cup-notes,
-  .bean-list.density-dense .bean-info .edit-bean,
-  .bean-list.density-dense .bean-info .bean-comments { display: none; }
-  .bean-list.density-dense .roastery { display: none; }
-  .bean-list.density-dense .bean-info h3 { margin: 0; font-size: 13px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .bean-list.density-dense .bean-stock { padding: 10px 8px; }
-  .bean-list.density-dense .stock-status { font-size: 8px; padding: 3px 4px; }
-  .bean-list.density-dense .status-edit-button { font-size: 9px; }
-  .bean-list.density-dense .remaining-label { margin-bottom: 1px; font-size: 8px; }
-  .bean-list.density-dense .remaining-weight { font-size: 21px; }
-  .bean-list.density-dense .purchased-weight { display: none; }
-  .bean-list.density-dense .stock-percent { margin-top: 3px; font-size: 9px; }
   .brew-log-tools { align-items: center; flex-direction: row; }
   .brew-log-tools select { width: auto; }
   .brew-note-form { grid-template-columns: 1fr; gap: 10px; }
@@ -377,6 +330,58 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .bean-form { padding: 18px; }
   .bean-form-grid { grid-template-columns: 1fr; }
   .bean-purchase-row { grid-template-columns: 1fr; gap: 12px; }
+}
+/* 간략 보기: 휴대폰·컴퓨터 공통 */
+.bean-list.density-compact .inventory-card { grid-template-columns: minmax(0, 1fr) 104px; }
+.bean-list.density-compact .bean-info { padding: 14px 13px; }
+.bean-list.density-compact .bean-info > .roastery,
+.bean-list.density-compact .bean-info > h3,
+.bean-list.density-compact .bean-info > .title-dates,
+.bean-list.density-compact .bean-info > .roastery-cup-notes,
+.bean-list.density-compact .bean-info > .bean-comments { display: none; }
+.bean-list.density-compact .compact-summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 8px; color: #6f5a43; }
+.bean-list.density-compact .compact-summary strong { min-width: 0; font-size: 12px; font-weight: 600; }
+.bean-list.density-compact .compact-roast { align-self: start; padding: 2px 5px; border-radius: 5px; background: #f3ede4; color: #8b7a64; font-size: 9px; line-height: 1.3; white-space: nowrap; }
+.bean-list.density-compact .compact-summary b { grid-column: 1 / -1; font-size: 16px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bean-list.density-compact .compact-cup-notes { grid-column: 1 / -1; display: flex; min-width: 0; gap: 4px; overflow: hidden; }
+.bean-list.density-compact .compact-cup-notes i { flex: 0 0 auto; max-width: 90px; overflow: hidden; text-overflow: ellipsis; padding: 3px 6px; border-radius: 5px; background: #f7f2eb; color: #806f5d; font-size: 12px; font-style: normal; line-height: 1.3; white-space: nowrap; }
+.bean-list.density-compact .bean-card-actions { margin-top: 9px; font-size: 11px; }
+.bean-list.density-compact .bean-card-actions .edit-bean { display: inline-block; margin-top: 0; font-size: 11px; }
+.bean-list.density-compact .bean-card-actions .record-details { margin-top: 0; }
+.bean-list.density-compact .record-details > summary { font-size: 11px; }
+.bean-list.density-compact .record-details .bean-comments { margin-top: 8px; padding-top: 8px; }
+.bean-list.density-compact .bean-stock { align-items: center; justify-content: flex-start; gap: 10px; padding: 14px 10px; }
+.bean-list.density-compact .stock-status-row { align-self: stretch; justify-content: space-between; }
+.bean-list.density-compact .remaining-label { display: none; }
+.bean-list.density-compact .remaining-weight { display: none; }
+.bean-list.density-compact .purchased-weight { display: none; }
+.bean-list.density-compact .stock-meter { display: none; }
+.bean-list.density-compact .stock-percent { display: none; }
+.bean-list.density-compact .compact-stock-donut { --stock-progress: 0%; display: grid; position: relative; place-content: center; width: 68px; aspect-ratio: 1; margin-top: 2px; border-radius: 50%; background: conic-gradient(#96774f var(--stock-progress), #e1d6c7 0); }
+.bean-list.density-compact .compact-stock-donut::before { content: ""; position: absolute; inset: 7px; border-radius: inherit; background: #f5efe6; }
+.bean-list.density-compact .compact-stock-donut strong, .bean-list.density-compact .compact-stock-donut small { position: relative; z-index: 1; text-align: center; }
+.bean-list.density-compact .compact-stock-donut strong { font-size: 19px; line-height: 1; letter-spacing: -1px; }
+.bean-list.density-compact .compact-stock-donut strong span { margin-left: 1px; font-size: 8px; font-weight: 400; letter-spacing: 0; }
+.bean-list.density-compact .compact-stock-donut small { display: none; }
+.bean-list.density-dense { gap: 7px; }
+.bean-list.density-dense .inventory-card { grid-template-columns: minmax(0, 1fr) 88px; }
+.bean-list.density-dense .bean-info { padding: 10px 11px; }
+.bean-list.density-dense .bean-info .title-dates,
+.bean-list.density-dense .bean-info .roastery-cup-notes,
+.bean-list.density-dense .bean-info .edit-bean,
+.bean-list.density-dense .bean-info .bean-comments { display: none; }
+.bean-list.density-dense .roastery { display: none; }
+.bean-list.density-dense .bean-info h3 { margin: 0; font-size: 13px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bean-list.density-dense .bean-stock { padding: 10px 8px; }
+.bean-list.density-dense .stock-status { font-size: 8px; padding: 3px 4px; }
+.bean-list.density-dense .status-edit-button { font-size: 9px; }
+.bean-list.density-dense .remaining-label { margin-bottom: 1px; font-size: 8px; }
+.bean-list.density-dense .remaining-weight { font-size: 21px; }
+.bean-list.density-dense .purchased-weight { display: none; }
+.bean-list.density-dense .stock-percent { margin-top: 3px; font-size: 9px; }
+@media (min-width: 541px) {
+.bean-list.density-compact, .bean-list.density-dense { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.bean-list.density-compact .inventory-card { grid-template-columns: minmax(0, 1fr) 132px; }
 }
 .origin-field { border: 0; padding: 0; margin: 0; min-width: 0; }
 .origin-field legend { font-size: 12px; color: #75634d; margin-bottom: 9px; }
@@ -601,6 +606,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 
 .inventory, .recipe-page, .brew-log, .brew-stats { padding-top: 10px; }
 .page-intro, .inventory-intro, .stats-header { margin: 14px 0 20px; }
+@media (min-width: 541px) {
+  .inventory, .recipe-page, .brew-log, .brew-stats { padding-top: 0; }
+  .page-intro, .inventory-intro, .stats-header { margin-top: 4px; }
+}
 .page-intro h2, .inventory-intro h2, .stats-header h2 { margin: 0 0 8px; color: #2c241d; font-size: 29px; font-weight: 600; letter-spacing: -1.1px; line-height: 1.2; }
 .page-intro p:last-child, .inventory-intro p:last-child, .stats-header p:last-child { color: #756958; font-size: 13px; line-height: 1.55; }
 .recipe-intro { margin-bottom: 16px; }
@@ -883,4 +892,55 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .recipe-amount-input input { padding-right: 20px; }
   .recipe-step-head, .recipe-step-row { grid-template-columns: 48px 104px minmax(0, 1fr) 42px 18px; }
   .recipe-step-row select { padding-right: 2px; }
+}
+/* Phone inventory toolbar: status filter and sort share one row, dropdowns at a calmer size. */
+@media (max-width: 720px) {
+  select.inventory-sort { min-height: 36px; padding: 6px 8px; font-size: 12px !important; }
+}
+@media (max-width: 540px) {
+  .inventory-toolbar-row { flex-wrap: nowrap; gap: 6px; }
+  .inventory-filters { flex: 1 1 auto; }
+  .inventory-filters button { flex: 1; padding: 7px 4px; }
+  .inventory-toolbar-meta { flex: 0 1 auto; gap: 4px; font-size: 11px; }
+  .inventory-toolbar-meta .inventory-sort { width: 104px; max-width: 104px; }
+  .view-mode-control { font-size: 11px; }
+}
+@media (max-width: 359px) {
+  .inventory-toolbar-meta label { display: none; }
+}
+
+/* Toolbar controls share one height and type size; the detailed search reads as real controls, grouped into three sections. */
+.inventory-sort, .advanced-filter-button { box-sizing: border-box; height: 32px; font-size: 12px; }
+.advanced-filter-button { padding: 0 11px; }
+.advanced-filter-panel { gap: 14px; }
+.advanced-filter-search input { box-sizing: border-box; width: 100%; height: 38px; border: 1px solid #d9cbb9; border-radius: 999px; background: #fffdf9; color: #5f4b35; padding: 0 16px; font: inherit; font-size: 13px; }
+.advanced-filter-search input:focus { border-color: #a98b67; outline: none; }
+/* Placeholder can be smaller than the 16px phone input size without triggering iOS zoom. */
+.advanced-filter-search input::placeholder { color: #a18e78; font-size: 12px; }
+.filter-section { display: grid; gap: 10px; padding-top: 12px; border-top: 1px solid #e8ddd0; }
+.filter-section h4 { margin: 0; color: #5d472f; font-size: 13px; font-weight: 700; }
+.facet-options button { min-height: 32px; padding: 0 11px; font-size: 12px; }
+.facet-options button small { margin-left: 1px; font-size: 11px; font-variant-numeric: tabular-nums; }
+.facet-options button:disabled { opacity: .45; cursor: default; }
+.facet-options button:disabled:hover { border-color: #e1d5c6; }
+.facet-empty { margin: 0; color: #a18e78; font-size: 11px; }
+.range-filter-group input { height: 32px; font-size: 12px; }
+.advanced-filter-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 12px; border-top: 1px solid #e8ddd0; color: #75634d; font-size: 12px; }
+.advanced-filter-footer b { color: #5d472f; font-size: 14px; }
+.advanced-filter-footer > div { display: flex; gap: 6px; }
+.advanced-filter-footer .primary-button, .advanced-filter-footer .quiet-button { padding: 7px 14px; font-size: 12px; }
+.advanced-filter-footer .quiet-button:disabled { opacity: .4; cursor: default; }
+.active-filter-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: -6px 0 16px; }
+.active-filter-chips button { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; border: 1px solid #c9b498; border-radius: 999px; background: #f5eee5; color: #634c31; padding: 0 10px; font-size: 11px; }
+.active-filter-chips button span { color: #8d7049; font-size: 13px; line-height: 1; }
+.active-filter-chips .active-filter-clear { border-color: transparent; background: transparent; color: #806444; text-decoration: underline; }
+@media (max-width: 720px) {
+  .advanced-filter-button { height: 36px; font-size: 12px; }
+  /* Range fields match the 32px/12px chips beside them, by request, even though iOS may zoom slightly on focus. */
+  .range-filter-group input { height: 32px; font-size: 12px !important; }
+}
+@media (max-width: 540px) {
+  .advanced-filter-button { padding: 0 10px; font-size: 12px; }
+  .facet-options button { padding: 0 10px; font-size: 12px; }
+  .advanced-filter-search input { height: 40px; }
 }
