@@ -848,11 +848,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   border-radius: 10px;
   background: #fcf9f5;
 }
-.bean-photo-import-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.bean-photo-import-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 .bean-photo-import-heading strong { display: block; color: #5f492f; font-size: 13px; }
 .bean-photo-import-heading p { max-width: 390px; margin: 4px 0 0; color: #7b6b58; font-size: 11px; line-height: 1.5; }
 .bean-photo-actions { display: flex; flex: 0 0 auto; gap: 6px; }
-.bean-photo-picker { flex: 0 0 auto; min-height: 32px; padding: 6px 10px; font-size: 11px; white-space: nowrap; }
+.bean-photo-picker { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; min-height: 32px; padding: 6px 10px; font-size: 11px; line-height: 1; white-space: nowrap; }
 .bean-photo-picker input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 .bean-photo-preview { position: relative; display: grid; grid-template-columns: 68px minmax(0, 1fr) 20px; gap: 10px; align-items: start; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e9dfd3; }
 .bean-photo-preview img { width: 68px; height: 68px; border: 1px solid #dfd3c5; border-radius: 8px; object-fit: cover; background: #f4efe8; }
