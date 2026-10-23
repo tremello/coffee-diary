@@ -8,6 +8,16 @@ const BEAN_STATUSES = ["배송 중", "디개싱 중", "소비 중"] as const;
 type BeanStatus = (typeof BEAN_STATUSES)[number];
 const BEAN_QUALITIES = ["특식", "준특식", "사료"] as const;
 type BeanQuality = (typeof BEAN_QUALITIES)[number];
+const PHOTO_ORIGIN_LABELS: Record<string, string> = {
+  ethiopia: "에티오피아", panama: "파나마", colombia: "콜롬비아", kenya: "케냐",
+  guatemala: "과테말라", peru: "페루", "costa rica": "코스타리카", costarica: "코스타리카"
+};
+const PHOTO_PROCESS_LABELS: Record<string, string> = {
+  washed: "워시드", natural: "내추럴", honey: "허니", "anaerobic natural": "무산소 내추럴",
+  "anaerobic washed": "무산소 워시드", "anaerobic fermentation natural": "무산소 내추럴",
+  "anaerobic fermentation washed": "무산소 워시드"
+};
+const localizedPhotoField = (value: string, labels: Record<string, string>) => labels[value.trim().toLowerCase().replace(/[-_]/g, " ").replace(/\s+/g, " ")] ?? value.trim();
 const localDate = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`; };
 const beanName = (bean: BeanForm) => [bean.origin, bean.farm, bean.variety, bean.process].map(value => value?.trim()).filter(Boolean).join(" ");
 const FONT = "'Nanum Barun Gothic', 'Apple SD Gothic Neo', sans-serif";
@@ -369,14 +379,15 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
       if (!response.ok) throw new Error(payload.error || "사진에서 정보를 읽지 못했어요.");
       const result = (payload.bean ?? {}) as RecognizedBeanFields;
       const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
-      const origin = text(result.origin);
+      const origin = localizedPhotoField(text(result.origin), PHOTO_ORIGIN_LABELS);
+      const process = localizedPhotoField(text(result.process), PHOTO_PROCESS_LABELS);
       if (origin && !origins.includes(origin) && !customOrigins.includes(origin)) setCustomOrigins([...customOrigins, origin]);
       setForm(current => ({
         ...current,
         ...(origin ? { origin } : {}),
         ...(text(result.farm) ? { farm: text(result.farm) } : {}),
         ...(text(result.variety) ? { variety: text(result.variety) } : {}),
-        ...(text(result.process) ? { process: text(result.process) } : {}),
+        ...(process ? { process } : {}),
         ...(text(result.roastery) ? { roastery: text(result.roastery) } : {}),
         ...(text(result.roasteryNotes) ? { roasteryNotes: text(result.roasteryNotes) } : {}),
         ...(result.purchased !== undefined && String(result.purchased).trim() ? { purchased: String(result.purchased) } : {}),
