@@ -839,3 +839,38 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .range-filter-quality .facet-options { display: flex; grid-template-columns: none; align-items: center; gap: 5px; padding-top: 1px; }
 .range-filter-quality .facet-options button { width: auto; padding: 5px 8px; font-size: 11px; }
 @media (max-width: 540px) { .range-filter-grid { grid-template-columns: 1fr; gap: 9px; } .range-filter-quality { grid-column: auto; } }
+
+/* Photo-assisted bean entry: the photo stays a temporary, review-first draft. */
+.bean-photo-import {
+  margin: 0 0 16px;
+  padding: 14px;
+  border: 1px dashed #d9cbb9;
+  border-radius: 10px;
+  background: #fcf9f5;
+}
+.bean-photo-import-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.bean-photo-import-heading strong { display: block; color: #5f492f; font-size: 13px; }
+.bean-photo-import-heading p { max-width: 390px; margin: 4px 0 0; color: #7b6b58; font-size: 11px; line-height: 1.5; }
+.bean-photo-actions { display: flex; flex: 0 0 auto; gap: 6px; }
+.bean-photo-picker { flex: 0 0 auto; min-height: 32px; padding: 6px 10px; font-size: 11px; white-space: nowrap; }
+.bean-photo-picker input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+.bean-photo-preview { position: relative; display: grid; grid-template-columns: 68px minmax(0, 1fr) 20px; gap: 10px; align-items: start; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e9dfd3; }
+.bean-photo-preview img { width: 68px; height: 68px; border: 1px solid #dfd3c5; border-radius: 8px; object-fit: cover; background: #f4efe8; }
+.bean-photo-preview > div { display: grid; align-items: start; justify-items: start; gap: 5px; min-width: 0; }
+.bean-photo-preview > div > strong { max-width: 100%; overflow: hidden; color: #5f492f; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.bean-photo-preview > div > span { color: #887866; font-size: 10px; line-height: 1.4; }
+.bean-photo-preview .primary-button { min-height: 30px; margin-top: 2px; padding: 6px 10px; font-size: 11px; }
+.bean-photo-remove { display: grid; width: 20px; height: 20px; place-items: center; padding: 0; border: 0; border-radius: 50%; color: #8c765d; background: transparent; font-size: 18px; line-height: 1; }
+.bean-photo-remove:hover { background: #f2e9de; color: #60482e; }
+.bean-photo-error, .bean-photo-success { margin: 0; font-size: 10px; line-height: 1.45; }
+.bean-photo-error { color: #a64f43; }
+.bean-photo-success { color: #487457; }
+@media (max-width: 540px) {
+  .bean-photo-import { padding: 12px; }
+  .bean-photo-import-heading { gap: 8px; }
+  .bean-photo-import-heading p { font-size: 10px; }
+  .bean-photo-actions { display: grid; gap: 4px; }
+  .bean-photo-picker { justify-content: center; min-height: 28px; padding: 5px 8px; font-size: 10px; }
+  .bean-photo-preview { grid-template-columns: 56px minmax(0, 1fr) 18px; gap: 8px; }
+  .bean-photo-preview img { width: 56px; height: 56px; }
+}

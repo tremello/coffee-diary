@@ -50,6 +50,18 @@ type BeanForm = Omit<Bean, "id" | "purchased" | "remaining" | "consumed"> & {
   consumed: string;
 };
 
+type RecognizedBeanFields = {
+  origin?: string;
+  farm?: string;
+  variety?: string;
+  process?: string;
+  roastery?: string;
+  roasteryNotes?: string;
+  purchased?: number | string;
+  roastDate?: string;
+  price?: number | string;
+};
+
 type Brew = {
   id: number;
   beanId: number;
@@ -249,6 +261,11 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
   const [roastTo, setRoastTo] = useState("");
   const [error, setError] = useState("");
   const [roastDateTouched, setRoastDateTouched] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState("");
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState("");
+  const [photoMessage, setPhotoMessage] = useState("");
   const [customOrigins, setCustomOrigins] = useStorage<string[]>("cf_origins", [], userId);
   const [addingOrigin, setAddingOrigin] = useState(false);
   const [newOrigin, setNewOrigin] = useState("");
@@ -316,7 +333,65 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
     }
     return a.id - b.id;
   });
-  const close = () => { setShow(false); setEditingId(null); setForm(emptyBeanForm); setError(""); setRoastDateTouched(false); setAddingOrigin(false); setNewOrigin(""); };
+  const clearPhoto = () => {
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoFile(null); setPhotoPreview(""); setPhotoBusy(false); setPhotoError(""); setPhotoMessage("");
+  };
+  const photoMimeType = (file: File) => {
+    if (file.type) return file.type.toLowerCase();
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    return extension === "heic" ? "image/heic" : extension === "heif" ? "image/heif" : "";
+  };
+  const selectPhoto = (file?: File) => {
+    clearPhoto();
+    if (!file) return;
+    const mimeType = photoMimeType(file);
+    if (!new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]).has(mimeType)) { setPhotoError("JPG, PNG, WebP, HEIC 사진만 선택할 수 있어요."); return; }
+    if (file.size > 6 * 1024 * 1024) { setPhotoError("사진은 6MB 이하로 선택해주세요."); return; }
+    setPhotoFile(file); setPhotoPreview(URL.createObjectURL(file));
+  };
+  const recognizePhoto = async () => {
+    if (!photoFile || photoBusy) return;
+    setPhotoBusy(true); setPhotoError(""); setPhotoMessage("");
+    try {
+      const image = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("사진을 읽지 못했어요."));
+        reader.onerror = () => reject(new Error("사진을 읽지 못했어요."));
+        reader.readAsDataURL(photoFile);
+      });
+      const response = await fetch("/api/recognize-bean", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image, mimeType: photoMimeType(photoFile) })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "사진에서 정보를 읽지 못했어요.");
+      const result = (payload.bean ?? {}) as RecognizedBeanFields;
+      const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
+      const origin = text(result.origin);
+      if (origin && !origins.includes(origin) && !customOrigins.includes(origin)) setCustomOrigins([...customOrigins, origin]);
+      setForm(current => ({
+        ...current,
+        ...(origin ? { origin } : {}),
+        ...(text(result.farm) ? { farm: text(result.farm) } : {}),
+        ...(text(result.variety) ? { variety: text(result.variety) } : {}),
+        ...(text(result.process) ? { process: text(result.process) } : {}),
+        ...(text(result.roastery) ? { roastery: text(result.roastery) } : {}),
+        ...(text(result.roasteryNotes) ? { roasteryNotes: text(result.roasteryNotes) } : {}),
+        ...(result.purchased !== undefined && String(result.purchased).trim() ? { purchased: String(result.purchased) } : {}),
+        ...(text(result.roastDate) ? { roastDate: text(result.roastDate) } : {}),
+        ...(result.price !== undefined && String(result.price).trim() ? { price: String(result.price) } : {})
+      }));
+      if (text(result.roastDate)) setRoastDateTouched(true);
+      setPhotoMessage("읽어온 정보를 입력칸에 채웠어요. 저장하기 전에 확인해주세요.");
+    } catch (photoRecognitionError) {
+      setPhotoError(photoRecognitionError instanceof Error ? photoRecognitionError.message : "사진에서 정보를 읽지 못했어요.");
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+  const close = () => { clearPhoto(); setShow(false); setEditingId(null); setForm(emptyBeanForm); setError(""); setRoastDateTouched(false); setAddingOrigin(false); setNewOrigin(""); };
   const edit = (bean: Bean) => {
     setForm({ ...bean, status: bean.status ?? "소비 중", purchased: String(bean.purchased), consumed: String(bean.consumed ?? 0) });
     setRoastDateTouched(Boolean(bean.roastDate && bean.roastDate !== bean.date));
@@ -378,6 +453,11 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
       {deletedId !== null && <div className="delete-notice" role="status"><span>원두를 삭제했어요.</span><button type="button" onClick={undoRemove}>되돌리기</button></div>}
       {show && <form className="bean-form" onSubmit={save}>
         <h3>{editingId === null ? "새 원두 등록" : "원두 정보 수정"}</h3>
+        {editingId === null && <section className="bean-photo-import" aria-label="사진으로 원두 정보 자동 입력">
+          <div className="bean-photo-import-heading"><div><strong>사진으로 자동 입력</strong><p>원두 봉투 라벨을 찍으면 읽을 수 있는 정보만 초안에 채워드려요.</p></div><span className="bean-photo-actions"><label className="secondary-button bean-photo-picker"><input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" capture="environment" onChange={event => selectPhoto(event.target.files?.[0])} />사진 찍기</label><label className="secondary-button bean-photo-picker"><input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" onChange={event => selectPhoto(event.target.files?.[0])} />사진 선택</label></span></div>
+          {photoPreview && <div className="bean-photo-preview"><img src={photoPreview} alt="선택한 원두 봉투 사진 미리보기" /><div><strong>{photoFile?.name}</strong><span>사진은 정보를 읽는 동안에만 사용하고 저장하지 않아요.</span>{photoMessage && <p className="bean-photo-success" role="status">{photoMessage}</p>}{photoError && <p className="bean-photo-error" role="alert">{photoError}</p>}<button type="button" className="primary-button" disabled={photoBusy} onClick={recognizePhoto}>{photoBusy ? "정보 읽는 중…" : "사진에서 정보 읽기"}</button></div><button className="bean-photo-remove" type="button" onClick={clearPhoto} aria-label="선택한 사진 제거">×</button></div>}
+          {!photoPreview && photoError && <p className="bean-photo-error" role="alert">{photoError}</p>}
+        </section>}
         <div className="bean-form-grid">
           <fieldset className="origin-field full-width"><legend>원산지 *</legend>
             <div className="origin-options">{origins.map(origin => <button type="button" key={origin} aria-pressed={form.origin === origin} onClick={() => setForm({ ...form, origin })}>{origin}</button>)}<button type="button" aria-expanded={addingOrigin} onClick={() => setAddingOrigin(!addingOrigin)}>+ 원산지 추가</button></div>
