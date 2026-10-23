@@ -1,6 +1,12 @@
-const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
+// Vercel caps request bodies at 4.5MB; 3MB of image is about 4MB once base64-encoded.
+const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 const SUPPORTED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+// Same publishable project credentials as src/supabase.ts; only used to verify the caller's login.
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://ghpiixyzxeqvdkwostcb.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || "sb_publishable_dbXp4bFaIdFgjjKP6vUsOg_kd9Ss5g3";
+// Optional comma-separated list of Google emails allowed to use photo recognition.
+const ALLOWED_EMAILS = (process.env.ALLOWED_EMAILS || "").split(",").map(email => email.trim().toLowerCase()).filter(Boolean);
 
 const beanSchema = {
   type: "object",
@@ -16,6 +22,18 @@ const beanSchema = {
     price: { type: "number", description: "명시된 구매 가격(원). 숫자만" }
   }
 };
+
+async function verifyUser(request) {
+  const header = request.headers?.authorization ?? "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : "";
+  if (!token) return null;
+  const authResponse = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${token}` }
+  });
+  if (!authResponse.ok) return null;
+  const user = await authResponse.json();
+  return user?.id ? user : null;
+}
 
 function getBody(request) {
   if (typeof request.body === "string") return JSON.parse(request.body);
@@ -42,6 +60,17 @@ export default async function handler(request, response) {
     return response.status(405).json({ error: "POST 요청만 사용할 수 있어요." });
   }
 
+  let user = null;
+  try {
+    user = await verifyUser(request);
+  } catch (error) {
+    console.error("Login check failed", error instanceof Error ? error.message : "unknown error");
+  }
+  if (!user) return response.status(401).json({ error: "사진 인식은 Google 로그인 후 사용할 수 있어요." });
+  if (ALLOWED_EMAILS.length > 0 && !ALLOWED_EMAILS.includes(String(user.email ?? "").toLowerCase())) {
+    return response.status(403).json({ error: "이 계정은 사진 인식을 사용할 수 없어요." });
+  }
+
   if (!process.env.GEMINI_API_KEY) {
     return response.status(503).json({ error: "Gemini API 키를 연결한 뒤 사진 인식을 사용할 수 있어요." });
   }
@@ -57,7 +86,7 @@ export default async function handler(request, response) {
 
     const base64 = image.split(",")[1] ?? "";
     if (Buffer.byteLength(base64, "base64") > MAX_IMAGE_BYTES) {
-      return response.status(413).json({ error: "사진은 6MB 이하로 선택해주세요." });
+      return response.status(413).json({ error: "사진은 3MB 이하로 줄여서 보내주세요." });
     }
 
     const geminiResponse = await fetch(

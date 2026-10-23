@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { supabase } from "./src/supabase";
 
 const STORAGE_KEYS = { beans: "cf_beans", brews: "cf_brews", notes: "cf_notes", recipes: "cf_recipes" };
@@ -16,6 +16,37 @@ const PHOTO_PROCESS_LABELS: Record<string, string> = {
   washed: "워시드", natural: "내추럴", honey: "허니", "anaerobic natural": "무산소 내추럴",
   "anaerobic washed": "무산소 워시드", "anaerobic fermentation natural": "무산소 내추럴",
   "anaerobic fermentation washed": "무산소 워시드"
+};
+// Vercel rejects request bodies over 4.5MB, so photos are shrunk to a JPEG well under that before upload.
+const MAX_PHOTO_SELECT_BYTES = 25 * 1024 * 1024;
+const MAX_PHOTO_UPLOAD_BYTES = 3 * 1024 * 1024;
+const PHOTO_MAX_SIDE = 1800;
+const readAsDataUrl = (blob: Blob) => new Promise<string>((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("사진을 읽지 못했어요."));
+  reader.onerror = () => reject(new Error("사진을 읽지 못했어요."));
+  reader.readAsDataURL(blob);
+});
+const shrinkPhoto = async (file: File): Promise<Blob | null> => {
+  try {
+    const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const scale = Math.min(1, PHOTO_MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    return await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/jpeg", 0.85));
+  } catch {
+    return null;
+  }
+};
+const preparePhoto = async (file: File, mimeType: string) => {
+  const shrunk = await shrinkPhoto(file);
+  if (shrunk && shrunk.size <= MAX_PHOTO_UPLOAD_BYTES) return { image: await readAsDataUrl(shrunk), mimeType: "image/jpeg" };
+  // Browsers that cannot decode the file (e.g. HEIC outside Safari) send the original when it is small enough.
+  if (file.size <= MAX_PHOTO_UPLOAD_BYTES) return { image: await readAsDataUrl(file), mimeType };
+  throw new Error("이 브라우저에서는 사진 크기를 줄일 수 없어요. 3MB 이하 사진이나 JPG로 다시 선택해주세요.");
 };
 const localizedPhotoField = (value: string, labels: Record<string, string>) => labels[value.trim().toLowerCase().replace(/[-_]/g, " ").replace(/\s+/g, " ")] ?? value.trim();
 const localDate = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`; };
@@ -122,25 +153,70 @@ type TastingNoteForm = Omit<TastingNote, "id" | "beanId"> & {
 };
 type TastingNoteTextKey = "flavor" | "aroma" | "acidity" | "body" | "finish";
 
+// Local data belongs to the account in OWNER_KEY; keys under PENDING_PREFIX failed to reach the server and must be pushed, not overwritten.
+const OWNER_KEY = "cf_owner";
+const PENDING_PREFIX = "cf_pending:";
+const readLocal = <T,>(key: string): T | undefined => {
+  try { const s = localStorage.getItem(key); return s ? JSON.parse(s) as T : undefined; } catch { return undefined; }
+};
+const writeLocal = (key: string, value: unknown) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} };
+const localDataKeys = () => { try { return Object.keys(localStorage).filter(key => key.startsWith("cf_")); } catch { return []; } };
+const clearLocalData = () => localDataKeys().forEach(key => { try { localStorage.removeItem(key); } catch {} });
+const hasPendingSync = () => localDataKeys().some(key => key.startsWith(PENDING_PREFIX));
+const adoptLocalData = (userId: string) => {
+  const owner = (() => { try { return localStorage.getItem(OWNER_KEY); } catch { return null; } })();
+  if (owner && owner !== userId) clearLocalData();
+  try { localStorage.setItem(OWNER_KEY, userId); } catch {}
+};
+
+const failedSyncKeys = new Set<string>();
+const syncRetries = new Map<string, () => void>();
+const syncListeners = new Set<() => void>();
+const setSyncFailed = (key: string, failed: boolean) => {
+  if (failed === failedSyncKeys.has(key)) return;
+  if (failed) failedSyncKeys.add(key); else failedSyncKeys.delete(key);
+  syncListeners.forEach(listener => listener());
+};
+const retryFailedSync = () => [...failedSyncKeys].forEach(key => syncRetries.get(key)?.());
+function useSyncFailed() {
+  return useSyncExternalStore(listener => { syncListeners.add(listener); return () => { syncListeners.delete(listener); }; }, () => failedSyncKeys.size > 0);
+}
+
 function useStorage<T>(key: string, init: T, userId: string | null = null): [T, StorageSetter<T>] {
-  const [val, setVal] = useState(() => {
-    try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : init; } catch { return init; }
-  });
+  const [val, setVal] = useState<T>(() => readLocal<T>(key) ?? init);
+  const editedRef = useRef(false);
+  const push = async (data: T) => {
+    if (!userId) return;
+    let failed = true;
+    try {
+      const { error } = await supabase.from("coffee_data").upsert({ key, data, user_id: userId }, { onConflict: "user_id,key" });
+      if (error) console.error("Coffee sync save failed", error); else failed = false;
+    } catch (error) { console.error("Coffee sync save failed", error); }
+    try { if (failed) localStorage.setItem(PENDING_PREFIX + key, "1"); else localStorage.removeItem(PENDING_PREFIX + key); } catch {}
+    setSyncFailed(key, failed);
+  };
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
-    supabase.from("coffee_data").select("data").eq("key", key).maybeSingle().then(({ data, error }) => {
-      if (cancelled) return;
+    editedRef.current = false;
+    const pushLocal = () => { const local = readLocal<T>(key); if (local !== undefined) void push(local); };
+    syncRetries.set(key, pushLocal);
+    if (readLocal(PENDING_PREFIX + key)) { pushLocal(); return () => { cancelled = true; syncRetries.delete(key); }; }
+    supabase.from("coffee_data").select("data").eq("user_id", userId).eq("key", key).maybeSingle().then(({ data, error }) => {
+      if (cancelled || editedRef.current) return;
       if (error) { console.error("Coffee sync read failed", error); return; }
-      if (data?.data !== undefined) setVal(data.data as T);
-      else if (Array.isArray(val) && val.length > 0) void supabase.from("coffee_data").upsert({ key, data: val, user_id: userId }, { onConflict: "user_id,key" }).then(({ error: saveError }) => { if (saveError) console.error("Coffee sync migration failed", saveError); });
+      if (data?.data !== undefined) { setVal(data.data as T); writeLocal(key, data.data); return; }
+      const local = readLocal<T>(key);
+      if (Array.isArray(local) && local.length > 0) void push(local);
+      else if (local === undefined) setVal(init);
     });
-    return () => { cancelled = true; };
+    return () => { cancelled = true; syncRetries.delete(key); };
   }, [key, userId]);
   const set = (v: T) => {
+    editedRef.current = true;
     setVal(v);
-    try { localStorage.setItem(key, JSON.stringify(v)); } catch {}
-    if (userId) void supabase.from("coffee_data").upsert({ key, data: v, user_id: userId }, { onConflict: "user_id,key" }).then(({ error }) => { if (error) console.error("Coffee sync save failed", error); });
+    writeLocal(key, v);
+    void push(v);
   };
   return [val, set];
 }
@@ -149,8 +225,10 @@ function useAuth() {
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => { setUser(data.session?.user ?? null); setLoading(false); });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user ?? null));
+    // Clear another account's local data before any storage hook sees the new user id.
+    const applyUser = (next: { id: string; email?: string } | null) => { if (next) adoptLocalData(next.id); setUser(next); };
+    supabase.auth.getSession().then(({ data }) => { applyUser(data.session?.user ?? null); setLoading(false); });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => applyUser(session?.user ?? null));
     return () => listener.subscription.unsubscribe();
   }, []);
   return { user, loading };
@@ -165,7 +243,7 @@ const sortByDateDesc = <T extends { date: string }>(items: T[]) =>
   [...items].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 const emptyBeanForm: BeanForm = { name: "", origin: "", process: "", roastery: "", date: "", purchased: "", consumed: "", price: "", roasteryNotes: "", roastDate: "", farm: "", variety: "", flavor: "", memo: "", status: undefined, quality: undefined };
-const emptyBrewForm = (): BrewForm => ({ beanId: "", amount: "", waterAmount: "", method: "", date: new Date().toISOString().slice(0, 10), recipe: "" });
+const emptyBrewForm = (): BrewForm => ({ beanId: "", amount: "", waterAmount: "", method: "", date: localDate(), recipe: "" });
 const brewRatio = (amount: number, waterAmount?: number) => waterAmount && amount > 0 ? `1:${Number((waterAmount / amount).toFixed(1)).toLocaleString()}` : "";
 const emptyNoteForm = (): TastingNoteForm => ({
   beanId: "",
@@ -177,7 +255,7 @@ const emptyNoteForm = (): TastingNoteForm => ({
   body: "",
   finish: "",
   memo: "",
-  date: new Date().toISOString().slice(0, 10)
+  date: localDate()
 });
 
 export default function App() {
@@ -188,6 +266,11 @@ export default function App() {
   const [brews, setBrews] = useStorage<Brew[]>(STORAGE_KEYS.brews, [], user?.id ?? null);
   const [notes, setNotes] = useStorage<TastingNote[]>(STORAGE_KEYS.notes, [], user?.id ?? null);
   const [recipes, setRecipes] = useStorage<SavedRecipe[]>(STORAGE_KEYS.recipes, [], user?.id ?? null);
+  const syncFailed = useSyncFailed();
+  useEffect(() => {
+    window.addEventListener("online", retryFailedSync);
+    return () => window.removeEventListener("online", retryFailedSync);
+  }, []);
   const navigate = (nextPage: Page) => {
     const nextHash = PAGE_HASHES[nextPage];
     if (window.location.hash !== nextHash) window.history.pushState({ page: nextPage }, "", nextHash);
@@ -209,6 +292,7 @@ export default function App() {
   return (
     <div style={{ fontFamily: FONT, maxWidth: 960, margin: "0 auto", padding: "0 0 3rem" }}>
       <Header page={page} setPage={navigate} user={user} authLoading={authLoading} />
+      {syncFailed && <div className="sync-alert" role="alert"><span>최근 변경을 서버에 저장하지 못했어요. 이 기기에는 남아 있어요.</span><button type="button" onClick={retryFailedSync}>다시 시도</button></div>}
       {page === "Beans" && <BeansPage beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} userId={user?.id ?? null} onBrew={() => { setOpenBrewForm(true); navigate("Brew Log"); }} />}
       {page === "Brew Log" && <BrewLog beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} recipes={recipes} openInitially={openBrewForm} onOpened={() => setOpenBrewForm(false)} />}
       {page === "Recipes" && <RecipePage recipes={recipes} setRecipes={setRecipes} />}
@@ -222,7 +306,12 @@ function Header({ page, setPage, user, authLoading }: { page: Page; setPage: (pa
     const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/` } });
     if (error) window.alert(error.message);
   };
-  const signOut = () => { void supabase.auth.signOut(); };
+  const signOut = async () => {
+    if (hasPendingSync() && !window.confirm("아직 서버에 저장하지 못한 기록이 있어요. 로그아웃하면 이 기기에서 지워져요. 계속할까요?")) return;
+    await supabase.auth.signOut();
+    clearLocalData();
+    window.location.reload();
+  };
   return (
     <div className="app-header" style={{ borderBottom: "0.5px solid var(--color-border-tertiary)", marginBottom: "1.5rem" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 0 0" }}>
@@ -357,23 +446,20 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
     if (!file) return;
     const mimeType = photoMimeType(file);
     if (!new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]).has(mimeType)) { setPhotoError("JPG, PNG, WebP, HEIC 사진만 선택할 수 있어요."); return; }
-    if (file.size > 6 * 1024 * 1024) { setPhotoError("사진은 6MB 이하로 선택해주세요."); return; }
+    if (file.size > MAX_PHOTO_SELECT_BYTES) { setPhotoError("사진은 25MB 이하로 선택해주세요."); return; }
     setPhotoFile(file); setPhotoPreview(URL.createObjectURL(file));
   };
   const recognizePhoto = async () => {
     if (!photoFile || photoBusy) return;
     setPhotoBusy(true); setPhotoError(""); setPhotoMessage("");
     try {
-      const image = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("사진을 읽지 못했어요."));
-        reader.onerror = () => reject(new Error("사진을 읽지 못했어요."));
-        reader.readAsDataURL(photoFile);
-      });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("사진 인식은 Google 로그인 후 사용할 수 있어요.");
+      const photo = await preparePhoto(photoFile, photoMimeType(photoFile));
       const response = await fetch("/api/recognize-bean", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image, mimeType: photoMimeType(photoFile) })
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify(photo)
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "사진에서 정보를 읽지 못했어요.");
@@ -466,7 +552,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
         <h3>{editingId === null ? "새 원두 등록" : "원두 정보 수정"}</h3>
         {editingId === null && <section className="bean-photo-import" aria-label="사진으로 원두 정보 자동 입력">
           <div className="bean-photo-import-heading"><div><strong>사진으로 자동 입력</strong><p>원두 봉투 라벨을 찍으면 읽을 수 있는 정보만 초안에 채워드려요.</p></div><span className="bean-photo-actions"><label className="secondary-button bean-photo-picker"><input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" capture="environment" onChange={event => selectPhoto(event.target.files?.[0])} />사진 찍기</label><label className="secondary-button bean-photo-picker"><input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" onChange={event => selectPhoto(event.target.files?.[0])} />사진 선택</label></span></div>
-          {photoPreview && <div className="bean-photo-preview"><img src={photoPreview} alt="선택한 원두 봉투 사진 미리보기" /><div><strong>{photoFile?.name}</strong><span>사진은 정보를 읽는 동안에만 사용하고 저장하지 않아요.</span>{photoMessage && <p className="bean-photo-success" role="status">{photoMessage}</p>}{photoError && <p className="bean-photo-error" role="alert">{photoError}</p>}<button type="button" className="primary-button" disabled={photoBusy} onClick={recognizePhoto}>{photoBusy ? "정보 읽는 중…" : "사진에서 정보 읽기"}</button></div><button className="bean-photo-remove" type="button" onClick={clearPhoto} aria-label="선택한 사진 제거">×</button></div>}
+          {photoPreview && <div className="bean-photo-preview"><img src={photoPreview} alt="선택한 원두 봉투 사진 미리보기" /><div><strong>{photoFile?.name}</strong><span>{userId ? "사진은 정보를 읽는 동안에만 사용하고 저장하지 않아요." : "사진 인식은 Google 로그인 후 사용할 수 있어요."}</span>{photoMessage && <p className="bean-photo-success" role="status">{photoMessage}</p>}{photoError && <p className="bean-photo-error" role="alert">{photoError}</p>}<button type="button" className="primary-button" disabled={photoBusy || !userId} onClick={recognizePhoto}>{photoBusy ? "정보 읽는 중…" : "사진에서 정보 읽기"}</button></div><button className="bean-photo-remove" type="button" onClick={clearPhoto} aria-label="선택한 사진 제거">×</button></div>}
           {!photoPreview && photoError && <p className="bean-photo-error" role="alert">{photoError}</p>}
         </section>}
         <div className="bean-form-grid">
@@ -870,7 +956,7 @@ function TastingNotes({ beans, notes, setNotes, brews, linkedBrewId, setLinkedBr
     beanId: linkedBean?.id?.toString() || "",
     brewId: linkedBrewId || null,
     rating: 3, flavor: "", aroma: "", acidity: "", body: "", finish: "", memo: "",
-    date: linkedBrew?.date || new Date().toISOString().slice(0, 10)
+    date: linkedBrew?.date || localDate()
   });
 
   useEffect(() => {

@@ -427,6 +427,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .delete-bean-button:hover { background: #f5e0dc; }
 .delete-notice { display: flex; justify-content: space-between; align-items: center; background: #f3e9df; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
 .delete-notice button { border: none; background: none; color: #806444; text-decoration: underline; }
+.sync-alert { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; padding: 10px 14px; border: 1px solid #e6c2b3; border-radius: 8px; background: #fbefe9; color: #7a3a22; font-size: 13px; }
+.sync-alert button { flex: 0 0 auto; min-height: 36px; padding: 6px 12px; border: 1px solid #c98a72; border-radius: 8px; background: #fffdf9; color: #7a3a22; }
 .stock-dates { display: grid; gap: 7px; font-size: 10px; color: #8b7e6f; margin-top: 24px; }
 .stock-dates span { display: grid; gap: 3px; }
 @media (max-width: 540px) { .roastery { font-size: 16px; } }
@@ -872,4 +874,13 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .bean-photo-picker { justify-content: center; min-height: 28px; padding: 5px 8px; font-size: 10px; }
   .bean-photo-preview { grid-template-columns: 56px minmax(0, 1fr) 18px; gap: 8px; }
   .bean-photo-preview img { width: 56px; height: 56px; }
+}
+
+/* iOS Safari zooms the page when a focused field is under 16px, so form fields stay at 16px on phones. */
+@media (max-width: 720px) {
+  input, select, textarea { font-size: 16px !important; }
+  .recipe-fixed-time, .recipe-time-input, .recipe-step-row select, .recipe-amount-input input, .recipe-no-amount { height: 36px; min-height: 36px; }
+  .recipe-amount-input input { padding-right: 20px; }
+  .recipe-step-head, .recipe-step-row { grid-template-columns: 48px 104px minmax(0, 1fr) 42px 18px; }
+  .recipe-step-row select { padding-right: 2px; }
 }
