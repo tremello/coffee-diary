@@ -271,6 +271,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .inventory-empty > span { font-size: 28px; }
 .inventory-empty h3 { font-size: 18px; font-weight: 500; }
 .inventory-empty p { color: #8b7a64; font-size: 13px; margin-bottom: 24px; }
+.getting-started { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0 0 20px; padding: 0; list-style: none; }
+.getting-started li { display: grid; justify-items: center; gap: 6px; min-width: 0; color: #705b44; font-size: 12px; }
+.getting-started b { display: grid; width: 24px; height: 24px; place-items: center; border-radius: 50%; color: #fffdf9; background: #806444; font-size: 12px; font-variant-numeric: tabular-nums; }
 @media (min-width: 721px) { #root { padding: 0 32px; } }
 @media (max-width: 540px) {
   #root { padding-bottom: 7rem !important; }

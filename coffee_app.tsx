@@ -11,7 +11,7 @@ type BeanQuality = (typeof BEAN_QUALITIES)[number];
 const localDate = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`; };
 const beanName = (bean: BeanForm) => [bean.origin, bean.farm, bean.variety, bean.process].map(value => value?.trim()).filter(Boolean).join(" ");
 const FONT = "'Nanum Barun Gothic', 'Apple SD Gothic Neo', sans-serif";
-const PAGES = ["Beans", "Brew Log", "Recipes", "Brew Stats"] as const;
+const PAGES = ["Beans", "Recipes", "Brew Log", "Brew Stats"] as const;
 const PAGE_LABELS = { Beans: "원두 재고", "Brew Log": "브루잉 기록", Recipes: "나의 레시피", "Brew Stats": "브루잉 통계" };
 
 type Page = (typeof PAGES)[number];
@@ -390,7 +390,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
             </div>
           </article>;
         })}
-        {visible.length === 0 && <div className="inventory-empty"><span aria-hidden="true">☕</span><h3>{available.length === 0 ? "나의 첫 원두를 올려보세요" : "해당하는 원두가 없어요"}</h3><p>원두 정보와 향미 노트, 남은 양을 한곳에서 관리해요.</p>{available.length === 0 && <button className="primary-button" onClick={() => { close(); setShow(true); }}>+ 원두 추가</button>}</div>}
+        {visible.length === 0 && <div className="inventory-empty"><span aria-hidden="true">☕</span><h3>{available.length === 0 ? "첫 원두를 등록해보세요" : "해당하는 원두가 없어요"}</h3><p>{available.length === 0 ? "원두부터 기록하면 나만의 브루잉 흐름이 시작돼요." : "원두 정보와 향미 노트, 남은 양을 한곳에서 관리해요."}</p>{available.length === 0 && <><ol className="getting-started" aria-label="커피 다이어리 시작 순서"><li><b>1</b><span>원두 등록</span></li><li><b>2</b><span>레시피 만들기</span></li><li><b>3</b><span>첫 브루잉 기록</span></li></ol><button className="primary-button" onClick={() => { close(); setShow(true); }}>첫 원두 등록하기</button></>}</div>}
       </div>
     </main>
   );
