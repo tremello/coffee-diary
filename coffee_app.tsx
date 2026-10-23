@@ -390,7 +390,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
             </div>
           </article>;
         })}
-        {visible.length === 0 && <div className="inventory-empty"><span aria-hidden="true">☕</span><h3>{available.length === 0 ? "첫 원두를 등록해보세요" : "해당하는 원두가 없어요"}</h3><p>{available.length === 0 ? "원두부터 기록하면 나만의 브루잉 흐름이 시작돼요." : "원두 정보와 향미 노트, 남은 양을 한곳에서 관리해요."}</p>{available.length === 0 && <><ol className="getting-started" aria-label="커피 다이어리 시작 순서"><li><b>1</b><span>원두 등록</span></li><li><b>2</b><span>레시피 만들기</span></li><li><b>3</b><span>첫 브루잉 기록</span></li></ol><button className="primary-button" onClick={() => { close(); setShow(true); }}>첫 원두 등록하기</button></>}</div>}
+        {visible.length === 0 && <div className="inventory-empty"><img className="onboarding-logo" src="/coffee-diary-logo-brown-96.png" width="38" height="38" alt="" /><h3>{available.length === 0 ? "첫 원두를 등록해보세요" : "해당하는 원두가 없어요"}</h3><p>{available.length === 0 ? "원두부터 기록하면 나만의 브루잉 흐름이 시작돼요." : "원두 정보와 향미 노트, 남은 양을 한곳에서 관리해요."}</p>{available.length === 0 && <><JourneySteps active="beans" /><button className="primary-button" onClick={() => { close(); setShow(true); }}>첫 원두 등록하기</button></>}</div>}
       </div>
     </main>
   );
@@ -460,7 +460,10 @@ const defaultRecipeSteps = (): RecipeStep[] => [
 ];
 
 function RecipePage({ recipes, setRecipes }: { recipes: SavedRecipe[]; setRecipes: StorageSetter<SavedRecipe[]> }) {
-  return <div className="recipe-page"><RecipeLibrary recipes={recipes} setRecipes={setRecipes} /></div>;
+  return <div className="recipe-page">
+    <div className="inventory-intro recipe-intro"><div><p className="eyebrow">MY RECIPES</p><h2>나의 레시피</h2><p>자주 쓰는 추출 흐름을 내 방식으로 저장해요.</p></div></div>
+    <RecipeLibrary recipes={recipes} setRecipes={setRecipes} />
+  </div>;
 }
 
 function RecipeLibrary({ recipes, setRecipes }: { recipes: SavedRecipe[]; setRecipes: StorageSetter<SavedRecipe[]> }) {
@@ -539,7 +542,7 @@ function RecipeLibrary({ recipes, setRecipes }: { recipes: SavedRecipe[]; setRec
     <section className="recipe-library" aria-label="저장 레시피">
       <div className="recipe-library-list-header"><strong>저장한 레시피</strong><span>{recipes.length}개</span></div>
       <div className="recipe-library-list">
-      {!sorted.length ? <div className="recipe-library-empty"><span aria-hidden="true">☕</span><strong>아직 저장한 레시피가 없어요</strong><p>자주 쓰는 드립 방식을 첫 레시피로 남겨보세요.</p><button type="button" onClick={() => setOpen(true)}>새 레시피 만들기</button></div> : sorted.map(recipe => {
+      {!sorted.length ? <div className="recipe-library-empty recipe-onboarding"><img className="onboarding-logo" src="/coffee-diary-logo-brown-96.png" width="38" height="38" alt="" /><h3>첫 레시피를 만들어보세요</h3><p>자주 쓰는 드립 방식을 저장해두면 브루잉 기록에 바로 적용할 수 있어요.</p><JourneySteps active="recipes" /><button type="button" className="primary-button" onClick={() => setOpen(true)}>첫 레시피 만들기</button></div> : sorted.map(recipe => {
         const water = recipe.steps.reduce((sum, step) => sum + (Number(step.amount) || 0), 0);
         return <article className="saved-recipe-card" key={recipe.id}>
           <div className="saved-recipe-top"><div><h3>{recipe.name}</h3><p>원두 {fmt(recipe.coffee)}g · 물 {fmt(water)}g · {water && recipe.coffee ? `1:${(water / recipe.coffee).toFixed(1)}` : "1:–"}</p></div><div className="saved-recipe-actions"><button type="button" onClick={() => edit(recipe)}>수정</button><button type="button" onClick={() => setRecipes(recipes.filter(item => item.id !== recipe.id))}>삭제</button></div></div>
@@ -638,8 +641,8 @@ function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, o
 
   return (
     <div className="brew-log">
-      <div className="brew-log-heading">
-        <p style={{ margin: 0, fontSize: 13, color: "var(--color-text-secondary)", fontFamily: FONT }}>총 {brews.length}회 브루잉</p>
+      <div className="inventory-intro brew-log-heading">
+        <div><p className="eyebrow">BREWING LOG</p><h2>오늘의 브루잉</h2><p>총 {brews.length}회 브루잉을 기록했어요.</p></div>
         <div className="brew-log-heading-actions"><button type="button" className="secondary-button brew-add-button" onClick={() => setShow(!show)}>+ 기록 추가</button></div>
       </div>
 
@@ -666,11 +669,11 @@ function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, o
         <select aria-label="브루잉 기록 정렬" value={brewSort} onChange={event => setBrewSort(event.target.value as "latest" | "oldest" | "amount")}><option value="latest">최신순</option><option value="oldest">오래된 순</option><option value="amount">사용량 많은 순</option></select>
       </div>
 
-      {sorted.length === 0 ? <Empty text={brews.length === 0 ? "브루잉 기록을 추가해보세요" : "검색 결과가 없어요"} /> : sorted.map(brew => {
+      {sorted.length === 0 ? (brews.length === 0 ? <div className="brew-empty inventory-empty"><img className="onboarding-logo" src="/coffee-diary-logo-brown-96.png" width="38" height="38" alt="" /><h3>첫 브루잉을 기록해보세요</h3><p>원두와 레시피를 골라 오늘의 한 잔을 남겨보세요.</p><JourneySteps active="brews" /><button type="button" className="primary-button" onClick={() => setShow(true)}>첫 브루잉 기록하기</button></div> : <Empty text="검색 결과가 없어요" />) : sorted.map(brew => {
         const bean = beans.find(b => b.id === brew.beanId);
         const hasNote = notes.some(n => n.brewId === brew.id);
         return (
-          <div key={brew.id} style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.25rem", marginBottom: 10 }}>
+          <article key={brew.id} className="brew-card">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div style={{ flex: 1 }}>
                 {bean?.roastery && <p className="brew-roastery">{bean.roastery}</p>}
@@ -681,7 +684,7 @@ function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, o
               </div>
               <div className="brew-card-actions"><button onClick={() => edit(brew)} className="brew-edit-button">수정</button><button onClick={() => remove(brew)} className="brew-delete-button">삭제</button></div>
             </div>
-          </div>
+          </article>
         );
       })}
     </div>
@@ -707,7 +710,7 @@ function BrewStats({ beans, brews }: { beans: Bean[]; brews: Brew[] }) {
     ? <p className="stats-empty">선택한 기간에 브루잉 기록이 없어요.</p>
     : <div className="usage-list">{items.map(([key, amount]) => <div className="usage-row" key={key}><span>{label(key)}</span><div className="usage-row-value"><div className="usage-bar"><i style={{ width: `${Math.max(8, amount / max * 100)}%` }} /></div><b>{fmt(Math.round(amount * 10) / 10)}g</b></div></div>)}</div>;
   return <div className="brew-stats">
-    <div className="stats-header"><div><p className="eyebrow">BREWING INSIGHTS</p><h2>브루잉 통계</h2><p>기간을 골라 내 기록을 가볍게 돌아봐요.</p></div><select aria-label="통계 기간" value={period} onChange={event => setPeriod(event.target.value as "all" | "7" | "30" | "90")}><option value="7">최근 7일</option><option value="30">최근 30일</option><option value="90">최근 90일</option><option value="all">전체 기간</option></select></div>
+    <div className="inventory-intro stats-header"><div><p className="eyebrow">BREWING INSIGHTS</p><h2>나의 브루잉 흐름</h2><p>기간을 골라 내 기록을 가볍게 돌아봐요.</p></div><select aria-label="통계 기간" value={period} onChange={event => setPeriod(event.target.value as "all" | "7" | "30" | "90")}><option value="7">최근 7일</option><option value="30">최근 30일</option><option value="90">최근 90일</option><option value="all">전체 기간</option></select></div>
     <div className="stats-cards"><div><span>브루잉 횟수</span><strong>{filtered.length}<small>회</small></strong></div><div><span>사용한 원두</span><strong>{beanUsage.length}<small>종</small></strong></div><div><span>사용량</span><strong>{fmt(Math.round(totalAmount * 10) / 10)}<small>g</small></strong></div></div>
     <section className="stats-section"><h3>원두별 사용량</h3>{beanUsage.length === 0 ? <p className="stats-empty">선택한 기간에 브루잉 기록이 없어요.</p> : <div className="usage-list">{beanUsage.map(item => <div className="usage-row" key={item.name}><span>{item.name}</span><b>{fmt(Math.round(item.amount * 10) / 10)}g</b></div>)}</div>}</section>
     <section className="stats-section"><h3>일별 사용량</h3>{usageRows(dailyUsage, dailyMax, key => { const date = parseLocalDate(key); return `${date.getMonth() + 1}/${date.getDate()}`; })}</section>
@@ -866,7 +869,7 @@ function Section({ title, children, onMore }: { title: string; children: ReactNo
 }
 
 function FormCard({ children }: { children: ReactNode }) {
-  return <div style={{ background: "var(--color-background-secondary)", borderRadius: "var(--border-radius-lg)", padding: "1rem", marginBottom: "1rem", border: "0.5px solid var(--color-border-tertiary)" }}>{children}</div>;
+  return <div className="form-card">{children}</div>;
 }
 
 function StarRating({ value, onChange }: { value: number; onChange: (value: number) => void }) {
@@ -895,6 +898,15 @@ function Btn({ onClick, filled, children }: { onClick: () => void; filled: boole
   return <button onClick={onClick} style={{ padding: "6px 16px", fontSize: 13, border: filled ? "1px solid #8B6F47" : "0.5px solid #8B6F47", borderRadius: 20, background: filled ? "#8B6F47" : "transparent", color: filled ? "#fff" : "#8B6F47", cursor: "pointer", fontFamily: FONT }}>{children}</button>;
 }
 
+function JourneySteps({ active }: { active: "beans" | "recipes" | "brews" }) {
+  const steps = [
+    { id: "beans" as const, number: 1, label: "원두 등록" },
+    { id: "recipes" as const, number: 2, label: "레시피 만들기" },
+    { id: "brews" as const, number: 3, label: "첫 브루잉 기록" }
+  ];
+  return <ol className="journey-steps" aria-label="커피 다이어리 시작 순서">{steps.map(step => <li key={step.id} className={step.id === active ? "is-active" : undefined}><b>{step.number}</b><span>{step.label}</span></li>)}</ol>;
+}
+
 function Empty({ text }: { text: string }) {
-  return <p style={{ fontSize: 13, color: "var(--color-text-tertiary)", textAlign: "center", padding: "1.5rem 0", margin: 0, fontFamily: FONT }}>{text}</p>;
+  return <p className="empty-state">{text}</p>;
 }
