@@ -243,6 +243,10 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
   const [density, setDensity] = useState<"detail" | "compact" | "dense">("detail");
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [facetFilters, setFacetFilters] = useState<BeanFacetFilters>(emptyBeanFacetFilters);
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
+  const [roastFrom, setRoastFrom] = useState("");
+  const [roastTo, setRoastTo] = useState("");
   const [error, setError] = useState("");
   const [roastDateTouched, setRoastDateTouched] = useState(false);
   const [customOrigins, setCustomOrigins] = useStorage<string[]>("cf_origins", [], userId);
@@ -279,8 +283,20 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
   const facetValues = (key: BeanFacetKey) => [...new Set(available.map(bean => facetValue(bean, key)).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko"));
   const toggleFacet = (key: BeanFacetKey, value: string) => setFacetFilters(current => ({ ...current, [key]: current[key].includes(value) ? current[key].filter(item => item !== value) : [...current[key], value] }));
   const activeFacetCount = Object.values(facetFilters).reduce((sum, values) => sum + values.length, 0);
+  const activeRangeCount = Number(Boolean(priceMin || priceMax)) + Number(Boolean(roastFrom || roastTo));
+  const activeDetailCount = activeFacetCount + activeRangeCount;
   const facetMatches = (bean: Bean) => (Object.keys(facetFilters) as BeanFacetKey[]).every(key => facetFilters[key].length === 0 || facetFilters[key].includes(facetValue(bean, key)));
-  const visible = available.filter(b => (filter === "all" || (filter === "active" ? b.remaining > 0 : b.remaining <= 0)) && (qualityFilter === "all" || b.quality === qualityFilter) && facetMatches(b));
+  const rangeMatches = (bean: Bean) => {
+    const price = Number(bean.price);
+    const minimumPrice = priceMin === "" ? 0 : Number(priceMin);
+    const maximumPrice = priceMax === "" ? Infinity : Number(priceMax);
+    if (!Number.isFinite(price) || price < minimumPrice || price > maximumPrice) return false;
+    if (roastFrom && (!bean.roastDate || bean.roastDate < roastFrom)) return false;
+    if (roastTo && (!bean.roastDate || bean.roastDate > roastTo)) return false;
+    return true;
+  };
+  const clearDetailFilters = () => { setFacetFilters(emptyBeanFacetFilters()); setPriceMin(""); setPriceMax(""); setRoastFrom(""); setRoastTo(""); };
+  const visible = available.filter(b => (filter === "all" || (filter === "active" ? b.remaining > 0 : b.remaining <= 0)) && (qualityFilter === "all" || b.quality === qualityFilter) && facetMatches(b) && rangeMatches(b));
   const sortedVisible = [...visible].sort((a, b) => {
     if (sort === "latest") return b.id - a.id;
     if (sort === "remaining") return a.remaining - b.remaining || b.id - a.id;
@@ -391,10 +407,10 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
         {error && <p role="alert">{error}</p>}
         <div className="form-buttons">{editingId !== null && <button type="button" className="delete-bean-button" onClick={remove}>삭제</button>}<button type="button" className="quiet-button" onClick={close}>취소</button><button type="submit" className="primary-button">저장</button></div>
       </form>}
-      <div className="inventory-toolbar"><div className="inventory-toolbar-top"><label className="view-mode-control" htmlFor="bean-density">보기<select id="bean-density" className="inventory-sort" value={density} onChange={event => setDensity(event.target.value as "detail" | "compact")}><option value="detail">자세히</option><option value="compact">간략하게</option></select></label><button type="button" className="advanced-filter-button" aria-expanded={advancedFiltersOpen} onClick={() => setAdvancedFiltersOpen(!advancedFiltersOpen)}>세부 검색{activeFacetCount > 0 && <b>{activeFacetCount}</b>}</button></div><div className="inventory-toolbar-row"><div className="inventory-filters" aria-label="원두 재고 필터">
+      <div className="inventory-toolbar"><div className="inventory-toolbar-top"><label className="view-mode-control" htmlFor="bean-density">보기<select id="bean-density" className="inventory-sort" value={density} onChange={event => setDensity(event.target.value as "detail" | "compact")}><option value="detail">자세히</option><option value="compact">간략하게</option></select></label><button type="button" className="advanced-filter-button" aria-expanded={advancedFiltersOpen} onClick={() => setAdvancedFiltersOpen(!advancedFiltersOpen)}>세부 검색{activeDetailCount > 0 && <b>{activeDetailCount}</b>}</button></div><div className="inventory-toolbar-row"><div className="inventory-filters" aria-label="원두 재고 필터">
         {[["active", "보유 중"], ["finished", "소비 완료"], ["all", "전체"]].map(([value, label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}
       </div><div className="inventory-toolbar-meta"><label htmlFor="quality-filter">분류</label><select id="quality-filter" className="inventory-sort" value={qualityFilter} onChange={event => setQualityFilter(event.target.value as "all" | BeanQuality)}><option value="all">전체</option>{BEAN_QUALITIES.map(quality => <option key={quality} value={quality}>{quality}</option>)}</select><label htmlFor="bean-sort">정렬</label><select id="bean-sort" className="inventory-sort" value={sort} onChange={event => setSort(event.target.value as BeanSort)}><option value="registered">등록순</option><option value="latest">최신순</option><option value="roastOldest">로스팅 날짜 빠른 순</option><option value="remaining">재고 적은 순</option><option value="unitPriceDesc">단가 높은 순</option><option value="unitPriceAsc">단가 낮은 순</option></select></div></div></div>
-      {advancedFiltersOpen && <section className="advanced-filter-panel" aria-label="원두 세부 검색"><div className="advanced-filter-header"><div><strong>세부 검색</strong><span>여러 조건을 함께 선택할 수 있어요.</span></div>{activeFacetCount > 0 && <button type="button" onClick={() => setFacetFilters(emptyBeanFacetFilters())}>초기화</button>}</div><div className="facet-grid">{facetGroup("origin", "원산지")}{facetGroup("roastery", "로스터리")}{facetGroup("variety", "품종")}{facetGroup("process", "가공방식")}{facetGroup("status", "원두 상태")}</div></section>}
+      {advancedFiltersOpen && <section className="advanced-filter-panel" aria-label="원두 세부 검색"><div className="advanced-filter-header"><div><strong>세부 검색</strong><span>여러 조건을 함께 선택할 수 있어요.</span></div>{activeDetailCount > 0 && <button type="button" onClick={clearDetailFilters}>초기화</button>}</div><div className="facet-grid">{facetGroup("origin", "원산지")}{facetGroup("roastery", "로스터리")}{facetGroup("variety", "품종")}{facetGroup("process", "가공방식")}{facetGroup("status", "원두 상태")}</div><div className="range-filter-grid"><fieldset className="range-filter-group"><legend>구매가 (원)</legend><div><input type="number" min="0" value={priceMin} onChange={event => setPriceMin(event.target.value)} placeholder="최소" aria-label="최소 구매가" /><span>~</span><input type="number" min="0" value={priceMax} onChange={event => setPriceMax(event.target.value)} placeholder="최대" aria-label="최대 구매가" /></div></fieldset><fieldset className="range-filter-group range-filter-quality"><legend>가격 구분</legend><div className="facet-options">{BEAN_QUALITIES.map(quality => <button type="button" key={quality} aria-pressed={qualityFilter === quality} onClick={() => setQualityFilter(qualityFilter === quality ? "all" : quality)}>{quality}</button>)}</div></fieldset><fieldset className="range-filter-group"><legend>로스팅 날짜</legend><div><input type="date" value={roastFrom} onChange={event => setRoastFrom(event.target.value)} aria-label="로스팅 시작일" /><span>~</span><input type="date" value={roastTo} onChange={event => setRoastTo(event.target.value)} aria-label="로스팅 종료일" /></div></fieldset></div></section>}
       <div className={`bean-list density-${density}`}>
         {sortedVisible.map(bean => {
           const pct = bean.purchased > 0 ? Math.max(0, Math.min(100, bean.remaining / bean.purchased * 100)) : 0;
