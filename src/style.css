@@ -869,7 +869,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .bean-photo-import { padding: 12px; }
   .bean-photo-import-heading { gap: 8px; }
   .bean-photo-import-heading p { font-size: 10px; }
-  .bean-photo-actions { display: grid; gap: 4px; }
+  .bean-photo-actions { display: flex; gap: 4px; }
   .bean-photo-picker { justify-content: center; min-height: 28px; padding: 5px 8px; font-size: 10px; }
   .bean-photo-preview { grid-template-columns: 56px minmax(0, 1fr) 18px; gap: 8px; }
   .bean-photo-preview img { width: 56px; height: 56px; }
