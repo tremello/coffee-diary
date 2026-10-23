@@ -19,6 +19,9 @@ const PAGE_HASHES: Record<Page, string> = { Beans: "#beans", "Brew Log": "#brews
 const pageFromHash = (hash: string): Page => ({ "#beans": "Beans", "#brews": "Brew Log", "#recipes": "Recipes", "#stats": "Brew Stats" }[hash.toLowerCase()] as Page | undefined) ?? "Beans";
 type StorageSetter<T> = (value: T) => void;
 type BeanSort = "registered" | "latest" | "roastOldest" | "remaining" | "unitPriceDesc" | "unitPriceAsc";
+type BeanFacetKey = "origin" | "roastery" | "variety" | "process" | "status";
+type BeanFacetFilters = Record<BeanFacetKey, string[]>;
+const emptyBeanFacetFilters = (): BeanFacetFilters => ({ origin: [], roastery: [], variety: [], process: [], status: [] });
 
 type Bean = {
   id: number;
@@ -238,14 +241,19 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
   const [sort, setSort] = useState<BeanSort>("registered");
   const [qualityFilter, setQualityFilter] = useState<"all" | BeanQuality>("all");
   const [density, setDensity] = useState<"detail" | "compact" | "dense">("detail");
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
+  const [facetFilters, setFacetFilters] = useState<BeanFacetFilters>(emptyBeanFacetFilters);
   const [error, setError] = useState("");
+  const [roastDateTouched, setRoastDateTouched] = useState(false);
   const [customOrigins, setCustomOrigins] = useStorage<string[]>("cf_origins", [], userId);
   const [addingOrigin, setAddingOrigin] = useState(false);
   const [newOrigin, setNewOrigin] = useState("");
   const [editingStatusId, setEditingStatusId] = useState<number | null>(null);
   const origins = [...new Set([...DEFAULT_ORIGINS, ...customOrigins, ...beans.map(b => b.origin).filter(Boolean)])];
   const [hiddenRoasteries, setHiddenRoasteries] = useStorage<string[]>("cf_hidden_roasteries", [], userId);
+  const [hiddenVarieties, setHiddenVarieties] = useStorage<string[]>("cf_hidden_varieties", [], userId);
   const roasteries = [...new Set(beans.map(bean => bean.roastery?.trim()).filter((roastery): roastery is string => Boolean(roastery)))].filter(roastery => !hiddenRoasteries.includes(roastery));
+  const varieties = [...new Set(beans.map(bean => bean.variety?.trim()).filter((variety): variety is string => Boolean(variety)))].filter(variety => !hiddenVarieties.includes(variety));
   const addOrigin = () => {
     const origin = newOrigin.trim();
     if (!origin) return;
@@ -253,6 +261,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
     setForm({ ...form, origin }); setNewOrigin(""); setAddingOrigin(false);
   };
   const hideRoastery = (roastery: string) => setHiddenRoasteries([...hiddenRoasteries, roastery]);
+  const hideVariety = (variety: string) => setHiddenVarieties([...hiddenVarieties, variety]);
   const [deletedId, setDeletedId] = useState<number | null>(null);
   const [deletedBrews, setDeletedBrews] = useState<Brew[]>([]);
   const [deletedNotes, setDeletedNotes] = useState<TastingNote[]>([]);
@@ -260,7 +269,18 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
   const active = available.filter(b => b.remaining > 0);
   const shippingAndDegassingWeight = active.filter(bean => bean.status === "배송 중" || bean.status === "디개싱 중").reduce((sum, bean) => sum + bean.remaining, 0);
   const consumingWeight = active.filter(bean => (bean.status ?? "소비 중") === "소비 중").reduce((sum, bean) => sum + bean.remaining, 0);
-  const visible = available.filter(b => (filter === "all" || (filter === "active" ? b.remaining > 0 : b.remaining <= 0)) && (qualityFilter === "all" || b.quality === qualityFilter));
+  const facetValue = (bean: Bean, key: BeanFacetKey) => {
+    if (key === "origin") return bean.origin?.trim() ?? "";
+    if (key === "roastery") return bean.roastery?.trim() ?? "";
+    if (key === "variety") return bean.variety?.trim() ?? "";
+    if (key === "process") return bean.process?.trim() ?? "";
+    return bean.status ?? "소비 중";
+  };
+  const facetValues = (key: BeanFacetKey) => [...new Set(available.map(bean => facetValue(bean, key)).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko"));
+  const toggleFacet = (key: BeanFacetKey, value: string) => setFacetFilters(current => ({ ...current, [key]: current[key].includes(value) ? current[key].filter(item => item !== value) : [...current[key], value] }));
+  const activeFacetCount = Object.values(facetFilters).reduce((sum, values) => sum + values.length, 0);
+  const facetMatches = (bean: Bean) => (Object.keys(facetFilters) as BeanFacetKey[]).every(key => facetFilters[key].length === 0 || facetFilters[key].includes(facetValue(bean, key)));
+  const visible = available.filter(b => (filter === "all" || (filter === "active" ? b.remaining > 0 : b.remaining <= 0)) && (qualityFilter === "all" || b.quality === qualityFilter) && facetMatches(b));
   const sortedVisible = [...visible].sort((a, b) => {
     if (sort === "latest") return b.id - a.id;
     if (sort === "remaining") return a.remaining - b.remaining || b.id - a.id;
@@ -280,9 +300,10 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
     }
     return a.id - b.id;
   });
-  const close = () => { setShow(false); setEditingId(null); setForm(emptyBeanForm); setError(""); setAddingOrigin(false); setNewOrigin(""); };
+  const close = () => { setShow(false); setEditingId(null); setForm(emptyBeanForm); setError(""); setRoastDateTouched(false); setAddingOrigin(false); setNewOrigin(""); };
   const edit = (bean: Bean) => {
     setForm({ ...bean, status: bean.status ?? "소비 중", purchased: String(bean.purchased), consumed: String(bean.consumed ?? 0) });
+    setRoastDateTouched(Boolean(bean.roastDate && bean.roastDate !== bean.date));
     setEditingId(bean.id); setError(""); setShow(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -309,6 +330,11 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
   const updateStatus = (beanId: number, status: BeanStatus) => {
     setBeans(beans.map(bean => bean.id === beanId ? { ...bean, status } : bean));
     setEditingStatusId(null);
+  };
+  const facetGroup = (key: BeanFacetKey, label: string) => {
+    const values = facetValues(key);
+    if (!values.length) return null;
+    return <fieldset className="facet-group" key={key}><legend>{label}</legend><div className="facet-options">{values.map(value => <button type="button" key={value} aria-pressed={facetFilters[key].includes(value)} onClick={() => toggleFacet(key, value)}>{value}</button>)}</div></fieldset>;
   };
   const save = (event: React.FormEvent) => {
     event.preventDefault();
@@ -341,9 +367,10 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
             <div className="origin-options">{origins.map(origin => <button type="button" key={origin} aria-pressed={form.origin === origin} onClick={() => setForm({ ...form, origin })}>{origin}</button>)}<button type="button" aria-expanded={addingOrigin} onClick={() => setAddingOrigin(!addingOrigin)}>+ 원산지 추가</button></div>
             {addingOrigin && <div className="origin-add"><label>새 원산지<input value={newOrigin} onChange={e => setNewOrigin(e.target.value)} placeholder="예: 과테말라" onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addOrigin(); } }} /></label><button type="button" className="quiet-button" disabled={!newOrigin.trim()} onClick={addOrigin}>추가</button></div>}
           </fieldset>
-          {([["farm", "농장 및 지역", "예: 세로아줄"], ["variety", "품종", "예: 게이샤"]] as const).map(([key, label, placeholder]) => <label key={key} className="full-width">{label}<input value={form[key] ?? ""} placeholder={placeholder} onChange={e => setForm({ ...form, [key]: e.target.value })} /></label>)}
+          <div className="bean-origin-row full-width"><label>농장 및 지역<input value={form.farm ?? ""} placeholder="예: 세로아줄" onChange={e => setForm({ ...form, farm: e.target.value })} /></label><label>품종<input value={form.variety ?? ""} placeholder="예: 게이샤" onChange={e => setForm({ ...form, variety: e.target.value })} /></label></div>
+          {editingId === null && varieties.length > 0 && <div className="existing-purchasers existing-varieties full-width"><span>기존 품종</span><span className="existing-purchaser-options">{varieties.map(variety => <span className="existing-purchaser-option" key={variety}><button type="button" onClick={() => setForm({ ...form, variety })}>{variety}</button><button type="button" className="remove-purchaser" aria-label={`${variety} 기존 품종에서 삭제`} onClick={() => hideVariety(variety)}>×</button></span>)}</span></div>}
           <fieldset className="origin-field full-width"><legend>가공방식</legend>
-            <div className="origin-options">{DEFAULT_PROCESSES.map(process => <button type="button" key={process} aria-pressed={form.process === process} onClick={() => setForm({ ...form, process })}>{process}</button>)}</div>
+            <div className="origin-options process-options">{DEFAULT_PROCESSES.slice(0, 3).map(process => <button type="button" key={process} aria-pressed={form.process === process} onClick={() => setForm({ ...form, process })}>{process}</button>)}<span className="process-anaerobic-pair">{DEFAULT_PROCESSES.slice(3).map(process => <button type="button" key={process} aria-pressed={form.process === process} onClick={() => setForm({ ...form, process })}>{process}</button>)}</span></div>
             <label className="process-custom">가공방식 직접 입력<input value={DEFAULT_PROCESSES.includes(form.process) ? "" : form.process} placeholder="예: 카보닉 매서레이션" onChange={e => setForm({ ...form, process: e.target.value })} /><span>이 원두에만 적용돼요.</span></label>
           </fieldset>
           <div className="generated-name full-width"><span>자동으로 만들어지는 원두 이름</span><output>{beanName(form) || "원두 정보를 입력해주세요"}</output></div>
@@ -351,22 +378,23 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
           <fieldset className="origin-field full-width"><legend>원두 상태</legend><div className="origin-options">{BEAN_STATUSES.map(status => <button type="button" key={status} aria-pressed={form.status === status} onClick={() => setForm({ ...form, status })}>{status}</button>)}</div></fieldset>
           <div className="bean-dates full-width">
           <label>구매량 (g) *<input type="number" min="0.1" step="0.1" required value={form.purchased} placeholder="200" onChange={e => setForm({ ...form, purchased: e.target.value })} /></label>
-          <label>소비량 (g)<input type="number" min="0" step="0.1" value={form.consumed} placeholder="0" onChange={e => setForm({ ...form, consumed: e.target.value })} /><span className="input-hint">이미 소비한 원두</span></label>
+          <label><span className="purchase-field-label">소비량 (g)<span className="input-hint">이미 소비한 원두</span></span><input type="number" min="0" step="0.1" value={form.consumed} placeholder="0" onChange={e => setForm({ ...form, consumed: e.target.value })} /></label>
           </div>
           <label className="full-width">로스터리 컵노트<input value={form.roasteryNotes ?? ""} placeholder="예: 자스민, 복숭아, 꿀" onChange={e => setForm({ ...form, roasteryNotes: e.target.value })} /></label>
           <div className="bean-purchase-row full-width"><label>구매가격 (원)<input type="number" min="0" step="100" value={form.price} placeholder="예: 28000" onChange={e => setForm({ ...form, price: e.target.value })} /></label><fieldset className="origin-field"><legend>내 기준 분류</legend><div className="origin-options">{BEAN_QUALITIES.map(quality => <button type="button" key={quality} aria-pressed={form.quality === quality} onClick={() => setForm({ ...form, quality })}>{quality}</button>)}</div></fieldset></div>
           <div className="bean-dates full-width">
-            <label>구매일<input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} /></label>
-            <label>로스팅 날짜<input type="date" value={form.roastDate ?? ""} onChange={e => setForm({ ...form, roastDate: e.target.value })} /></label>
+            <label>구매일<input type="date" value={form.date} onChange={e => { const date = e.target.value; setForm(current => ({ ...current, date, roastDate: roastDateTouched ? current.roastDate : date })); }} /></label>
+            <label>로스팅 날짜<input type="date" value={form.roastDate ?? ""} onChange={e => { setRoastDateTouched(true); setForm({ ...form, roastDate: e.target.value }); }} /></label>
           </div>
 
         </div>
         {error && <p role="alert">{error}</p>}
         <div className="form-buttons">{editingId !== null && <button type="button" className="delete-bean-button" onClick={remove}>삭제</button>}<button type="button" className="quiet-button" onClick={close}>취소</button><button type="submit" className="primary-button">저장</button></div>
       </form>}
-      <div className="inventory-toolbar"><label className="view-mode-control" htmlFor="bean-density">보기<select id="bean-density" className="inventory-sort" value={density} onChange={event => setDensity(event.target.value as "detail" | "compact")}><option value="detail">자세히</option><option value="compact">간략하게</option></select></label><div className="inventory-toolbar-row"><div className="inventory-filters" aria-label="원두 재고 필터">
+      <div className="inventory-toolbar"><div className="inventory-toolbar-top"><label className="view-mode-control" htmlFor="bean-density">보기<select id="bean-density" className="inventory-sort" value={density} onChange={event => setDensity(event.target.value as "detail" | "compact")}><option value="detail">자세히</option><option value="compact">간략하게</option></select></label><button type="button" className="advanced-filter-button" aria-expanded={advancedFiltersOpen} onClick={() => setAdvancedFiltersOpen(!advancedFiltersOpen)}>세부 검색{activeFacetCount > 0 && <b>{activeFacetCount}</b>}</button></div><div className="inventory-toolbar-row"><div className="inventory-filters" aria-label="원두 재고 필터">
         {[["active", "보유 중"], ["finished", "소비 완료"], ["all", "전체"]].map(([value, label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}
       </div><div className="inventory-toolbar-meta"><label htmlFor="quality-filter">분류</label><select id="quality-filter" className="inventory-sort" value={qualityFilter} onChange={event => setQualityFilter(event.target.value as "all" | BeanQuality)}><option value="all">전체</option>{BEAN_QUALITIES.map(quality => <option key={quality} value={quality}>{quality}</option>)}</select><label htmlFor="bean-sort">정렬</label><select id="bean-sort" className="inventory-sort" value={sort} onChange={event => setSort(event.target.value as BeanSort)}><option value="registered">등록순</option><option value="latest">최신순</option><option value="roastOldest">로스팅 날짜 빠른 순</option><option value="remaining">재고 적은 순</option><option value="unitPriceDesc">단가 높은 순</option><option value="unitPriceAsc">단가 낮은 순</option></select></div></div></div>
+      {advancedFiltersOpen && <section className="advanced-filter-panel" aria-label="원두 세부 검색"><div className="advanced-filter-header"><div><strong>세부 검색</strong><span>여러 조건을 함께 선택할 수 있어요.</span></div>{activeFacetCount > 0 && <button type="button" onClick={() => setFacetFilters(emptyBeanFacetFilters())}>초기화</button>}</div><div className="facet-grid">{facetGroup("origin", "원산지")}{facetGroup("roastery", "로스터리")}{facetGroup("variety", "품종")}{facetGroup("process", "가공방식")}{facetGroup("status", "원두 상태")}</div></section>}
       <div className={`bean-list density-${density}`}>
         {sortedVisible.map(bean => {
           const pct = bean.purchased > 0 ? Math.max(0, Math.min(100, bean.remaining / bean.purchased * 100)) : 0;

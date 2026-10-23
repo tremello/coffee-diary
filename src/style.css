@@ -757,3 +757,73 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   font-size: 13px;
   line-height: 1;
 }
+
+/* Keep bean registration's compact data fields on one shared height. */
+.bean-form-grid > label > input,
+.bean-dates input,
+.bean-purchase-row input {
+  min-height: 38px;
+  height: 38px;
+  padding: 7px 10px;
+}
+.bean-dates input[type="date"] { min-height: 38px; height: 38px; }
+.existing-varieties { margin-top: 8px; }
+
+.bean-dates > label { display: grid; gap: 7px; }
+.purchase-field-label { display: inline-flex; align-items: baseline; gap: 6px; }
+.purchase-field-label .input-hint { color: #94816b; font-size: 11px; font-weight: 400; }
+
+/* Compact bean provenance fields without leaving a single process button stranded. */
+.bean-origin-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.bean-origin-row > label { display: grid; gap: 7px; min-width: 0; color: #75634d; font-size: 12px; }
+.bean-origin-row input { width: 100%; min-width: 0; height: 38px; padding: 7px 10px; }
+.process-options { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; }
+.process-options button { min-width: 0; padding-right: 6px; padding-left: 6px; white-space: nowrap; }
+.process-options button:nth-child(-n + 3) { grid-column: span 2; }
+.process-options button:nth-child(n + 4) { grid-column: span 3; }
+@media (max-width: 540px) {
+  .bean-origin-row { gap: 10px; }
+  .process-options { gap: 6px; }
+  .process-options button { padding-right: 4px; padding-left: 4px; font-size: 11px; }
+}
+
+/* Process chips keep their natural text width; anaerobic options wrap as one pair. */
+.process-options { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.process-options > button { flex: 0 0 auto; padding-right: 12px; padding-left: 12px; }
+.process-anaerobic-pair { display: inline-flex; flex: 0 0 auto; gap: 7px; }
+.process-anaerobic-pair > button { flex: 0 0 auto; min-width: 0; padding: 8px 12px; white-space: nowrap; }
+@media (max-width: 540px) {
+  .process-options, .process-anaerobic-pair { gap: 6px; }
+  .process-options > button, .process-anaerobic-pair > button { padding-right: 10px; padding-left: 10px; font-size: 12px; }
+}
+
+/* Center the shared three-step guide in every empty-state card. */
+.journey-steps { margin-right: auto; margin-left: auto; }
+
+/* Faceted inventory search: compact at rest, detailed only when requested. */
+.inventory-toolbar-top { display: flex; align-items: center; justify-content: flex-end; gap: 7px; }
+.advanced-filter-button { display: inline-flex; align-items: center; gap: 5px; border: 1px solid #d9cbb9; border-radius: 7px; background: #fffdf9; color: #75634d; padding: 7px 9px; font-size: 12px; white-space: nowrap; }
+.advanced-filter-button:hover, .advanced-filter-button[aria-expanded="true"] { border-color: #a98b67; background: #f5eee5; color: #634c31; }
+.advanced-filter-button b { display: grid; width: 16px; height: 16px; place-items: center; border-radius: 50%; color: #fffdf9; background: #806444; font-size: 10px; font-variant-numeric: tabular-nums; }
+.advanced-filter-panel { display: grid; gap: 14px; margin: -4px 0 16px; padding: 15px; border: 1px solid #e2d5c5; border-radius: 12px; background: #fbf8f3; }
+.advanced-filter-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.advanced-filter-header > div { display: grid; gap: 3px; }
+.advanced-filter-header strong { color: #5d472f; font-size: 13px; }
+.advanced-filter-header span { color: #8b7a64; font-size: 11px; }
+.advanced-filter-header button { border: 0; background: transparent; color: #806444; padding: 3px 0; font-size: 11px; }
+.facet-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 18px; }
+.facet-group { min-width: 0; margin: 0; padding: 0; border: 0; }
+.facet-group legend { margin: 0 0 7px; color: #75634d; font-size: 12px; }
+.facet-options { display: flex; flex-wrap: wrap; gap: 5px; }
+.facet-options button { display: inline-flex; align-items: center; gap: 5px; min-width: 0; border: 1px solid #e1d5c6; border-radius: 999px; background: #fffdf9; color: #76634d; padding: 5px 8px; font-size: 11px; white-space: nowrap; }
+.facet-options button:hover { border-color: #b69b7d; }
+.facet-options button[aria-pressed="true"] { border-color: #806444; color: #fffdf9; background: #806444; }
+.facet-options small { color: #a18e78; font-size: 9px; }
+.facet-options button[aria-pressed="true"] small { color: #eee5d8; }
+@media (max-width: 540px) {
+  .inventory-toolbar-top { gap: 5px; }
+  .advanced-filter-button { padding: 6px 7px; font-size: 10px; }
+  .advanced-filter-panel { gap: 12px; margin-bottom: 14px; padding: 12px; }
+  .facet-grid { grid-template-columns: 1fr; gap: 11px; }
+  .facet-options button { padding: 5px 7px; font-size: 10px; }
+}
