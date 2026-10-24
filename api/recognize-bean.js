@@ -16,7 +16,7 @@ const beanSchema = {
     labelLines: { type: "array", items: { type: "string" }, description: "라벨 글자를 보이는 그대로 한 줄씩 옮겨 적은 것(최대 30줄)" },
     origin: { type: "string", description: "원산지 국가 이름(한국어)만. 예: 콜롬비아" },
     farm: { type: "string", description: "농장·프로젝트·생산자, 그다음 지역(한국어 표기). 쉼표로 구분. 예: 암베라 랩스, 우일라" },
-    variety: { type: "string", description: "품종 이름만(라벨 원문 표기). 예: Pink Bourbon" },
+    variety: { type: "string", description: "품종 이름만 한국어 발음 표기로. 코드형 품종은 원문 그대로. 예: 핑크 버번, SL28" },
     process: { type: "string", description: "가공 방식(한국어). 예: 워시드, 코퍼먼트 - 장미 차" },
     roastery: { type: "string", description: "로스터리 이름(라벨 원문 표기). 예: ACORN Coffee Roasters" },
     roasteryNotes: { type: "string", description: "컵노트(한국어), 쉼표로 구분. 예: 장미, 핑크 블라썸, 구아바, 황도" },
@@ -72,7 +72,7 @@ const PROMPT = `# 원두 봉투 라벨 읽기 가이드
 ## 항목별 작성법
 - origin: 국가 이름만 한국어로 씁니다(Colombia→콜롬비아, Ethiopia→에티오피아, Kenya→케냐, Panama→파나마). ORIGIN 줄이 없어도 제목에 국가가 있거나(예: "Colombia Pink Bourbon") 지역으로 국가가 확실하면(Huila→콜롬비아, Yirgacheffe→에티오피아) 그 국가를 씁니다.
 - farm: FARM 줄이 있으면 그 농장 이름을 꼭 씁니다. 농장·프로젝트·생산자 이름을 먼저, 그다음 가장 큰 지역 이름 하나를 한국어 표기로 쓰고 쉼표로 나눕니다. 예: PROJECT "Ambera Labs", REGION "Huila, Traqui, Lagunilla" → "암베라 랩스, 우일라". 예: FARM "EL PALOMAR ESTATE", REGION "LA CANTERA, BOQUETE, CHIRIQUÍ" → "엘 팔로마르 에스테이트, 보케테". 예: El Vergel → "엘 베르헬".
-- variety: 품종 이름만 라벨 원문 그대로 한 번만 씁니다. 예: "Pink Bourbon", "Geisha", "Heirloom". 대문자·소문자·한국어로 같은 이름을 반복하지 않고, 국가·가공·설명도 붙이지 않습니다.
+- variety: 품종 이름만 한 번, 한국어 발음 표기로 씁니다. 예: Geisha→게이샤, Pink Bourbon→핑크 버번, Catuai→카투아이, Heirloom→에어룸. 단, SL28, CGLE-17, ETH47, Ruiru 11처럼 숫자가 들어간 코드형 품종은 원문 그대로 씁니다. 여러 품종이면 쉼표로 나눕니다. 영어와 한국어로 같은 이름을 반복하지 않고, 국가·가공·설명도 붙이지 않습니다.
 - process: 한국어로 씁니다. Washed→워시드, Natural→내추럴, Honey→허니, Anaerobic Natural→무산소 내추럴, Anaerobic Washed→무산소 워시드. 이 다섯 가지가 아니면 라벨 표현을 한국어로 옮겨 그대로 씁니다. 예: "Coferment - Rose Tea" → "코퍼먼트 - 장미 차", "Carbonic Maceration" → "카보닉 매서레이션".
 - roastery: 로스터리 이름을 로고·브랜드 원문 그대로 씁니다. 예: "ACORN Coffee Roasters".
 - roasteryNotes: 컵노트를 한국어 맛 표현으로 바꿔 쉼표로 나눕니다. 예: "Rose, Pink Blossom, Guava, Yellow peach" → "장미, 핑크 블라썸, 구아바, 황도".
@@ -155,8 +155,8 @@ function cleanVariety(value) {
     seen.add(key);
     return true;
   });
-  // A Korean transliteration next to the original name is a repeat of it.
-  if (words.some(word => /[a-z]/i.test(word))) words = words.filter(word => !/^[가-힣]+[,.]?$/.test(word));
+  // The user writes varieties in Korean, so an English name next to its Korean reading is the repeat.
+  if (words.some(word => /^[가-힣]+[,.]?$/.test(word))) words = words.filter(word => !/^[a-z]+[,.]?$/i.test(word));
   return words.slice(0, MAX_VARIETY_WORDS).join(" ").replace(/,$/, "");
 }
 
@@ -167,6 +167,25 @@ function cleanBean(bean) {
   }
   if (typeof cleaned.variety === "string") cleaned.variety = cleanVariety(cleaned.variety);
   return cleaned;
+}
+
+// Korean readings for common varieties, used when Gemini leaves the name in English.
+const VARIETY_KOREAN = {
+  geisha: "게이샤", gesha: "게이샤", "pink bourbon": "핑크 버번", "red bourbon": "레드 버번", "yellow bourbon": "옐로 버번",
+  bourbon: "버번", catuai: "카투아이", "red catuai": "레드 카투아이", "yellow catuai": "옐로 카투아이", caturra: "카투라",
+  castillo: "카스티요", typica: "티피카", heirloom: "에어룸", sidra: "시드라", java: "자바", pacamara: "파카마라",
+  pacas: "파카스", maragogype: "마라고지페", "sudan rume": "수단 루메", "wush wush": "우시 우시", laurina: "라우리나",
+  mokka: "모카", "villa sarchi": "비야 사르치", tabi: "타비", catimor: "카티모르", "mundo novo": "문도 노보",
+  sarchimor: "사르치모르", obata: "오바타", parainema: "파라이네마"
+};
+
+function koreanVariety(value) {
+  return value.split(/\s*,\s*/).map(name => VARIETY_KOREAN[name.toLowerCase()] ?? name).join(", ");
+}
+
+// Korean names and code names like SL28 or CGLE-17 are already in the form the user wants.
+function varietyIsFinal(value) {
+  return value.split(/[\s,]+/).filter(Boolean).every(word => /[가-힣]/.test(word) || /\d/.test(word));
 }
 
 // Row names printed on labels, longest first so "PROCESSING METHOD" wins over "PROCESS".
@@ -201,14 +220,15 @@ function labelRows(lines) {
   return rows;
 }
 
-// Fills fields Gemini left empty from the label's own rows. The variety row always wins because
-// the variety is written exactly as printed.
+// Fills fields Gemini left empty from the label's own rows. The variety row also replaces a
+// variety Gemini left in English, since Gemini has repeated or garbled that field.
 function fillFromLabelRows(bean, lines) {
   const rows = labelRows(lines);
   const valueOf = field => Object.values(rows).find(row => row.field === field)?.value;
   const filled = { ...bean };
   const variety = valueOf("variety");
-  if (variety) filled.variety = cleanVariety(cleanText(titleCase(variety), "variety"));
+  if (variety && !(filledValue(filled.variety) && varietyIsFinal(filled.variety))) filled.variety = cleanVariety(cleanText(titleCase(variety), "variety"));
+  if (filledValue(filled.variety)) filled.variety = koreanVariety(filled.variety);
   if (!filledValue(filled.origin) && valueOf("origin")) filled.origin = cleanText(titleCase(valueOf("origin")), "origin");
   if (!filledValue(filled.process) && valueOf("process")) filled.process = cleanText(titleCase(valueOf("process")), "process");
   if (!filledValue(filled.farm)) {
