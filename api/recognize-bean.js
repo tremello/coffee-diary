@@ -11,15 +11,15 @@ const ALLOWED_EMAILS = (process.env.ALLOWED_EMAILS || "").split(",").map(email =
 const beanSchema = {
   type: "object",
   properties: {
-    origin: { type: "string", description: "원산지 국가명(한국어). 예: 에티오피아, 콜롬비아" },
-    farm: { type: "string", description: "농장·워싱스테이션·지역명(한국어 표기). 여러 개면 쉼표로 구분" },
-    variety: { type: "string", description: "품종. 봉투 원문 표기 유지. 예: Gesha, Heirloom" },
-    process: { type: "string", description: "가공 방식. 워시드, 내추럴, 허니, 무산소 내추럴, 무산소 워시드 중 하나를 우선 사용" },
-    roastery: { type: "string", description: "로스터리 또는 판매처 이름. 로고에 적힌 원문 표기 유지" },
-    roasteryNotes: { type: "string", description: "봉투에 적힌 컵노트·향미 표현(한국어). 쉼표로 구분" },
-    purchased: { type: "number", description: "원두 무게(g) 숫자만. 예: 200g은 200, 1kg은 1000" },
-    roastDate: { type: "string", description: "로스팅 날짜 YYYY-MM-DD. 연·월·일이 모두 보일 때만" },
-    price: { type: "number", description: "가격(원) 숫자만. 예: 18,000원은 18000" }
+    origin: { type: "string", description: "원산지 국가 이름(한국어)만. 예: 콜롬비아" },
+    farm: { type: "string", description: "농장·프로젝트·생산자, 그다음 지역(한국어 표기). 쉼표로 구분. 예: 암베라 랩스, 우일라" },
+    variety: { type: "string", description: "품종 이름만(라벨 원문 표기). 예: Pink Bourbon" },
+    process: { type: "string", description: "가공 방식(한국어). 예: 워시드, 코퍼먼트 - 장미 차" },
+    roastery: { type: "string", description: "로스터리 이름(라벨 원문 표기). 예: ACORN Coffee Roasters" },
+    roasteryNotes: { type: "string", description: "컵노트(한국어), 쉼표로 구분. 예: 장미, 핑크 블라썸, 구아바, 황도" },
+    purchased: { type: "number", description: "원두 무게(g) 숫자만. 예: 200" },
+    roastDate: { type: "string", description: "로스팅 날짜 YYYY-MM-DD" },
+    price: { type: "number", description: "가격(원) 숫자만. 예: 18000" }
   }
 };
 const BEAN_FIELDS = Object.keys(beanSchema.properties);
@@ -37,25 +37,43 @@ const MAX_RETRIES = 1;
 // footnote markers) from keeping the user waiting. Reading a label needs little reasoning,
 // and low thinking keeps thinking tokens well under the cap.
 const MAX_OUTPUT_TOKENS = 2048;
-const MAX_TEXT_LENGTH = 200;
+// Longest sensible value per field; anything past this is Gemini rambling.
+const MAX_TEXT_LENGTH = { origin: 20, farm: 60, variety: 40, process: 40, roastery: 60, roasteryNotes: 200, roastDate: 10 };
 
-const PROMPT = `이 사진은 커피 원두 봉투 라벨입니다. 라벨에 적힌 정보를 아래 항목별로 추출하세요.
+// The reading guide Gemini follows for every label photo. Each field: where to find it on the
+// label, how to write it, and an example.
+const PROMPT = `# 원두 봉투 라벨 읽기 가이드
 
-먼저 사진 전체를 꼼꼼히 훑어보세요. 작은 글씨, 봉투 옆면·뒷면, 붙어 있는 스티커, 손글씨, 도장(로스팅 날짜가 찍혀 있는 경우가 많음)까지 모두 확인합니다. 영어·한국어·일본어 등 어떤 언어로 적혀 있어도 읽습니다.
+사진은 커피 원두 봉투 라벨입니다. 아래 9개 항목을 찾아 JSON으로 답하세요.
 
-- roastery: 로스터리·판매처 이름. 로고나 브랜드명 원문 표기를 그대로 씁니다.
-- origin: 원산지 국가를 한국어 국가명으로 씁니다(Ethiopia→에티오피아, Panama→파나마, Colombia→콜롬비아, Kenya→케냐). 국가 대신 지역명만 적혀 있어도 그 지역이 속한 국가가 확실하면 국가명을 씁니다(예: Yirgacheffe→에티오피아).
-- farm: 농장·워싱스테이션·생산자·지역명을 자연스러운 한국어 음역 또는 통용 한국어 표기로 씁니다(El Vergel→엘 베르헬).
-- variety: 품종 원문 표기를 그대로 씁니다(Gesha, Heirloom, Pink Bourbon 등).
-- process: 가공 방식. 가능하면 워시드, 내추럴, 허니, 무산소 내추럴, 무산소 워시드 중 하나로 씁니다(Washed→워시드, Natural→내추럴, Anaerobic Natural→무산소 내추럴).
-- roasteryNotes: 컵노트·테이스팅 노트·향미 표현을 한국어 맛 표현으로 바꿔 쉼표로 나눕니다.
-- purchased: 원두 무게를 g 단위 숫자로만 씁니다(200g→200, 1kg→1000).
-- roastDate: 로스팅 날짜를 YYYY-MM-DD로 씁니다(2026.10.20, 20/10/2026, 26.10.20 등도 변환). 연·월·일 중 하나라도 알 수 없으면 생략합니다. 유통기한·포장일로 명시된 날짜는 로스팅 날짜로 쓰지 않습니다.
-- price: 가격을 원 단위 숫자로만 씁니다(18,000원→18000).
+## 기본 규칙
+1. 사진 전체를 봅니다. 제목(상품명), 표 형태의 "항목명: 값" 줄, 로고, 작은 글씨, 스티커, 손글씨, 도장까지 모두 확인합니다.
+2. 각 칸에는 그 항목의 값만 짧게 씁니다. 설명, 괄호 속 번역, 다른 항목의 내용, 각주·출처 표시([^1] 같은 것)를 덧붙이지 않습니다.
+3. 라벨에 실제로 적힌 내용만 씁니다. 다만 아래에서 "해도 된다"고 한 변환(국가 이름 추론, 한국어 표기)은 합니다.
+4. 사진 전체를 확인했는데 라벨에 없는 항목은 비워두고 notOnLabel에 항목 이름을 넣습니다. 글씨가 가려지거나 잘려서 확인할 수 없는 항목은 notOnLabel에 넣지 않습니다.
 
-라벨에 실제로 적힌 내용만 쓰고, 적혀 있지 않은 정보를 추측해서 만들지 마세요. 하지만 글씨가 작거나 흐려도 읽을 수 있다면 생략하지 말고 채워주세요. 라벨에서 찾을 수 없는 항목만 생략합니다. 값에는 라벨 내용만 쓰고 각주·출처 표시([^1] 같은 것)는 절대 붙이지 마세요.
+## 라벨 항목명 → 칸
+- ORIGIN, COUNTRY, 원산지 → origin
+- FARM, PRODUCER, PROJECT, WASHING STATION, MILL, 농장, 생산자 → farm
+- REGION, AREA, 지역 → farm (농장·프로젝트 뒤에)
+- VARIETY, VARIETAL, CULTIVAR, 품종 → variety
+- PROCESS, PROCESSING, 가공 → process
+- CUP NOTE, TASTING NOTE, FLAVOR, 컵노트 → roasteryNotes
+- NET WT, WEIGHT, 중량 → purchased
+- ROASTED ON, ROAST DATE, 로스팅 날짜 → roastDate
+- PRICE, 가격 → price
+- ALTITUDE, IMPORTED BY 같은 나머지 항목은 쓰지 않습니다.
 
-원두 봉투에는 원래 일부 정보가 없는 경우가 많습니다(예: 가격이나 로스팅 날짜가 없는 라벨). 사진 전체를 확인했는데도 라벨에 적혀 있지 않은 항목은 notOnLabel에 그 항목 이름을 넣어 "없음"으로 판단해주세요. 글씨가 가려지거나 잘려서 확인할 수 없는 항목은 notOnLabel에 넣지 마세요.`;
+## 항목별 작성법
+- origin: 국가 이름만 한국어로 씁니다(Colombia→콜롬비아, Ethiopia→에티오피아, Kenya→케냐, Panama→파나마). ORIGIN 줄이 없어도 제목에 국가가 있거나(예: "Colombia Pink Bourbon") 지역으로 국가가 확실하면(Huila→콜롬비아, Yirgacheffe→에티오피아) 그 국가를 씁니다.
+- farm: 농장·프로젝트·생산자 이름을 먼저, 그다음 가장 큰 지역 이름 하나를 한국어 표기로 쓰고 쉼표로 나눕니다. 예: PROJECT "Ambera Labs", REGION "Huila, Traqui, Lagunilla" → "암베라 랩스, 우일라". 예: El Vergel → "엘 베르헬".
+- variety: 품종 이름만 라벨 원문 그대로 씁니다. 예: "Pink Bourbon", "Gesha", "Heirloom". 국가·가공·설명은 붙이지 않습니다.
+- process: 한국어로 씁니다. Washed→워시드, Natural→내추럴, Honey→허니, Anaerobic Natural→무산소 내추럴, Anaerobic Washed→무산소 워시드. 이 다섯 가지가 아니면 라벨 표현을 한국어로 옮겨 그대로 씁니다. 예: "Coferment - Rose Tea" → "코퍼먼트 - 장미 차", "Carbonic Maceration" → "카보닉 매서레이션".
+- roastery: 로스터리 이름을 로고·브랜드 원문 그대로 씁니다. 예: "ACORN Coffee Roasters".
+- roasteryNotes: 컵노트를 한국어 맛 표현으로 바꿔 쉼표로 나눕니다. 예: "Rose, Pink Blossom, Guava, Yellow peach" → "장미, 핑크 블라썸, 구아바, 황도".
+- purchased: 무게를 g 숫자만 씁니다. 200g→200, 1kg→1000.
+- roastDate: 로스팅 날짜를 YYYY-MM-DD로 씁니다. 2026.10.20, 20/10/2026, 26.10.20 모두 2026-10-20. 연·월·일 중 하나라도 모르면 비웁니다. 유통기한·포장일은 쓰지 않습니다.
+- price: 원 단위 숫자만 씁니다. 18,000원→18000.`;
 
 async function verifyUser(request) {
   const header = request.headers?.authorization ?? "";
@@ -108,15 +126,21 @@ function mergeBeans(first, second) {
 }
 
 // Gemini has been seen appending footnote markers like "[^1] [^2] ..." to values.
-function cleanText(value) {
-  return value.replace(/\s*\[\^?\d+\]/g, "").replace(/\s+/g, " ").trim().slice(0, MAX_TEXT_LENGTH).trim();
+function cleanText(value, maxLength) {
+  const text = value.replace(/\s*\[\^?\d+\]/g, "").replace(/\s+/g, " ").trim();
+  if (text.length <= maxLength) return text;
+  // Cut at the last space or comma that fits, so a word isn't split in half.
+  const cut = text.slice(0, maxLength + 1).search(/[\s,]+[^\s,]*$/);
+  return (cut > 0 ? text.slice(0, cut) : text.slice(0, maxLength)).trim();
 }
 
 function cleanBean(bean) {
   const cleaned = { ...bean };
   for (const field of BEAN_FIELDS) {
-    if (typeof cleaned[field] === "string") cleaned[field] = cleanText(cleaned[field]);
+    if (typeof cleaned[field] === "string") cleaned[field] = cleanText(cleaned[field], MAX_TEXT_LENGTH[field] ?? 200);
   }
+  // A variety is a short name; drop anything Gemini tacked on in brackets or after a separator.
+  if (typeof cleaned.variety === "string") cleaned.variety = cleaned.variety.split(/\s*[([{|]/)[0].trim();
   return cleaned;
 }
 
