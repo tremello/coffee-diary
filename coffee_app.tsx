@@ -1,11 +1,14 @@
-import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { supabase } from "./src/supabase";
 
 const STORAGE_KEYS = { beans: "cf_beans", brews: "cf_brews", notes: "cf_notes", recipes: "cf_recipes" };
 const DEFAULT_PROCESSES = ["워시드", "내추럴", "허니", "무산소 내추럴", "무산소 워시드"];
 const DEFAULT_ORIGINS = ["에티오피아", "파나마", "콜롬비아", "케냐"];
-const BEAN_STATUSES = ["배송 중", "디개싱 중", "소비 중"] as const;
+const BEAN_STATUSES = ["디개싱 중", "소비 중"] as const;
 type BeanStatus = (typeof BEAN_STATUSES)[number];
+// "배송 중" was retired (shipping is brief and always ends in degassing); older records read as "디개싱 중" and are saved that way on their next edit.
+const LEGACY_SHIPPING_STATUS = "배송 중";
+const normalizeBeans = (beans: Bean[]) => beans.some(bean => (bean.status as string) === LEGACY_SHIPPING_STATUS) ? beans.map(bean => (bean.status as string) === LEGACY_SHIPPING_STATUS ? { ...bean, status: "디개싱 중" as BeanStatus } : bean) : beans;
 const BEAN_QUALITIES = ["특식", "준특식", "사료"] as const;
 type BeanQuality = (typeof BEAN_QUALITIES)[number];
 const PHOTO_ORIGIN_LABELS: Record<string, string> = {
@@ -263,7 +266,8 @@ export default function App() {
   const [page, setPage] = useState<Page>(() => pageFromHash(window.location.hash));
   const [openBrewForm, setOpenBrewForm] = useState(false);
   const { user, loading: authLoading } = useAuth();
-  const [beans, setBeans] = useStorage<Bean[]>(STORAGE_KEYS.beans, [], user?.id ?? null);
+  const [storedBeans, setBeans] = useStorage<Bean[]>(STORAGE_KEYS.beans, [], user?.id ?? null);
+  const beans = useMemo(() => normalizeBeans(storedBeans), [storedBeans]);
   const [brews, setBrews] = useStorage<Brew[]>(STORAGE_KEYS.brews, [], user?.id ?? null);
   const [notes, setNotes] = useStorage<TastingNote[]>(STORAGE_KEYS.notes, [], user?.id ?? null);
   const [recipes, setRecipes] = useStorage<SavedRecipe[]>(STORAGE_KEYS.recipes, [], user?.id ?? null);
@@ -397,7 +401,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
   const [deletedNotes, setDeletedNotes] = useState<TastingNote[]>([]);
   const available = beans.filter(b => !b.deleted);
   const active = available.filter(b => b.remaining > 0);
-  const shippingAndDegassingWeight = active.filter(bean => bean.status === "배송 중" || bean.status === "디개싱 중").reduce((sum, bean) => sum + bean.remaining, 0);
+  const degassingWeight = active.filter(bean => bean.status === "디개싱 중").reduce((sum, bean) => sum + bean.remaining, 0);
   const consumingWeight = active.filter(bean => (bean.status ?? "소비 중") === "소비 중").reduce((sum, bean) => sum + bean.remaining, 0);
   const today = localDate();
   const beanFacetValues = (bean: Bean, key: BeanFacetKey): string[] => {
@@ -598,7 +602,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
         <div className="intro-actions"><button className="secondary-button" onClick={onBrew}>브루잉 추가</button><button className="primary-button" onClick={() => { close(); setShow(true); }}>+ 원두 추가</button></div></div>
       <div className="inventory-summary">
         <div className="summary-primary"><span>보유 중</span><strong>{active.length}<small>종</small>{fmt(Math.round(active.reduce((sum, b) => sum + b.remaining, 0) * 10) / 10)}<small>g</small></strong></div>
-        <div className="summary-details"><div className="summary-status-breakdown"><span>배송·디개싱 중 <b>{fmt(Math.round(shippingAndDegassingWeight * 10) / 10)}g</b></span><span>소비 중 <b>{fmt(Math.round(consumingWeight * 10) / 10)}g</b></span></div></div>
+        <div className="summary-details"><div className="summary-status-breakdown"><span>디개싱 중 <b>{fmt(Math.round(degassingWeight * 10) / 10)}g</b></span><span>소비 중 <b>{fmt(Math.round(consumingWeight * 10) / 10)}g</b></span></div></div>
       </div>
       {deletedId !== null && <div className="delete-notice" role="status"><span>원두를 삭제했어요.</span><button type="button" onClick={undoRemove}>되돌리기</button></div>}
       {show && <form className="bean-form" onSubmit={save}>
@@ -887,7 +891,7 @@ function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, o
     const restoredBeans = previous ? beans.map(item => item.id === previous.beanId ? { ...item, remaining: Math.round((item.remaining + previous.amount) * 10) / 10 } : item) : beans;
     const available = restoredBeans.find(item => item.id === nextBeanId);
     if (!available || available.remaining < amt) { setBrewError(`잔여량(${fmt(available?.remaining ?? 0)}g)이 부족해요.`); return; }
-    const startsConsuming = available.status === "배송 중" || available.status === "디개싱 중";
+    const startsConsuming = available.status === "디개싱 중";
     const brew = { ...form, id: editingId ?? Date.now(), beanId: nextBeanId, amount: amt, waterAmount: water };
     setBrews(editingId === null ? [...brews, brew] : brews.map(item => item.id === editingId ? brew : item));
     setBeans(restoredBeans.map(item => item.id === nextBeanId ? { ...item, remaining: Math.round((item.remaining - amt) * 10) / 10, ...(startsConsuming ? { status: "소비 중" as BeanStatus } : {}) } : item));
