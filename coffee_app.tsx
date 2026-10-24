@@ -537,8 +537,11 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
       const origin = localizedPhotoField(text(result.origin), PHOTO_ORIGIN_LABELS);
       const process = localizedPhotoField(text(result.process), PHOTO_PROCESS_LABELS);
       if (origin && !origins.includes(origin) && !customOrigins.includes(origin)) setCustomOrigins([...customOrigins, origin]);
+      // A new photo replaces what an earlier photo (or typing) put in these fields.
       setForm(current => ({
         ...current,
+        origin: "", farm: "", variety: "", process: "", roastery: "", roasteryNotes: "", purchased: "", price: "",
+        roastDate: current.date,
         ...(origin ? { origin } : {}),
         ...(text(result.farm) ? { farm: text(result.farm) } : {}),
         ...(text(result.variety) ? { variety: text(result.variety) } : {}),
@@ -549,7 +552,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
         ...(text(result.roastDate) ? { roastDate: text(result.roastDate) } : {}),
         ...(result.price !== undefined && String(result.price).trim() ? { price: String(result.price) } : {})
       }));
-      if (text(result.roastDate)) setRoastDateTouched(true);
+      setRoastDateTouched(Boolean(text(result.roastDate)));
       setPhotoMessage("읽어온 정보를 입력칸에 채웠어요. 저장하기 전에 확인해주세요.");
     } catch (photoRecognitionError) {
       setPhotoError(photoRecognitionError instanceof Error ? photoRecognitionError.message : "사진에서 정보를 읽지 못했어요.");

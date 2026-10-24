@@ -11,6 +11,9 @@ const ALLOWED_EMAILS = (process.env.ALLOWED_EMAILS || "").split(",").map(email =
 const beanSchema = {
   type: "object",
   properties: {
+    // Listed first so Gemini copies the label before filling fields; the server also reads
+    // "VARIETY: GEISHA"-style rows from it directly.
+    labelLines: { type: "array", items: { type: "string" }, description: "라벨 글자를 보이는 그대로 한 줄씩 옮겨 적은 것(최대 30줄)" },
     origin: { type: "string", description: "원산지 국가 이름(한국어)만. 예: 콜롬비아" },
     farm: { type: "string", description: "농장·프로젝트·생산자, 그다음 지역(한국어 표기). 쉼표로 구분. 예: 암베라 랩스, 우일라" },
     variety: { type: "string", description: "품종 이름만(라벨 원문 표기). 예: Pink Bourbon" },
@@ -22,7 +25,7 @@ const beanSchema = {
     price: { type: "number", description: "가격(원) 숫자만. 예: 18000" }
   }
 };
-const BEAN_FIELDS = Object.keys(beanSchema.properties);
+const BEAN_FIELDS = Object.keys(beanSchema.properties).filter(field => field !== "labelLines");
 beanSchema.properties.notOnLabel = {
   type: "array",
   items: { type: "string", enum: BEAN_FIELDS },
@@ -36,8 +39,9 @@ const MAX_RETRIES = 1;
 // A normal answer is a few hundred tokens; the cap stops a runaway answer (e.g. endless
 // footnote markers) from keeping the user waiting. Reading a label needs little reasoning,
 // and low thinking keeps thinking tokens well under the cap.
-const MAX_OUTPUT_TOKENS = 2048;
+const MAX_OUTPUT_TOKENS = 3072;
 // Longest sensible value per field; anything past this is Gemini rambling.
+const MAX_VARIETY_WORDS = 3;
 const MAX_TEXT_LENGTH = { origin: 20, farm: 60, variety: 40, process: 40, roastery: 60, roasteryNotes: 200, roastDate: 10 };
 
 // The reading guide Gemini follows for every label photo. Each field: where to find it on the
@@ -48,9 +52,10 @@ const PROMPT = `# 원두 봉투 라벨 읽기 가이드
 
 ## 기본 규칙
 1. 사진 전체를 봅니다. 제목(상품명), 표 형태의 "항목명: 값" 줄, 로고, 작은 글씨, 스티커, 손글씨, 도장까지 모두 확인합니다.
-2. 각 칸에는 그 항목의 값만 짧게 씁니다. 설명, 괄호 속 번역, 다른 항목의 내용, 각주·출처 표시([^1] 같은 것)를 덧붙이지 않습니다.
-3. 라벨에 실제로 적힌 내용만 씁니다. 다만 아래에서 "해도 된다"고 한 변환(국가 이름 추론, 한국어 표기)은 합니다.
-4. 사진 전체를 확인했는데 라벨에 없는 항목은 비워두고 notOnLabel에 항목 이름을 넣습니다. 글씨가 가려지거나 잘려서 확인할 수 없는 항목은 notOnLabel에 넣지 않습니다.
+2. 먼저 labelLines에 라벨 글자를 보이는 그대로 한 줄씩 옮겨 적습니다(예: "FARM: EL PALOMAR ESTATE"). 긴 설명 문단은 첫 줄만 적습니다. 그다음 이 내용을 보고 각 칸을 채웁니다.
+3. 각 칸에는 그 항목의 값만 짧게 씁니다. 설명, 괄호 속 번역, 다른 항목의 내용, 각주·출처 표시([^1] 같은 것)를 덧붙이지 않습니다.
+4. 라벨에 실제로 적힌 내용만 씁니다. 다만 아래에서 "해도 된다"고 한 변환(국가 이름 추론, 한국어 표기)은 합니다.
+5. 사진 전체를 확인했는데 라벨에 없는 항목은 비워두고 notOnLabel에 항목 이름을 넣습니다. 글씨가 가려지거나 잘려서 확인할 수 없는 항목은 notOnLabel에 넣지 않습니다.
 
 ## 라벨 항목명 → 칸
 - ORIGIN, COUNTRY, 원산지 → origin
@@ -66,8 +71,8 @@ const PROMPT = `# 원두 봉투 라벨 읽기 가이드
 
 ## 항목별 작성법
 - origin: 국가 이름만 한국어로 씁니다(Colombia→콜롬비아, Ethiopia→에티오피아, Kenya→케냐, Panama→파나마). ORIGIN 줄이 없어도 제목에 국가가 있거나(예: "Colombia Pink Bourbon") 지역으로 국가가 확실하면(Huila→콜롬비아, Yirgacheffe→에티오피아) 그 국가를 씁니다.
-- farm: 농장·프로젝트·생산자 이름을 먼저, 그다음 가장 큰 지역 이름 하나를 한국어 표기로 쓰고 쉼표로 나눕니다. 예: PROJECT "Ambera Labs", REGION "Huila, Traqui, Lagunilla" → "암베라 랩스, 우일라". 예: El Vergel → "엘 베르헬".
-- variety: 품종 이름만 라벨 원문 그대로 씁니다. 예: "Pink Bourbon", "Gesha", "Heirloom". 국가·가공·설명은 붙이지 않습니다.
+- farm: FARM 줄이 있으면 그 농장 이름을 꼭 씁니다. 농장·프로젝트·생산자 이름을 먼저, 그다음 가장 큰 지역 이름 하나를 한국어 표기로 쓰고 쉼표로 나눕니다. 예: PROJECT "Ambera Labs", REGION "Huila, Traqui, Lagunilla" → "암베라 랩스, 우일라". 예: FARM "EL PALOMAR ESTATE", REGION "LA CANTERA, BOQUETE, CHIRIQUÍ" → "엘 팔로마르 에스테이트, 보케테". 예: El Vergel → "엘 베르헬".
+- variety: 품종 이름만 라벨 원문 그대로 한 번만 씁니다. 예: "Pink Bourbon", "Geisha", "Heirloom". 대문자·소문자·한국어로 같은 이름을 반복하지 않고, 국가·가공·설명도 붙이지 않습니다.
 - process: 한국어로 씁니다. Washed→워시드, Natural→내추럴, Honey→허니, Anaerobic Natural→무산소 내추럴, Anaerobic Washed→무산소 워시드. 이 다섯 가지가 아니면 라벨 표현을 한국어로 옮겨 그대로 씁니다. 예: "Coferment - Rose Tea" → "코퍼먼트 - 장미 차", "Carbonic Maceration" → "카보닉 매서레이션".
 - roastery: 로스터리 이름을 로고·브랜드 원문 그대로 씁니다. 예: "ACORN Coffee Roasters".
 - roasteryNotes: 컵노트를 한국어 맛 표현으로 바꿔 쉼표로 나눕니다. 예: "Rose, Pink Blossom, Guava, Yellow peach" → "장미, 핑크 블라썸, 구아바, 황도".
@@ -112,8 +117,8 @@ function unexplainedMissing(bean, notOnLabel) {
 }
 
 function labelFields(bean) {
-  const { notOnLabel, ...fields } = bean;
-  return { fields, notOnLabel: Array.isArray(notOnLabel) ? notOnLabel : [] };
+  const { notOnLabel, labelLines, ...fields } = bean;
+  return { fields: fillFromLabelRows(fields, labelLines), notOnLabel: Array.isArray(notOnLabel) ? notOnLabel : [] };
 }
 
 // Keep the first read's values and only fill in fields it left empty.
@@ -125,23 +130,94 @@ function mergeBeans(first, second) {
   return merged;
 }
 
+// Fields that hold one name, so only the first line Gemini wrote is kept.
+const SINGLE_LINE_FIELDS = new Set(["origin", "variety", "process", "roastery", "roastDate"]);
+
 // Gemini has been seen appending footnote markers like "[^1] [^2] ..." to values.
-function cleanText(value, maxLength) {
-  const text = value.replace(/\s*\[\^?\d+\]/g, "").replace(/\s+/g, " ").trim();
+function cleanText(value, field) {
+  const lines = value.split(/\s*\n+\s*/).filter(Boolean);
+  const joined = SINGLE_LINE_FIELDS.has(field) ? lines[0] ?? "" : lines.join(", ");
+  const text = joined.replace(/\s*\[\^?\d+\]/g, "").replace(/\s+/g, " ").trim();
+  const maxLength = MAX_TEXT_LENGTH[field] ?? 200;
   if (text.length <= maxLength) return text;
   // Cut at the last space or comma that fits, so a word isn't split in half.
   const cut = text.slice(0, maxLength + 1).search(/[\s,]+[^\s,]*$/);
   return (cut > 0 ? text.slice(0, cut) : text.slice(0, maxLength)).trim();
 }
 
+// Gemini has written a variety as "GEISHA Geisha 게이샤 GEISHA ...". Keep one spelling of a short name.
+function cleanVariety(value) {
+  const text = value.split(/\s*[([{|]/)[0].trim();
+  const seen = new Set();
+  let words = text.split(/\s+/).filter(word => {
+    const key = word.toLowerCase().replace(/[,.]$/, "");
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  // A Korean transliteration next to the original name is a repeat of it.
+  if (words.some(word => /[a-z]/i.test(word))) words = words.filter(word => !/^[가-힣]+[,.]?$/.test(word));
+  return words.slice(0, MAX_VARIETY_WORDS).join(" ").replace(/,$/, "");
+}
+
 function cleanBean(bean) {
   const cleaned = { ...bean };
   for (const field of BEAN_FIELDS) {
-    if (typeof cleaned[field] === "string") cleaned[field] = cleanText(cleaned[field], MAX_TEXT_LENGTH[field] ?? 200);
+    if (typeof cleaned[field] === "string") cleaned[field] = cleanText(cleaned[field], field);
   }
-  // A variety is a short name; drop anything Gemini tacked on in brackets or after a separator.
-  if (typeof cleaned.variety === "string") cleaned.variety = cleaned.variety.split(/\s*[([{|]/)[0].trim();
+  if (typeof cleaned.variety === "string") cleaned.variety = cleanVariety(cleaned.variety);
   return cleaned;
+}
+
+// Row names printed on labels, longest first so "PROCESSING METHOD" wins over "PROCESS".
+const LABEL_ROWS = [
+  ["origin", ["ORIGIN", "COUNTRY", "원산지", "생산국"]],
+  ["farm", ["WASHING STATION", "PRODUCER", "PROJECT", "ESTATE", "FARM", "MILL", "농장", "생산자"]],
+  ["region", ["REGION", "AREA", "지역"]],
+  ["variety", ["VARIETIES", "VARIETAL", "VARIETY", "CULTIVAR", "품종"]],
+  ["process", ["PROCESSING METHOD", "PROCESSING", "PROCESS", "가공방식", "가공", "프로세스"]]
+].flatMap(([field, names]) => names.map(name => [field, name])).sort((a, b) => b[1].length - a[1].length);
+// When a label has both, the farm name is preferred over producer or project.
+const FARM_ROW_PRIORITY = ["FARM", "ESTATE", "농장", "WASHING STATION", "PROJECT", "PRODUCER", "생산자", "MILL"];
+
+function titleCase(value) {
+  if (value !== value.toUpperCase()) return value;
+  return value.toLowerCase().replace(/(^|[\s,(-])(\p{L})/gu, (_, before, letter) => before + letter.toUpperCase());
+}
+
+// Reads "FARM: EL PALOMAR ESTATE"-style rows out of Gemini's copy of the label.
+function labelRows(lines) {
+  const rows = {};
+  for (const line of Array.isArray(lines) ? lines : []) {
+    if (typeof line !== "string") continue;
+    const text = line.trim();
+    for (const [field, name] of LABEL_ROWS) {
+      if (!text.toUpperCase().startsWith(name)) continue;
+      const value = text.slice(name.length).replace(/^\s*[:：|\-–]?\s*/, "").trim();
+      if (value && value.length < 80 && !rows[name]) rows[name] = { field, value };
+      break;
+    }
+  }
+  return rows;
+}
+
+// Fills fields Gemini left empty from the label's own rows. The variety row always wins because
+// the variety is written exactly as printed.
+function fillFromLabelRows(bean, lines) {
+  const rows = labelRows(lines);
+  const valueOf = field => Object.values(rows).find(row => row.field === field)?.value;
+  const filled = { ...bean };
+  const variety = valueOf("variety");
+  if (variety) filled.variety = cleanVariety(cleanText(titleCase(variety), "variety"));
+  if (!filledValue(filled.origin) && valueOf("origin")) filled.origin = cleanText(titleCase(valueOf("origin")), "origin");
+  if (!filledValue(filled.process) && valueOf("process")) filled.process = cleanText(titleCase(valueOf("process")), "process");
+  if (!filledValue(filled.farm)) {
+    const farmName = FARM_ROW_PRIORITY.map(name => rows[name]?.value).find(Boolean);
+    const region = valueOf("region");
+    const farm = farmName ?? region;
+    if (farm) filled.farm = cleanText(titleCase(farm), "farm");
+  }
+  return filled;
 }
 
 // When the answer was cut off at the token cap, keep the fields that were finished.
