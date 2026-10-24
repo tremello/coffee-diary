@@ -206,7 +206,24 @@ const VERIFY_DELAY = 1_500;
 const MAX_VERIFY_ROUNDS = 3;
 const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 const itemId = (item: unknown) => typeof item === "string" ? item : item && typeof item === "object" && "id" in item ? String((item as { id: unknown }).id) : undefined;
-const mergeSynced = (base: unknown, mine: unknown, theirs: unknown): unknown => {
+// Both sides changed the same record: take each field from whichever side changed it; bean stock deltas add up.
+const mergeRecord = (base: unknown, mine: unknown, theirs: unknown, sumStock: boolean): unknown => {
+  if (sameJson(mine, base)) return theirs;
+  if (sameJson(theirs, base)) return mine;
+  const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === "object" && !Array.isArray(value);
+  if (!isRecord(base) || !isRecord(mine) || !isRecord(theirs)) return mine;
+  const merged: Record<string, unknown> = {};
+  new Set([...Object.keys(base), ...Object.keys(mine), ...Object.keys(theirs)]).forEach(field => {
+    const mineChanged = !sameJson(mine[field], base[field]), theirsChanged = !sameJson(theirs[field], base[field]);
+    const [b, m, t] = [base[field], mine[field], theirs[field]];
+    const bothStock = field === "remaining" && mineChanged && theirsChanged && typeof b === "number" && typeof m === "number" && typeof t === "number";
+    // On a re-check the server copy may already include our deduction, so adding again would double count; keep theirs.
+    const value = bothStock ? (sumStock ? Math.round(((t as number) + (m as number) - (b as number)) * 10) / 10 : t) : mineChanged ? m : t;
+    if (value !== undefined) merged[field] = value;
+  });
+  return merged;
+};
+const mergeSynced = (base: unknown, mine: unknown, theirs: unknown, sumStock = true): unknown => {
   if (!Array.isArray(mine) || !Array.isArray(theirs)) return mine;
   const baseItems = Array.isArray(base) ? base : [];
   if ([...baseItems, ...mine, ...theirs].some(item => itemId(item) === undefined)) return mine;
@@ -215,7 +232,7 @@ const mergeSynced = (base: unknown, mine: unknown, theirs: unknown): unknown => 
   const merged: unknown[] = [];
   theirs.forEach(item => {
     const id = itemId(item) as string;
-    if (mineById.has(id)) merged.push(baseById.has(id) && sameJson(mineById.get(id), baseById.get(id)) ? item : mineById.get(id));
+    if (mineById.has(id)) merged.push(baseById.has(id) ? mergeRecord(baseById.get(id), mineById.get(id), item, sumStock) : mineById.get(id));
     else if (!baseById.has(id)) merged.push(item);
   });
   mine.forEach(item => {
@@ -225,11 +242,12 @@ const mergeSynced = (base: unknown, mine: unknown, theirs: unknown): unknown => 
   });
   return merged;
 };
-type KeySync = { running: boolean; again: boolean; rounds: number; lastRefresh: number; apply?: (value: unknown) => void };
+// readyFor is the account whose first server read finished for this key; pushes wait for it so nothing is sent before we know the account's data.
+type KeySync = { running: boolean; again: boolean; rounds: number; lastRefresh: number; readyFor: string | null; queued: boolean; apply?: (value: unknown) => void };
 const keySyncs = new Map<string, KeySync>();
 const keySync = (key: string) => {
   let sync = keySyncs.get(key);
-  if (!sync) { sync = { running: false, again: false, rounds: 0, lastRefresh: 0 }; keySyncs.set(key, sync); }
+  if (!sync) { sync = { running: false, again: false, rounds: 0, lastRefresh: 0, readyFor: null, queued: false }; keySyncs.set(key, sync); }
   return sync;
 };
 const fetchRemote = async (key: string, userId: string) => {
@@ -247,7 +265,7 @@ const pushOnce = async (key: string, userId: string) => {
     // A newer local edit arrived while reading; the next round pushes it instead.
     if (!sameJson(readLocal(key), mine)) { sync.again = true; return; }
     const base = readLocal<unknown>(BASE_PREFIX + key);
-    const value = theirs !== undefined && !sameJson(theirs, base) ? mergeSynced(base, mine, theirs) : mine;
+    const value = theirs !== undefined && !sameJson(theirs, base) ? mergeSynced(base, mine, theirs, sync.rounds === 0) : mine;
     if (!sameJson(value, mine)) { writeLocal(key, value); sync.apply?.(value); }
     const { error } = await supabase.from("coffee_data").upsert({ key, data: value, user_id: userId }, { onConflict: "user_id,key" });
     if (error) console.error("Coffee sync save failed", error);
@@ -266,6 +284,7 @@ const pushOnce = async (key: string, userId: string) => {
 // One push per key at a time; edits made meanwhile are sent together when it finishes.
 const pushKey = async (key: string, userId: string) => {
   const sync = keySync(key);
+  if (sync.readyFor !== userId) { sync.queued = true; return; }
   if (sync.running) { sync.again = true; return; }
   sync.running = true;
   sync.rounds = 0;
@@ -274,7 +293,7 @@ const pushKey = async (key: string, userId: string) => {
 };
 const refreshKey = async (key: string, userId: string) => {
   const sync = keySync(key);
-  if (sync.running || Date.now() - sync.lastRefresh < REFRESH_INTERVAL) return;
+  if (sync.running || sync.readyFor !== userId || Date.now() - sync.lastRefresh < REFRESH_INTERVAL) return;
   sync.lastRefresh = Date.now();
   if (readLocal(PENDING_PREFIX + key)) { void pushKey(key, userId); return; }
   const local = readLocal<unknown>(key);
@@ -293,7 +312,15 @@ function useStorage<T>(key: string, init: T, userId: string | null = null): [T, 
     if (!userId) return;
     let cancelled = false;
     editedRef.current = false;
+    // Drop whatever the previous account left in memory; adoptLocalData has already cleared its local copy.
+    setVal(readLocal<T>(key) ?? init);
     const sync = keySync(key);
+    sync.readyFor = null; sync.queued = false;
+    const markReady = () => {
+      if (cancelled) return;
+      sync.readyFor = userId;
+      if (sync.queued) { sync.queued = false; void pushKey(key, userId); }
+    };
     const apply = (value: unknown) => { if (!cancelled) setVal(value as T); };
     sync.apply = apply;
     const pushLocal = () => { void pushKey(key, userId); };
@@ -309,15 +336,17 @@ function useStorage<T>(key: string, init: T, userId: string | null = null): [T, 
       window.removeEventListener("online", refresh);
       document.removeEventListener("visibilitychange", refresh);
     };
-    if (readLocal(PENDING_PREFIX + key)) { pushLocal(); return cleanup; }
+    if (readLocal(PENDING_PREFIX + key)) { markReady(); pushLocal(); return cleanup; }
     sync.lastRefresh = Date.now();
     fetchRemote(key, userId).then(remote => {
-      if (cancelled || editedRef.current) return;
-      if (remote !== undefined) { setVal(remote as T); writeLocal(key, remote); writeLocal(BASE_PREFIX + key, remote); return; }
+      if (cancelled) return;
+      if (editedRef.current) { markReady(); return; }
+      if (remote !== undefined) { setVal(remote as T); writeLocal(key, remote); writeLocal(BASE_PREFIX + key, remote); markReady(); return; }
+      markReady();
       const local = readLocal<T>(key);
       if (Array.isArray(local) && local.length > 0) pushLocal();
       else if (local === undefined) setVal(init);
-    }, error => console.error("Coffee sync read failed", error));
+    }, error => { console.error("Coffee sync read failed", error); markReady(); });
     return cleanup;
   }, [key, userId]);
   const set = (v: T) => {
