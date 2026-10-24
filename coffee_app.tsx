@@ -128,7 +128,7 @@ type BrewForm = Omit<Brew, "id" | "beanId" | "amount" | "waterAmount"> & {
 
 type RecipeStep = {
   time: string;
-  action: "블룸" | "센터 푸어" | "원형 푸어" | "마무리";
+  action: "블룸" | "센터 푸어" | "원형 푸어" | "마무리" | "가수";
   amount: number;
 };
 
@@ -848,8 +848,20 @@ function BeanComments({ bean, notes, onAdd }: { bean: Bean; notes: TastingNote[]
   </section>;
 }
 
-const recipeActions: RecipeStep["action"][] = ["블룸", "센터 푸어", "원형 푸어", "마무리"];
+const recipeActions: RecipeStep["action"][] = ["블룸", "센터 푸어", "원형 푸어", "마무리", "가수"];
 const normalizedRecipeAction = (action: string): RecipeStep["action"] => action === "스파이럴" ? "원형 푸어" : recipeActions.includes(action as RecipeStep["action"]) ? action as RecipeStep["action"] : "원형 푸어";
+// 가수 (bypass water added to the server after extraction) is kept out of the brew ratio and shown on its own.
+const isBypassStep = (step: RecipeStep) => normalizedRecipeAction(step.action) === "가수";
+const recipeWater = (steps: RecipeStep[]) => steps.reduce((total, step) => {
+  const amount = Number(step.amount) || 0;
+  return isBypassStep(step) ? { ...total, bypass: total.bypass + amount } : { ...total, extraction: total.extraction + amount };
+}, { extraction: 0, bypass: 0 });
+const extractionCumulative = (steps: RecipeStep[], index: number) => recipeWater(steps.slice(0, index + 1)).extraction;
+// Phone number pads have no ':', so digits alone read as m:ss with the last two as seconds (130 → 1:30).
+const recipeTimeFromDigits = (value: string) => {
+  const digits = value.replace(/\D/g, "").replace(/^0+/, "").slice(0, 4);
+  return digits ? `${Number(digits.slice(0, -2) || "0")}:${digits.slice(-2).padStart(2, "0")}` : "";
+};
 const recipeTimeToSeconds = (time: string) => {
   const match = time.match(/^(\d+):(\d{1,2})$/);
   return match ? Number(match[1]) * 60 + Number(match[2]) : 0;
@@ -880,20 +892,28 @@ function RecipeLibrary({ recipes, setRecipes }: { recipes: SavedRecipe[]; setRec
   const [showErrors, setShowErrors] = useState(false);
   const [deletedRecipe, setDeletedRecipe] = useState<SavedRecipe | null>(null);
 
-  const totalWater = steps.reduce((sum, step) => sum + (Number(step.amount) || 0), 0);
+  const { extraction: totalWater, bypass: bypassWater } = recipeWater(steps);
+  const explicitTimeRows = useRef(new Set<number>());
+  const handleTimeInput = (index: number, event: React.ChangeEvent<HTMLInputElement>) => {
+    const typed = (event.nativeEvent as InputEvent).data;
+    const value = event.target.value;
+    // Typing ':' switches the row to literal m:ss entry, with the digits so far as minutes.
+    if (typed === ":") { explicitTimeRows.current.add(index); updateStep(index, { time: `${Number(steps[index].time.replace(/\D/g, "").slice(-3)) || 0}:` }); return; }
+    updateStep(index, { time: explicitTimeRows.current.has(index) ? value.replace(/[^\d:]/g, "").replace(/^(\d{0,3}:\d{0,2}).*$/, "$1") : recipeTimeFromDigits(value) });
+  };
   const reset = () => {
     setEditingId(null); setName(""); setCoffee(""); setMemo(""); setSteps(defaultRecipeSteps()); setShowErrors(false);
   };
   const close = () => { reset(); setOpen(false); };
   const updateStep = (index: number, patch: Partial<RecipeStep>) => setSteps(current => current.map((step, stepIndex) => stepIndex === index ? { ...step, ...patch } : step));
   const setStepTime = (index: number, value: string) => {
-    const requested = recipeTimeToSeconds(value);
+    const requested = Math.min(recipeTimeToSeconds(value), 99 * 60 + 59);
     const min = index === 0 ? 0 : recipeTimeToSeconds(steps[index - 1].time) + 5;
     const max = index === steps.length - 1 ? Infinity : recipeTimeToSeconds(steps[index + 1].time) - 5;
     updateStep(index, { time: recipeTime(Math.min(Math.max(requested, min), max)) });
   };
   const addStep = () => {
-    if (steps.length >= 6) return;
+    if (steps.length >= 7) return;
     const last = steps[steps.length - 1];
     setSteps([...steps, { time: recipeTime(recipeTimeToSeconds(last?.time ?? "0:00") + 30), action: "원형 푸어", amount: 0 }]);
   };
@@ -935,20 +955,21 @@ function RecipeLibrary({ recipes, setRecipes }: { recipes: SavedRecipe[]; setRec
           <div className={`recipe-step-editor ${showErrors && totalWater <= 0 ? "has-error" : ""}`}>
             <div className="recipe-step-head"><span>시간</span><span>동작</span><span>붓는 양</span><span>누적</span><span /></div>
             {steps.map((step, index) => {
-              const cumulative = steps.slice(0, index + 1).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+              const cumulative = extractionCumulative(steps, index);
               return <div className="recipe-step-row" key={index}>
-                {index === 0 ? <span className="recipe-fixed-time">0:00</span> : <input className="recipe-time-input" value={step.time} inputMode="numeric" onChange={event => updateStep(index, { time: event.target.value })} onBlur={event => setStepTime(index, event.target.value)} onKeyDown={event => { if (event.key === "ArrowUp" || event.key === "ArrowDown") { event.preventDefault(); setStepTime(index, recipeTime(recipeTimeToSeconds(step.time) + (event.key === "ArrowUp" ? 5 : -5))); } }} aria-label={`${index + 1}번째 푸어 시간`} />}
+                {index === 0 ? <span className="recipe-fixed-time">0:00</span> : <input className="recipe-time-input" value={step.time} inputMode="numeric" placeholder="130" onFocus={event => event.target.select()} onChange={event => handleTimeInput(index, event)} onBlur={event => { explicitTimeRows.current.delete(index); setStepTime(index, event.target.value); }} onKeyDown={event => { if (event.key === "ArrowUp" || event.key === "ArrowDown") { event.preventDefault(); setStepTime(index, recipeTime(recipeTimeToSeconds(step.time) + (event.key === "ArrowUp" ? 5 : -5))); } }} aria-label={`${index + 1}번째 푸어 시간`} />}
                 <select value={step.action} onChange={event => { const action = event.target.value as RecipeStep["action"]; updateStep(index, { action, ...(action === "마무리" ? { amount: 0 } : {}) }); }} aria-label={`${index + 1}번째 푸어 동작`}>{recipeActions.map(action => <option key={action}>{action}</option>)}</select>
                 {step.action === "마무리" ? <span className="recipe-no-amount">–</span> : <label className="recipe-amount-input"><input type="number" min="0" step="0.1" value={step.amount || ""} onChange={event => updateStep(index, { amount: Number(event.target.value) || 0 })} placeholder="0" aria-label={`${index + 1}번째 붓는 양`} /><span>g</span></label>}
-                <span className="recipe-cumulative">{cumulative || "–"}g</span>
+                <span className="recipe-cumulative" aria-label={isBypassStep(step) ? `가수 ${fmt(Number(step.amount) || 0)}g, 누적에서 제외` : undefined}>{isBypassStep(step) ? `+${fmt(Number(step.amount) || 0)}g` : `${cumulative || "–"}g`}</span>
                 <button type="button" className="recipe-remove-step" disabled={index < 2} aria-label={`${index + 1}번째 푸어 삭제`} onClick={() => setSteps(steps.filter((_, stepIndex) => stepIndex !== index))}>×</button>
               </div>;
             })}
           </div>
+          <p className="recipe-time-hint">시간은 숫자만 눌러도 돼요. 130 → 1:30</p>
           {showErrors && totalWater <= 0 && <p className="recipe-timeline-error">붓는 양을 한 번 이상 입력해주세요.</p>}
-          <button type="button" className="recipe-add-step" disabled={steps.length >= 6} onClick={addStep}>{steps.length >= 6 ? "5회 푸어까지 입력 가능" : "+ 푸어 추가"}</button>
+          <button type="button" className="recipe-add-step" disabled={steps.length >= 7} onClick={addStep}>{steps.length >= 7 ? "6회 푸어까지 입력 가능" : "+ 푸어 추가"}</button>
         </div>
-        <div className="recipe-metrics"><span>최종 물 양 <b>{totalWater ? `${fmt(totalWater)}g` : "–"}</b></span><span>브루잉 비율 <b>{Number(coffee) > 0 && totalWater > 0 ? `1:${(totalWater / Number(coffee)).toFixed(1)}` : "1:–"}</b></span></div>
+        <div className="recipe-metrics"><span>최종 물 양 <b>{totalWater ? `${fmt(totalWater)}g` : "–"}</b></span><span>브루잉 비율 <b>{Number(coffee) > 0 && totalWater > 0 ? `1:${(totalWater / Number(coffee)).toFixed(1)}` : "1:–"}</b></span>{bypassWater > 0 && <span>가수 <b>{fmt(bypassWater)}g</b></span>}</div>
         <Field label="추출 메모"><textarea rows={1} value={memo} onChange={event => setMemo(event.target.value)} placeholder="" /></Field>
         <div className="recipe-form-actions"><button type="button" className="quiet-button" onClick={close}>취소</button><button type="button" className="primary-button" onClick={save}>{editingId === null ? "레시피 저장" : "수정 저장"}</button></div>
       </div>}
@@ -958,10 +979,10 @@ function RecipeLibrary({ recipes, setRecipes }: { recipes: SavedRecipe[]; setRec
       <div className="recipe-library-list-header"><strong>저장한 레시피</strong><span>{recipes.length}개</span></div>
       <div className="recipe-library-list">
       {!sorted.length ? <div className="recipe-library-empty recipe-onboarding"><img className="onboarding-logo" src="/coffee-diary-logo-brown-96.png" width="38" height="38" alt="" /><h3>첫 레시피를 만들어보세요</h3><p>자주 쓰는 드립 방식을 저장해두면 브루잉 기록에 바로 적용할 수 있어요.</p><JourneySteps active="recipes" /><button type="button" className="primary-button" onClick={() => setOpen(true)}>첫 레시피 만들기</button></div> : sorted.map(recipe => {
-        const water = recipe.steps.reduce((sum, step) => sum + (Number(step.amount) || 0), 0);
+        const { extraction: water, bypass } = recipeWater(recipe.steps);
         return <article className="saved-recipe-card" key={recipe.id}>
-          <div className="saved-recipe-top"><div><h3>{recipe.name}</h3><p>원두 {fmt(recipe.coffee)}g · 물 {fmt(water)}g · {water && recipe.coffee ? `1:${(water / recipe.coffee).toFixed(1)}` : "1:–"}</p></div><div className="saved-recipe-actions"><button type="button" onClick={() => edit(recipe)}>수정</button><button type="button" onClick={() => remove(recipe)}>삭제</button></div></div>
-          <div className="saved-recipe-timeline">{recipe.steps.map((step, index) => { const cumulative = recipe.steps.slice(0, index + 1).reduce((sum, item) => sum + (Number(item.amount) || 0), 0); const action = normalizedRecipeAction(step.action); return <div className="saved-recipe-step" key={`${recipe.id}-${index}`}><span>{step.time}</span><i aria-hidden="true" /><p><b>{action}</b><em>{action === "마무리" ? "–" : `${fmt(step.amount)}g`} · 누적 {fmt(cumulative)}g</em></p></div>; })}</div>
+          <div className="saved-recipe-top"><div><h3>{recipe.name}</h3><p>원두 {fmt(recipe.coffee)}g · 물 {fmt(water)}g · {water && recipe.coffee ? `1:${(water / recipe.coffee).toFixed(1)}` : "1:–"}{bypass > 0 && ` · 가수 ${fmt(bypass)}g`}</p></div><div className="saved-recipe-actions"><button type="button" onClick={() => edit(recipe)}>수정</button><button type="button" onClick={() => remove(recipe)}>삭제</button></div></div>
+          <div className="saved-recipe-timeline">{recipe.steps.map((step, index) => { const cumulative = extractionCumulative(recipe.steps, index); const action = normalizedRecipeAction(step.action); return <div className="saved-recipe-step" key={`${recipe.id}-${index}`}><span>{step.time}</span><i aria-hidden="true" /><p><b>{action}</b><em>{action === "마무리" ? "–" : action === "가수" ? `+${fmt(step.amount)}g · 추출 후 추가` : `${fmt(step.amount)}g · 누적 ${fmt(cumulative)}g`}</em></p></div>; })}</div>
           {recipe.memo && <p className="saved-recipe-memo">{recipe.memo}</p>}
         </article>;
       })}
@@ -1061,7 +1082,7 @@ function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, o
     setBrewError("");
     const recipe = recipes.find(item => String(item.id) === recipeId);
     if (!recipe) return;
-    const water = recipe.steps.reduce((sum, step) => sum + (Number(step.amount) || 0), 0);
+    const water = recipeWater(recipe.steps).extraction;
     setForm(current => ({ ...current, amount: String(recipe.coffee), waterAmount: water ? String(water) : "", recipe: recipe.name }));
   };
 
@@ -1084,7 +1105,7 @@ function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, o
             </Field>
             <Field label="날짜*"><input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} style={{ width: "100%", boxSizing: "border-box", fontFamily: FONT }} /></Field>
           </div>
-          <div className="brew-recipe-picker"><span className="brew-recipe-picker-label">레시피 선택*</span><div className="recipe-mode-options"><button type="button" aria-pressed={recipeMode === "saved"} onClick={() => { setRecipeMode("saved"); setBrewError(""); }}>저장한 레시피</button><button type="button" aria-pressed={recipeMode === "custom"} onClick={() => { setRecipeMode("custom"); setSelectedRecipeId(""); setForm(current => ({ ...current, recipe: "" })); setBrewError(""); }}>직접 입력</button></div>{recipeMode === "saved" ? <div className="recipe-mode-content"><select value={selectedRecipeId} onChange={event => applySavedRecipe(event.target.value)}><option value="">선택하세요</option>{recipes.map(recipe => { const water = recipe.steps.reduce((sum, step) => sum + (Number(step.amount) || 0), 0); return <option key={recipe.id} value={recipe.id}>{recipe.name} · 원두 {fmt(recipe.coffee)}g · 물 {fmt(water)}g</option>; })}</select>{selectedRecipeId && <p>레시피의 원두 양과 물 양을 적용했어요.</p>}</div> : <div className="brew-custom-recipe-fields"><Field label="사용량 (g)*"><input type="number" min="0.1" step="0.1" value={form.amount} onChange={event => { setForm({ ...form, amount: event.target.value }); setBrewError(""); }} placeholder="예: 15" /></Field><Field label="투입 물 양 (g)*"><input type="number" min="0.1" step="0.1" value={form.waterAmount} onChange={event => { setForm({ ...form, waterAmount: event.target.value }); setBrewError(""); }} placeholder="예: 220" /></Field><div className="custom-recipe-name"><Field label="레시피 이름"><input value={form.recipe} onChange={event => setForm({ ...form, recipe: event.target.value })} placeholder="예: 나만의 4:6 레시피" /></Field></div></div>}</div>
+          <div className="brew-recipe-picker"><span className="brew-recipe-picker-label">레시피 선택*</span><div className="recipe-mode-options"><button type="button" aria-pressed={recipeMode === "saved"} onClick={() => { setRecipeMode("saved"); setBrewError(""); }}>저장한 레시피</button><button type="button" aria-pressed={recipeMode === "custom"} onClick={() => { setRecipeMode("custom"); setSelectedRecipeId(""); setForm(current => ({ ...current, recipe: "" })); setBrewError(""); }}>직접 입력</button></div>{recipeMode === "saved" ? <div className="recipe-mode-content"><select value={selectedRecipeId} onChange={event => applySavedRecipe(event.target.value)}><option value="">선택하세요</option>{recipes.map(recipe => { const water = recipeWater(recipe.steps).extraction; return <option key={recipe.id} value={recipe.id}>{recipe.name} · 원두 {fmt(recipe.coffee)}g · 물 {fmt(water)}g</option>; })}</select>{selectedRecipeId && <p>레시피의 원두 양과 물 양을 적용했어요.</p>}</div> : <div className="brew-custom-recipe-fields"><Field label="사용량 (g)*"><input type="number" min="0.1" step="0.1" value={form.amount} onChange={event => { setForm({ ...form, amount: event.target.value }); setBrewError(""); }} placeholder="예: 15" /></Field><Field label="투입 물 양 (g)*"><input type="number" min="0.1" step="0.1" value={form.waterAmount} onChange={event => { setForm({ ...form, waterAmount: event.target.value }); setBrewError(""); }} placeholder="예: 220" /></Field><div className="custom-recipe-name"><Field label="레시피 이름"><input value={form.recipe} onChange={event => setForm({ ...form, recipe: event.target.value })} placeholder="예: 나만의 4:6 레시피" /></Field></div></div>}</div>
           <div className="brew-note-form"><Field label="컵 노트 / 느낀점"><textarea value={noteMemo} onChange={e => setNoteMemo(e.target.value)} rows={1} style={{ width: "100%", boxSizing: "border-box", resize: "vertical", fontFamily: FONT }} placeholder="오늘의 맛과 느낌을 자유롭게 기록해보세요..." /></Field><div><span className="brew-rating-label">별점</span><StarRating value={noteRating} onChange={setNoteRating} /></div></div>
           {brewError && <p className="brew-form-error" role="alert">{brewError}</p>}
           <FormActions onSave={add} onCancel={() => { setShow(false); setEditingId(null); setSelectedRecipeId(""); setRecipeMode("saved"); setBrewError(""); setForm(emptyBrewForm()); setNoteMemo(""); setNoteRating(0); }} saveLabel={editingId === null ? "저장 (재고 차감)" : "수정 저장"} />
