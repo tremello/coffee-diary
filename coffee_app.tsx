@@ -769,7 +769,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
           const pct = bean.purchased > 0 ? Math.max(0, Math.min(100, bean.remaining / bean.purchased * 100)) : 0;
           return <article className="inventory-card" key={bean.id}>
             <div className="bean-info">
-              <p className="roastery"><span>{bean.roastery || "로스터리 미입력"}</span><RoastStamp bean={bean} today={cardToday} /></p>
+              <p className="roastery"><span>{bean.roastery || "로스터리 미입력"}</span></p>
               <h3>{bean.name}</h3>
               <BeanDates bean={bean} />
               <div className="compact-summary"><strong>{bean.roastery || "로스터리 미입력"}</strong><time className="compact-roast" dateTime={bean.roastDate}>로스팅 : {bean.roastDate || "날짜 미입력"}</time><b>{bean.name}</b>{bean.roasteryNotes && <span className="compact-cup-notes">{bean.roasteryNotes.split(/[\s,·、\n]+/).map(value => value.trim()).filter(Boolean).map((note, index) => <i key={index}>{note}</i>)}</span>}</div>
@@ -777,7 +777,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
               <div className="bean-card-actions"><button className="edit-bean" onClick={() => edit(bean)} aria-label={`${bean.name} 원두 정보 수정`}>원두 정보 수정</button><details className="record-details"><summary>내 메모 보기</summary><BeanComments bean={bean} notes={notes.filter(note => note.beanId === bean.id)} onAdd={note => setNotes([...notes, note])} /></details></div>
             </div>
             <div className="bean-stock">
-              <div className="stock-status-row">{bean.remaining <= 0 ? <span data-status="finished" className={`stock-status ${pct <= 20 ? "low" : ""}`}>다 마셨어요</span> : (() => {
+              <div className="stock-status-row"><RoastAge bean={bean} today={cardToday} />{bean.remaining <= 0 ? <span data-status="finished" className={`stock-status ${pct <= 20 ? "low" : ""}`}>다 마셨어요</span> : (() => {
                 const status = bean.status ?? "소비 중";
                 const next: BeanStatus = status === "소비 중" ? "디개싱 중" : "소비 중";
                 return <button type="button" data-status={status} className={`stock-status stock-status-toggle ${pct <= 20 ? "low" : ""}`} onClick={() => updateStatus(bean.id, next)} aria-label={`${bean.name} 상태: ${status}. 눌러서 ${next}으로 변경`} title={`눌러서 ${next}으로 변경`}>{status}<span aria-hidden="true">⇄</span></button>;
@@ -798,17 +798,20 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
   );
 }
 
-// Sits on the roastery line in the detailed card; the purchase date stays in the form only.
-function RoastStamp({ bean, today }: { bean: Bean; today: string }) {
+// The D+ chip sits on the roastery line beside the status chip; the roast date itself goes on the price row.
+function RoastAge({ bean, today }: { bean: Bean; today: string }) {
   if (!bean.roastDate) return null;
   const days = Math.round((Date.parse(today) - Date.parse(bean.roastDate)) / 86_400_000);
-  return <span className="roast-stamp">로스팅 <time dateTime={bean.roastDate}>{bean.roastDate.slice(2).replace(/-/g, ".")}</time>{Number.isFinite(days) && <strong aria-label={days >= 0 ? `로스팅 후 ${days}일` : `로스팅까지 ${-days}일`}>{days >= 0 ? `D+${days}` : `D${days}`}</strong>}</span>;
+  if (!Number.isFinite(days)) return null;
+  return <span className="roast-age" aria-label={days >= 0 ? `로스팅 후 ${days}일` : `로스팅까지 ${-days}일`}>{days >= 0 ? `D+${days}` : `D${days}`}</span>;
 }
 
+// The purchase date stays in the form only.
 function BeanDates({ bean }: { bean: Bean }) {
   const priceLabel = bean.price ? (Number.isFinite(Number(bean.price)) ? `₩${fmt(bean.price)}` : bean.price) : null;
-  if (!priceLabel && !bean.quality) return null;
+  if (!bean.roastDate && !priceLabel && !bean.quality) return null;
   return <div className="title-dates">
+    {bean.roastDate && <span className="roast-date">로스팅 <time dateTime={bean.roastDate}>{bean.roastDate.slice(2).replace(/-/g, ".")}</time></span>}
     {(priceLabel || bean.quality) && <span className="bean-purchase-meta">{priceLabel && <span>구매가 {priceLabel}</span>}{bean.quality && <b className={`quality-tag quality-${bean.quality}`}>{bean.quality}</b>}</span>}
   </div>;
 }
