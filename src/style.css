@@ -944,3 +944,17 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .facet-options button { padding: 0 10px; font-size: 12px; }
   .advanced-filter-search input { height: 40px; }
 }
+/* iOS Safari draws native selects with its own metrics, so toolbar selects drop native styling to match the 세부 검색 button exactly. */
+.inventory-sort { -webkit-appearance: none; appearance: none; padding: 0 26px 0 10px; line-height: 1; background: #fffdf9 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2375634d' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 10px center / 10px 6px; }
+.advanced-filter-button { line-height: 1; padding-top: 0; padding-bottom: 0; }
+@media (max-width: 720px) {
+  select.inventory-sort, .advanced-filter-button { height: 36px; min-height: 36px; }
+  select.inventory-sort { padding: 0 26px 0 10px; }
+}
+/* Phone intro: the line of copy sits above, and both add buttons share one row. */
+@media (max-width: 540px) {
+  .inventory-intro { flex-direction: column; align-items: stretch; gap: 10px; }
+  .inventory-intro p:last-child { max-width: none; }
+  .intro-actions { flex-direction: row; gap: 6px; }
+  .intro-actions button { flex: 1; min-height: 38px; padding: 0 10px; font-size: 12px; }
+}
