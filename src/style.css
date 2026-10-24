@@ -978,7 +978,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .stats-cards > div { background: #ffffff; border: 1px solid #ede3d6; box-shadow: none; }
 .stats-cards span { color: #6b5d50; }
 .flavor-tags > span { background: #f5eee5; color: #5a4a3b; border-radius: 12px; padding: 4px 10px; }
-.inventory-filters button[aria-pressed="true"] { background: #2a211a; color: #fbf7f1; }
+.inventory-filters button[aria-pressed="true"] { background: #5a3f22; color: #fbf7f1; }
 .stock-status { font-size: 12px; font-weight: 600; border: 0; border-radius: 12px; padding: 5px 10px; }
 .stock-status[data-status="소비 중"] { background: #e3eedf; color: #2f5a2a; }
 .stock-status[data-status="디개싱 중"] { background: #f6e7cf; color: #7a4e12; }
@@ -1014,8 +1014,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .bean-search input:focus-visible { outline: none; }
 .bean-fab { display: none; }
 @media (max-width: 540px) {
-  .intro-actions .intro-add-bean { display: none; }
+  .inventory > .inventory-intro .intro-actions, .brew-log-heading-actions { display: none; }
   .bean-fab { position: fixed; z-index: 21; right: 16px; bottom: calc(96px + env(safe-area-inset-bottom)); display: inline-flex; align-items: center; gap: 6px; height: 52px; padding: 0 20px 0 16px; border: 0; border-radius: 26px; background: #7a5733; color: #ffffff; font: inherit; font-size: 15px; font-weight: 600; box-shadow: 0 6px 18px rgba(74, 52, 30, 0.25); }
   .bean-fab:active { background: #5a3f22; }
   .inventory .bean-list { padding-bottom: 72px; }
+  .brew-log { padding-bottom: 72px; }
 }
