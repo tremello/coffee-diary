@@ -7,6 +7,14 @@
     <link rel="icon" type="image/png" href="/coffee-diary-icon-180.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/coffee-diary-icon-180.png" />
     <meta name="theme-color" content="#7a5733" />
+    <script>
+      // Apply the saved light/dark choice before the first paint so the page never flashes the wrong theme.
+      try {
+        var t = localStorage.getItem("coffee-theme");
+        if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+        if (t === "dark" || (t !== "light" && matchMedia("(prefers-color-scheme: dark)").matches)) document.querySelector('meta[name="theme-color"]').setAttribute("content", "#1a1713");
+      } catch (e) {}
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet" />

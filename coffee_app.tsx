@@ -411,6 +411,33 @@ export default function App() {
   );
 }
 
+// Theme: follows the system setting until the user taps the toggle. The choice lives outside the cf_ keys so logging out keeps it,
+// and choosing the same look as the system clears it so the app goes back to following the system.
+// index.html applies the stored choice before first paint.
+const THEME_KEY = "coffee-theme";
+const darkQuery = () => window.matchMedia("(prefers-color-scheme: dark)");
+const readThemeChoice = (): "light" | "dark" | null => { try { const t = localStorage.getItem(THEME_KEY); return t === "light" || t === "dark" ? t : null; } catch { return null; } };
+
+function ThemeToggle() {
+  const [choice, setChoice] = useState(readThemeChoice);
+  const [systemDark, setSystemDark] = useState(() => darkQuery().matches);
+  useEffect(() => {
+    const query = darkQuery();
+    const onChange = () => setSystemDark(query.matches);
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+  }, []);
+  const dark = choice ? choice === "dark" : systemDark;
+  useEffect(() => {
+    if (choice) document.documentElement.dataset.theme = choice; else delete document.documentElement.dataset.theme;
+    try { if (choice) localStorage.setItem(THEME_KEY, choice); else localStorage.removeItem(THEME_KEY); } catch {}
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#1a1713" : "#7a5733");
+  }, [choice, dark]);
+  const toggle = () => { const next = !dark; setChoice(next === systemDark ? null : next ? "dark" : "light"); };
+  const label = dark ? "밝은 화면으로 바꾸기" : "어두운 화면으로 바꾸기";
+  return <button type="button" className="refresh-button theme-button" onClick={toggle} aria-label={label} title={label}>{dark ? <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="currentColor" /><g stroke="currentColor" strokeWidth="2" strokeLinecap="round">{[0, 45, 90, 135, 180, 225, 270, 315].map(a => <line key={a} x1="12" y1="2.6" x2="12" y2="4.6" transform={`rotate(${a} 12 12)`} />)}</g></svg> : <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" fill="currentColor" /></svg>}</button>;
+}
+
 function Header({ page, setPage, user, authLoading }: { page: Page; setPage: (page: Page) => void; user: { id: string; email?: string } | null; authLoading: boolean }) {
   const [loginError, setLoginError] = useState("");
   const signInGoogle = async () => {
@@ -418,7 +445,9 @@ function Header({ page, setPage, user, authLoading }: { page: Page; setPage: (pa
     const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/` } });
     if (error) setLoginError(`Google 로그인에 실패했어요. ${error.message}`);
   };
+  const accountName = user?.email?.split("@")[0] || "내 계정";
   const signOut = async () => {
+    if (!hasPendingSync() && !window.confirm(`${accountName} 계정에서 로그아웃할까요?`)) return;
     if (hasPendingSync() && !window.confirm("아직 서버에 저장하지 못한 기록이 있어요. 로그아웃하면 이 기기에서 지워져요. 계속할까요?")) return;
     await supabase.auth.signOut();
     clearLocalData();
@@ -431,16 +460,16 @@ function Header({ page, setPage, user, authLoading }: { page: Page; setPage: (pa
           <p style={{ fontSize: 11, color: "var(--color-text-tertiary)", margin: 0, letterSpacing: 1, textTransform: "uppercase", fontFamily: FONT }}>My Coffee Diary</p>
           <h1 style={{ fontSize: 24, fontWeight: 700, margin: "2px 0 0", letterSpacing: "-0.02em", color: "var(--color-text-primary)", fontFamily: FONT }}>{PAGE_LABELS[page]}</h1>
         </div>
-        <div className="account-actions">{user ? <button className="account-button" onClick={signOut}>{user.email?.split("@")[0] ?? "내 계정"} · 로그아웃</button> : <button className="google-button" onClick={signInGoogle}>Google 로그인</button>}<button className="refresh-button" onClick={() => window.location.reload()} aria-label="새로고침" title="새로고침">↻</button><img className="brand-mark" src="/coffee-diary-logo-brown-96.png" width="40" height="40" alt="커피 기록 로고" /></div>
+        <div className="account-actions">{user ? <button type="button" className="refresh-button account-button" onClick={signOut} aria-label={`${accountName} 로그아웃`} title={`${accountName} · 로그아웃`}>{accountName.slice(0, 1).toUpperCase()}</button> : <button type="button" className="google-button" onClick={signInGoogle} aria-label="Google 계정으로 로그인" title="Google 계정으로 로그인">로그인</button>}<ThemeToggle /><button className="refresh-button" onClick={() => window.location.reload()} aria-label="새로고침" title="새로고침">↻</button><img className="brand-mark" src="/coffee-diary-logo-brown-96.png" width="40" height="40" alt="커피 기록 로고" /></div>
       </div>
       {loginError && <p className="login-error" role="alert">{loginError}</p>}
       <nav className="page-tabs">
         {PAGES.map(p => (
           <button key={p} className="page-tab" onClick={() => setPage(p)} aria-current={page === p ? "page" : undefined} style={{
             padding: "8px 16px", fontSize: 14, borderRadius: 10, fontFamily: FONT,
-            border: page === p ? "1px solid #7a5733" : "0.5px solid var(--color-border-tertiary)",
-            background: page === p ? "#7a5733" : "transparent",
-            color: page === p ? "#fff" : "var(--color-text-secondary)",
+            border: page === p ? "1px solid var(--bd-7a5733)" : "0.5px solid var(--color-border-tertiary)",
+            background: page === p ? "var(--bg-7a5733)" : "transparent",
+            color: page === p ? "var(--fg-ffffff)" : "var(--color-text-secondary)",
             cursor: "pointer"
           }}><span className="page-tab-icon" aria-hidden="true"><PageIcon page={p} /></span><span>{PAGE_LABELS[p]}</span></button>
         ))}
@@ -1191,7 +1220,7 @@ function StarRating({ value, onChange }: { value: number; onChange: (value: numb
 function Field({ label, children, required = false, invalid = false }: { label: string; children: ReactNode; required?: boolean; invalid?: boolean }) {
   return (
     <div>
-      <label style={{ fontSize: 12, color: invalid ? "#b65f50" : "var(--color-text-secondary)", display: "block", marginBottom: 4, fontFamily: FONT }}>{label}{required && <span aria-hidden="true" style={{ color: invalid ? "#b65f50" : "#7a5733", marginLeft: 2 }}>*</span>}</label>
+      <label style={{ fontSize: 12, color: invalid ? "var(--fg-b65f50)" : "var(--color-text-secondary)", display: "block", marginBottom: 4, fontFamily: FONT }}>{label}{required && <span aria-hidden="true" style={{ color: invalid ? "var(--fg-b65f50)" : "var(--fg-7a5733)", marginLeft: 2 }}>*</span>}</label>
       {children}
     </div>
   );
