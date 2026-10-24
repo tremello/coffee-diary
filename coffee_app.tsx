@@ -54,7 +54,7 @@ const preparePhoto = async (file: File, mimeType: string) => {
 const localizedPhotoField = (value: string, labels: Record<string, string>) => labels[value.trim().toLowerCase().replace(/[-_]/g, " ").replace(/\s+/g, " ")] ?? value.trim();
 const localDate = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`; };
 const beanName = (bean: BeanForm) => [bean.origin, bean.farm, bean.variety, bean.process].map(value => value?.trim()).filter(Boolean).join(" ");
-const FONT = "'Nanum Barun Gothic', 'Apple SD Gothic Neo', sans-serif";
+const FONT = "'IBM Plex Sans KR', 'Apple SD Gothic Neo', sans-serif";
 const PAGES = ["Beans", "Recipes", "Brew Log", "Brew Stats"] as const;
 const PAGE_LABELS = { Beans: "원두 재고", "Brew Log": "브루잉 기록", Recipes: "나의 레시피", "Brew Stats": "브루잉 통계" };
 
@@ -437,8 +437,8 @@ function Header({ page, setPage, user, authLoading }: { page: Page; setPage: (pa
         {PAGES.map(p => (
           <button key={p} className="page-tab" onClick={() => setPage(p)} aria-current={page === p ? "page" : undefined} style={{
             padding: "8px 16px", fontSize: 14, borderRadius: 10, fontFamily: FONT,
-            border: page === p ? "1px solid #8B6F47" : "0.5px solid var(--color-border-tertiary)",
-            background: page === p ? "#8B6F47" : "transparent",
+            border: page === p ? "1px solid #7a5733" : "0.5px solid var(--color-border-tertiary)",
+            background: page === p ? "#7a5733" : "transparent",
             color: page === p ? "#fff" : "var(--color-text-secondary)",
             cursor: "pointer"
           }}><span className="page-tab-icon" aria-hidden="true"><PageIcon page={p} /></span><span>{PAGE_LABELS[p]}</span></button>
@@ -777,10 +777,10 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
               <div className="bean-card-actions"><button className="edit-bean" onClick={() => edit(bean)} aria-label={`${bean.name} 원두 정보 수정`}>원두 정보 수정</button><details className="record-details"><summary>내 메모 보기</summary><BeanComments bean={bean} notes={notes.filter(note => note.beanId === bean.id)} onAdd={note => setNotes([...notes, note])} /></details></div>
             </div>
             <div className="bean-stock">
-              <div className="stock-status-row">{bean.remaining <= 0 ? <span className={`stock-status ${pct <= 20 ? "low" : ""}`}>다 마셨어요</span> : (() => {
+              <div className="stock-status-row">{bean.remaining <= 0 ? <span data-status="finished" className={`stock-status ${pct <= 20 ? "low" : ""}`}>다 마셨어요</span> : (() => {
                 const status = bean.status ?? "소비 중";
                 const next: BeanStatus = status === "소비 중" ? "디개싱 중" : "소비 중";
-                return <button type="button" className={`stock-status stock-status-toggle ${pct <= 20 ? "low" : ""}`} onClick={() => updateStatus(bean.id, next)} aria-label={`${bean.name} 상태: ${status}. 눌러서 ${next}으로 변경`} title={`눌러서 ${next}으로 변경`}>{status}<span aria-hidden="true">⇄</span></button>;
+                return <button type="button" data-status={status} className={`stock-status stock-status-toggle ${pct <= 20 ? "low" : ""}`} onClick={() => updateStatus(bean.id, next)} aria-label={`${bean.name} 상태: ${status}. 눌러서 ${next}으로 변경`} title={`눌러서 ${next}으로 변경`}>{status}<span aria-hidden="true">⇄</span></button>;
               })()}</div>
               <p className="remaining-label">남은 원두</p>
               <p className="remaining-weight">{fmt(bean.remaining)}<span>g</span></p>
@@ -1147,7 +1147,7 @@ function StarRating({ value, onChange }: { value: number; onChange: (value: numb
 function Field({ label, children, required = false, invalid = false }: { label: string; children: ReactNode; required?: boolean; invalid?: boolean }) {
   return (
     <div>
-      <label style={{ fontSize: 12, color: invalid ? "#b65f50" : "var(--color-text-secondary)", display: "block", marginBottom: 4, fontFamily: FONT }}>{label}{required && <span aria-hidden="true" style={{ color: invalid ? "#b65f50" : "#8b6f47", marginLeft: 2 }}>*</span>}</label>
+      <label style={{ fontSize: 12, color: invalid ? "#b65f50" : "var(--color-text-secondary)", display: "block", marginBottom: 4, fontFamily: FONT }}>{label}{required && <span aria-hidden="true" style={{ color: invalid ? "#b65f50" : "#7a5733", marginLeft: 2 }}>*</span>}</label>
       {children}
     </div>
   );
