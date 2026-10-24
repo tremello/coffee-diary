@@ -1004,3 +1004,18 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .bean-list.density-detail .stock-percent { display: none; }
   .stock-status { font-size: 12px; padding: 5px 10px; }
 }
+
+/* Always-visible bean search and the phone-only floating add button from design A. */
+.bean-search { display: flex; align-items: center; gap: 8px; height: 44px; margin-bottom: 12px; padding: 0 14px; border: 1px solid #e6dacb; border-radius: 12px; background: #ffffff; color: #6b5d50; }
+.bean-search:focus-within { border-color: #7a5733; }
+.bean-search input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: transparent; color: #2a211a; font: inherit; font-size: 14px; outline: none; }
+.bean-search input::placeholder { color: #6b5d50; }
+.bean-search:has(input:focus-visible) { outline: 2px solid #7a5733; outline-offset: 2px; }
+.bean-search input:focus-visible { outline: none; }
+.bean-fab { display: none; }
+@media (max-width: 540px) {
+  .intro-actions .intro-add-bean { display: none; }
+  .bean-fab { position: fixed; z-index: 21; right: 16px; bottom: calc(96px + env(safe-area-inset-bottom)); display: inline-flex; align-items: center; gap: 6px; height: 52px; padding: 0 20px 0 16px; border: 0; border-radius: 26px; background: #7a5733; color: #ffffff; font: inherit; font-size: 15px; font-weight: 600; box-shadow: 0 6px 18px rgba(74, 52, 30, 0.25); }
+  .bean-fab:active { background: #5a3f22; }
+  .inventory .bean-list { padding-bottom: 72px; }
+}
