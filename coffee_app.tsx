@@ -476,6 +476,14 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
   const [beanQuery, setBeanQuery] = useState("");
   const [error, setError] = useState("");
   const [roastDateTouched, setRoastDateTouched] = useState(false);
+  // True while the purchase date only mirrors the roast date. iOS date pickers fire a change with today's date the moment they open,
+  // so an empty purchase date must keep following the roast date until the user edits it directly.
+  const purchaseDateFollowsRoast = useRef(false);
+  const purchaseDateForRoast = (purchaseDate: string, roastDate: string) => {
+    if (purchaseDate && !purchaseDateFollowsRoast.current) return purchaseDate;
+    purchaseDateFollowsRoast.current = Boolean(roastDate);
+    return roastDate;
+  };
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState("");
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -640,7 +648,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
         ...(text(result.roastery) ? { roastery: text(result.roastery) } : {}),
         ...(text(result.roasteryNotes) ? { roasteryNotes: text(result.roasteryNotes) } : {}),
         ...(result.purchased !== undefined && String(result.purchased).trim() ? { purchased: String(result.purchased) } : {}),
-        ...(text(result.roastDate) ? { roastDate: text(result.roastDate), date: current.date || text(result.roastDate) } : {}),
+        ...(text(result.roastDate) ? { roastDate: text(result.roastDate), date: purchaseDateForRoast(current.date, text(result.roastDate)) } : {}),
         ...(result.price !== undefined && String(result.price).trim() ? { price: String(result.price) } : {})
       }));
       setRoastDateTouched(Boolean(text(result.roastDate)));
@@ -651,11 +659,12 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
       setPhotoBusy(false);
     }
   };
-  const close = () => { clearPhoto(); setShow(false); setEditingId(null); setForm(emptyBeanForm); setError(""); setRoastDateTouched(false); setAddingOrigin(false); setNewOrigin(""); };
+  const close = () => { clearPhoto(); setShow(false); setEditingId(null); setForm(emptyBeanForm); setError(""); setRoastDateTouched(false); purchaseDateFollowsRoast.current = false; setAddingOrigin(false); setNewOrigin(""); };
   const openNewBean = () => { close(); setShow(true); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const edit = (bean: Bean) => {
     setForm({ ...bean, status: bean.status ?? "소비 중", purchased: String(bean.purchased), consumed: String(bean.consumed ?? 0) });
     setRoastDateTouched(Boolean(bean.roastDate && bean.roastDate !== bean.date));
+    purchaseDateFollowsRoast.current = false;
     setEditingId(bean.id); setError(""); setShow(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -740,8 +749,12 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
           <label className="full-width"><span className="purchase-field-label">로스터리 컵노트<span className="input-hint">쉼표(,)로 구분해요</span></span><input value={form.roasteryNotes ?? ""} placeholder="예: 흰 꽃, 복숭아, 꿀" onChange={e => setForm({ ...form, roasteryNotes: e.target.value })} /></label>
           <div className="bean-purchase-row full-width"><label>구매가격 (원)<input type="text" inputMode="numeric" value={withCommas(form.price)} placeholder="예: 28,000" onChange={e => handleNumericInput(e, price => setForm(current => ({ ...current, price })))} /></label><fieldset className="origin-field"><legend>내 기준 분류</legend><div className="origin-options">{BEAN_QUALITIES.map(quality => <button type="button" key={quality} aria-pressed={form.quality === quality} onClick={() => setForm({ ...form, quality })}>{quality}</button>)}</div></fieldset></div>
           <div className="bean-dates full-width">
-            <label>구매일<input type="date" value={form.date} onChange={e => { const date = e.target.value; setForm(current => ({ ...current, date, roastDate: roastDateTouched ? current.roastDate : date })); }} /></label>
-            <label>로스팅 날짜<input type="date" value={form.roastDate ?? ""} onChange={e => { const roastDate = e.target.value; setRoastDateTouched(true); setForm(current => ({ ...current, roastDate, date: current.date || roastDate })); }} /></label>
+            <label>구매일<input type="date" value={form.date} onChange={e => { const date = e.target.value; purchaseDateFollowsRoast.current = false; setForm(current => ({ ...current, date, roastDate: roastDateTouched ? current.roastDate : date })); }} /></label>
+            <label>로스팅 날짜<input type="date" value={form.roastDate ?? ""} onChange={e => {
+              const roastDate = e.target.value;
+              setRoastDateTouched(true);
+              setForm(current => ({ ...current, roastDate, date: purchaseDateForRoast(current.date, roastDate) }));
+            }} /></label>
           </div>
 
         </div>
