@@ -33,6 +33,11 @@ beanSchema.properties.notOnLabel = {
 // so the number of extra reads is capped.
 const RETRY_WHEN_UNEXPLAINED = 2;
 const MAX_RETRIES = 1;
+// A normal answer is a few hundred tokens; the cap stops a runaway answer (e.g. endless
+// footnote markers) from keeping the user waiting. Reading a label needs little reasoning,
+// and low thinking keeps thinking tokens well under the cap.
+const MAX_OUTPUT_TOKENS = 2048;
+const MAX_TEXT_LENGTH = 200;
 
 const PROMPT = `이 사진은 커피 원두 봉투 라벨입니다. 라벨에 적힌 정보를 아래 항목별로 추출하세요.
 
@@ -48,7 +53,7 @@ const PROMPT = `이 사진은 커피 원두 봉투 라벨입니다. 라벨에 �
 - roastDate: 로스팅 날짜를 YYYY-MM-DD로 씁니다(2026.10.20, 20/10/2026, 26.10.20 등도 변환). 연·월·일 중 하나라도 알 수 없으면 생략합니다. 유통기한·포장일로 명시된 날짜는 로스팅 날짜로 쓰지 않습니다.
 - price: 가격을 원 단위 숫자로만 씁니다(18,000원→18000).
 
-라벨에 실제로 적힌 내용만 쓰고, 적혀 있지 않은 정보를 추측해서 만들지 마세요. 하지만 글씨가 작거나 흐려도 읽을 수 있다면 생략하지 말고 채워주세요. 라벨에서 찾을 수 없는 항목만 생략합니다.
+라벨에 실제로 적힌 내용만 쓰고, 적혀 있지 않은 정보를 추측해서 만들지 마세요. 하지만 글씨가 작거나 흐려도 읽을 수 있다면 생략하지 말고 채워주세요. 라벨에서 찾을 수 없는 항목만 생략합니다. 값에는 라벨 내용만 쓰고 각주·출처 표시([^1] 같은 것)는 절대 붙이지 마세요.
 
 원두 봉투에는 원래 일부 정보가 없는 경우가 많습니다(예: 가격이나 로스팅 날짜가 없는 라벨). 사진 전체를 확인했는데도 라벨에 적혀 있지 않은 항목은 notOnLabel에 그 항목 이름을 넣어 "없음"으로 판단해주세요. 글씨가 가려지거나 잘려서 확인할 수 없는 항목은 notOnLabel에 넣지 마세요.`;
 
@@ -102,12 +107,46 @@ function mergeBeans(first, second) {
   return merged;
 }
 
+// Gemini has been seen appending footnote markers like "[^1] [^2] ..." to values.
+function cleanText(value) {
+  return value.replace(/\s*\[\^?\d+\]/g, "").replace(/\s+/g, " ").trim().slice(0, MAX_TEXT_LENGTH).trim();
+}
+
+function cleanBean(bean) {
+  const cleaned = { ...bean };
+  for (const field of BEAN_FIELDS) {
+    if (typeof cleaned[field] === "string") cleaned[field] = cleanText(cleaned[field]);
+  }
+  return cleaned;
+}
+
+// When the answer was cut off at the token cap, keep the fields that were finished.
+function salvageFields(text) {
+  const bean = {};
+  for (const field of BEAN_FIELDS) {
+    const match = text.match(new RegExp(`"${field}"\\s*:\\s*("(?:[^"\\\\]|\\\\.)*"|-?\\d+(?:\\.\\d+)?(?=\\s*[,}]))`));
+    if (match) {
+      try {
+        bean[field] = JSON.parse(match[1]);
+      } catch {
+        // Skip a value that isn't valid JSON on its own.
+      }
+      continue;
+    }
+    // The value that was being written when the answer was cut off has no closing quote.
+    const unfinished = text.match(new RegExp(`"${field}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)$`));
+    if (unfinished) bean[field] = unfinished[1];
+  }
+  return Object.keys(bean).length > 0 ? bean : null;
+}
+
 function parseBean(text) {
   try {
     const bean = JSON.parse(text);
-    return bean && typeof bean === "object" && !Array.isArray(bean) ? bean : null;
+    return bean && typeof bean === "object" && !Array.isArray(bean) ? cleanBean(bean) : null;
   } catch {
-    return null;
+    const salvaged = salvageFields(text);
+    return salvaged ? cleanBean(salvaged) : null;
   }
 }
 
@@ -128,6 +167,7 @@ async function readLabel(base64, mimeType) {
           { type: "text", text: PROMPT }
         ],
         response_format: { type: "text", mime_type: "application/json", schema: beanSchema },
+        generation_config: { thinking_level: "low", max_output_tokens: MAX_OUTPUT_TOKENS },
         store: false
       })
     }
