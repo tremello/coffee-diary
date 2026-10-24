@@ -69,7 +69,8 @@ const BEAN_FACET_KEYS: BeanFacetKey[] = ["origin", "variety", "process", "roaste
 const emptyBeanFacetFilters = (): BeanFacetFilters => ({ origin: [], roastery: [], variety: [], process: [], note: [], status: [], remaining: [], age: [] });
 const REMAINING_OPTIONS = ["100g 이하", "100~200g", "200g 이상"];
 const AGE_OPTIONS = ["D+7 이내", "D+8~30", "D+31 이상"];
-const splitCupNotes = (value?: string) => (value ?? "").split(/[\s,·、\n]+/).map(note => note.trim()).filter(Boolean);
+// Notes are separated by commas (or ·, 、, line breaks) only, so a note like "흰 꽃" stays whole.
+const splitCupNotes = (value?: string) => (value ?? "").split(/[,，·、\n]+/).map(note => note.trim()).filter(Boolean);
 
 type Bean = {
   id: number;
@@ -639,7 +640,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
         ...(text(result.roastery) ? { roastery: text(result.roastery) } : {}),
         ...(text(result.roasteryNotes) ? { roasteryNotes: text(result.roasteryNotes) } : {}),
         ...(result.purchased !== undefined && String(result.purchased).trim() ? { purchased: String(result.purchased) } : {}),
-        ...(text(result.roastDate) ? { roastDate: text(result.roastDate) } : {}),
+        ...(text(result.roastDate) ? { roastDate: text(result.roastDate), date: current.date || text(result.roastDate) } : {}),
         ...(result.price !== undefined && String(result.price).trim() ? { price: String(result.price) } : {})
       }));
       setRoastDateTouched(Boolean(text(result.roastDate)));
@@ -736,11 +737,11 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
           <label>구매량 (g) *<input type="number" min="0.1" step="0.1" required value={form.purchased} placeholder="200" onChange={e => setForm({ ...form, purchased: e.target.value })} /></label>
           <label><span className="purchase-field-label">소비량 (g)<span className="input-hint">이미 소비한 원두</span></span><input type="number" min="0" step="0.1" value={form.consumed} placeholder="0" onChange={e => setForm({ ...form, consumed: e.target.value })} /></label>
           </div>
-          <label className="full-width">로스터리 컵노트<input value={form.roasteryNotes ?? ""} placeholder="예: 자스민, 복숭아, 꿀" onChange={e => setForm({ ...form, roasteryNotes: e.target.value })} /></label>
+          <label className="full-width"><span className="purchase-field-label">로스터리 컵노트<span className="input-hint">쉼표(,)로 구분해요</span></span><input value={form.roasteryNotes ?? ""} placeholder="예: 흰 꽃, 복숭아, 꿀" onChange={e => setForm({ ...form, roasteryNotes: e.target.value })} /></label>
           <div className="bean-purchase-row full-width"><label>구매가격 (원)<input type="text" inputMode="numeric" value={withCommas(form.price)} placeholder="예: 28,000" onChange={e => handleNumericInput(e, price => setForm(current => ({ ...current, price })))} /></label><fieldset className="origin-field"><legend>내 기준 분류</legend><div className="origin-options">{BEAN_QUALITIES.map(quality => <button type="button" key={quality} aria-pressed={form.quality === quality} onClick={() => setForm({ ...form, quality })}>{quality}</button>)}</div></fieldset></div>
           <div className="bean-dates full-width">
             <label>구매일<input type="date" value={form.date} onChange={e => { const date = e.target.value; setForm(current => ({ ...current, date, roastDate: roastDateTouched ? current.roastDate : date })); }} /></label>
-            <label>로스팅 날짜<input type="date" value={form.roastDate ?? ""} onChange={e => { setRoastDateTouched(true); setForm({ ...form, roastDate: e.target.value }); }} /></label>
+            <label>로스팅 날짜<input type="date" value={form.roastDate ?? ""} onChange={e => { const roastDate = e.target.value; setRoastDateTouched(true); setForm(current => ({ ...current, roastDate, date: current.date || roastDate })); }} /></label>
           </div>
 
         </div>
@@ -772,8 +773,8 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
               <p className="roastery"><span>{bean.roastery || "로스터리 미입력"}</span></p>
               <h3>{bean.name}</h3>
               <BeanDates bean={bean} />
-              <div className="compact-summary"><strong>{bean.roastery || "로스터리 미입력"}</strong><time className="compact-roast" dateTime={bean.roastDate}>로스팅 : {bean.roastDate || "날짜 미입력"}</time><b>{bean.name}</b>{bean.roasteryNotes && <span className="compact-cup-notes">{bean.roasteryNotes.split(/[\s,·、\n]+/).map(value => value.trim()).filter(Boolean).map((note, index) => <i key={index}>{note}</i>)}</span>}</div>
-              {bean.roasteryNotes && <div className="roastery-cup-notes"><span className="detail-label">로스터리 컵노트</span><div className="flavor-tags">{bean.roasteryNotes.split(/[\s,·、\n]+/).map(value => value.trim()).filter(Boolean).map((note, index) => <span key={index}>{note}</span>)}</div></div>}
+              <div className="compact-summary"><strong>{bean.roastery || "로스터리 미입력"}</strong><time className="compact-roast" dateTime={bean.roastDate}>로스팅 : {bean.roastDate || "날짜 미입력"}</time><b>{bean.name}</b>{bean.roasteryNotes && <span className="compact-cup-notes">{splitCupNotes(bean.roasteryNotes).map((note, index) => <i key={index}>{note}</i>)}</span>}</div>
+              {bean.roasteryNotes && <div className="roastery-cup-notes"><span className="detail-label">로스터리 컵노트</span><div className="flavor-tags">{splitCupNotes(bean.roasteryNotes).map((note, index) => <span key={index}>{note}</span>)}</div></div>}
               <div className="bean-card-actions"><button className="edit-bean" onClick={() => edit(bean)} aria-label={`${bean.name} 원두 정보 수정`}>원두 정보 수정</button><details className="record-details"><summary>내 메모 보기</summary><BeanComments bean={bean} notes={notes.filter(note => note.beanId === bean.id)} onAdd={note => setNotes([...notes, note])} /></details></div>
             </div>
             <div className="bean-stock">
@@ -841,7 +842,7 @@ function BeanComments({ bean, notes, onAdd }: { bean: Bean; notes: TastingNote[]
       <div className="form-buttons"><button type="button" className="quiet-button" onClick={() => { setOpen(false); setError(""); }}>취소</button><button className="primary-button" type="submit">메모 저장</button></div>
     </form>}
     {!notes.length && !legacy && <p className="placeholder-note">마실 때마다 달라지는 맛을 남겨보세요.</p>}
-    <div className={`comment-list ${expanded ? "expanded" : "collapsed"}`}>{(expanded ? sorted : sorted.slice(0, 1)).map(note => <div className="taste-comment" key={note.id}><time dateTime={note.date}>{note.date}</time>{note.flavor && <div className="flavor-tags">{note.flavor.split(/[,·、\n]+/).map(v => v.trim()).filter(Boolean).map((tag, index) => <span key={index}>{tag}</span>)}</div>}{note.memo && <p className="bean-memo">{note.memo}</p>}</div>)}
+    <div className={`comment-list ${expanded ? "expanded" : "collapsed"}`}>{(expanded ? sorted : sorted.slice(0, 1)).map(note => <div className="taste-comment" key={note.id}><time dateTime={note.date}>{note.date}</time>{note.flavor && <div className="flavor-tags">{splitCupNotes(note.flavor).map((tag, index) => <span key={index}>{tag}</span>)}</div>}{note.memo && <p className="bean-memo">{note.memo}</p>}</div>)}
       {legacy && (expanded || !sorted.length) && <div className="taste-comment legacy-comment"><span className="detail-label">이전에 저장한 노트 · 날짜 미지정</span>{bean.flavor && <p className="bean-memo">{bean.flavor}</p>}{bean.memo && <p className="bean-memo">{bean.memo}</p>}</div>}
     </div>
     {notes.length + Number(legacy) > 1 && <button type="button" className="more-records" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? "접기" : `더보기 · 이전 기록 ${notes.length + Number(legacy) - 1}개`}</button>}

@@ -1059,3 +1059,25 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .recipe-amount-input input { padding: 0 14px 0 4px; }
   .recipe-amount-input span { right: 4px; }
 }
+/* Cup notes stay on one line and scroll sideways; a soft fade at the right edge hints at more. */
+.flavor-tags, .bean-list.density-compact .compact-cup-notes { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 18px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 18px), transparent); padding-right: 18px; }
+.flavor-tags::-webkit-scrollbar, .bean-list.density-compact .compact-cup-notes::-webkit-scrollbar { display: none; }
+.flavor-tags > span, .bean-list.density-compact .compact-cup-notes i { flex: 0 0 auto; max-width: none; white-space: nowrap; overflow: visible; text-overflow: clip; overflow-wrap: normal; }
+/* Bean form, phones: price gets ~2/3 of its old width so the three 분류 buttons fit on one line. */
+@media (max-width: 720px) {
+  .bean-purchase-row { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 10px; }
+  .bean-purchase-row .origin-options { flex-wrap: nowrap; gap: 5px; }
+  .bean-purchase-row .origin-options button { flex: 1 1 auto; min-width: 0; padding: 8px 6px; white-space: nowrap; }
+}
+/* Mouse users get a thin scrollbar on hover so the strip can be dragged without a trackpad. */
+@media (hover: hover) and (pointer: fine) {
+  .flavor-tags:hover, .bean-list.density-compact .compact-cup-notes:hover { scrollbar-width: thin; scrollbar-color: #d6c8b6 transparent; }
+  .flavor-tags:hover::-webkit-scrollbar, .bean-list.density-compact .compact-cup-notes:hover::-webkit-scrollbar { display: block; height: 4px; }
+  .flavor-tags:hover::-webkit-scrollbar-thumb, .bean-list.density-compact .compact-cup-notes:hover::-webkit-scrollbar-thumb { border-radius: 4px; background: #d6c8b6; }
+}
+@media (max-width: 359px) {
+  .bean-purchase-row { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .bean-purchase-row input { padding-right: 8px; padding-left: 8px; }
+  .bean-purchase-row .origin-options { gap: 4px; }
+  .bean-purchase-row .origin-options button { flex: 0 0 auto; padding: 7px 7px; font-size: 11px; }
+}
