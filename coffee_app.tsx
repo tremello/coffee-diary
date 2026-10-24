@@ -155,7 +155,6 @@ type TastingNote = {
 type TastingNoteForm = Omit<TastingNote, "id" | "beanId"> & {
   beanId: string;
 };
-type TastingNoteTextKey = "flavor" | "aroma" | "acidity" | "body" | "finish";
 
 // Local data belongs to the account in OWNER_KEY; keys under PENDING_PREFIX failed to reach the server and must be pushed, not overwritten.
 const OWNER_KEY = "cf_owner";
@@ -243,8 +242,6 @@ const parseLocalDate = (date: string) => {
   const [year, month, day] = date.split("-").map(Number);
   return new Date(year, (month || 1) - 1, day || 1);
 };
-const sortByDateDesc = <T extends { date: string }>(items: T[]) =>
-  [...items].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 const emptyBeanForm: BeanForm = { name: "", origin: "", process: "", roastery: "", date: "", purchased: "", consumed: "", price: "", roasteryNotes: "", roastDate: "", farm: "", variety: "", flavor: "", memo: "", status: undefined, quality: undefined };
 const emptyBrewForm = (): BrewForm => ({ beanId: "", amount: "", waterAmount: "", method: "", date: localDate(), recipe: "" });
@@ -390,6 +387,12 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
   const hideRoastery = (roastery: string) => setHiddenRoasteries([...hiddenRoasteries, roastery]);
   const hideVariety = (variety: string) => setHiddenVarieties([...hiddenVarieties, variety]);
   const [deletedId, setDeletedId] = useState<number | null>(null);
+  // One clock for every card's D+ badge instead of an interval per card.
+  const [cardToday, setCardToday] = useState(localDate);
+  useEffect(() => {
+    const timer = window.setInterval(() => setCardToday(localDate()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
   const [deletedBrews, setDeletedBrews] = useState<Brew[]>([]);
   const [deletedNotes, setDeletedNotes] = useState<TastingNote[]>([]);
   const available = beans.filter(b => !b.deleted);
@@ -658,7 +661,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
             <div className="bean-info">
               <p className="roastery">{bean.roastery || "로스터리 미입력"}</p>
               <h3>{bean.name}</h3>
-              <BeanDates bean={bean} />
+              <BeanDates bean={bean} today={cardToday} />
               <div className="compact-summary"><strong>{bean.roastery || "로스터리 미입력"}</strong><time className="compact-roast" dateTime={bean.roastDate}>로스팅 : {bean.roastDate || "날짜 미입력"}</time><b>{bean.name}</b>{bean.roasteryNotes && <span className="compact-cup-notes">{bean.roasteryNotes.split(/[\s,·、\n]+/).map(value => value.trim()).filter(Boolean).map((note, index) => <i key={index}>{note}</i>)}</span>}</div>
               {bean.roasteryNotes && <div className="roastery-cup-notes"><span className="detail-label">로스터리 컵노트</span><div className="flavor-tags">{bean.roasteryNotes.split(/[\s,·、\n]+/).map(value => value.trim()).filter(Boolean).map((note, index) => <span key={index}>{note}</span>)}</div></div>}
               <div className="bean-card-actions"><button className="edit-bean" onClick={() => edit(bean)} aria-label={`${bean.name} 원두 정보 수정`}>원두 정보 수정</button><details className="record-details"><summary>내 메모 보기</summary><BeanComments bean={bean} notes={notes.filter(note => note.beanId === bean.id)} onAdd={note => setNotes([...notes, note])} /></details></div>
@@ -680,12 +683,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
   );
 }
 
-function BeanDates({ bean }: { bean: Bean }) {
-  const [today, setToday] = useState(localDate);
-  useEffect(() => {
-    const timer = window.setInterval(() => setToday(localDate()), 60_000);
-    return () => window.clearInterval(timer);
-  }, []);
+function BeanDates({ bean, today }: { bean: Bean; today: string }) {
   const days = bean.roastDate ? Math.round((Date.parse(today) - Date.parse(bean.roastDate)) / 86_400_000) : null;
   const priceLabel = bean.price ? (Number.isFinite(Number(bean.price)) ? `₩${fmt(bean.price)}` : bean.price) : null;
   if (!bean.date && !bean.roastDate && !priceLabel && !bean.quality) return null;
@@ -758,6 +756,7 @@ function RecipeLibrary({ recipes, setRecipes }: { recipes: SavedRecipe[]; setRec
   const [memo, setMemo] = useState("");
   const [steps, setSteps] = useState<RecipeStep[]>(defaultRecipeSteps);
   const [showErrors, setShowErrors] = useState(false);
+  const [deletedRecipe, setDeletedRecipe] = useState<SavedRecipe | null>(null);
 
   const totalWater = steps.reduce((sum, step) => sum + (Number(step.amount) || 0), 0);
   const reset = () => {
@@ -786,6 +785,15 @@ function RecipeLibrary({ recipes, setRecipes }: { recipes: SavedRecipe[]; setRec
     const item: SavedRecipe = { id: editingId ?? Date.now(), name: name.trim(), coffee: coffeeAmount, memo: memo.trim(), steps, createdAt: editingId ? recipes.find(recipe => recipe.id === editingId)?.createdAt ?? Date.now() : Date.now() };
     setRecipes(editingId === null ? [...recipes, item] : recipes.map(recipe => recipe.id === editingId ? item : recipe));
     close();
+  };
+  const remove = (recipe: SavedRecipe) => {
+    setRecipes(recipes.filter(item => item.id !== recipe.id));
+    setDeletedRecipe(recipe);
+  };
+  const undoRemove = () => {
+    if (!deletedRecipe) return;
+    setRecipes([...recipes, deletedRecipe]);
+    setDeletedRecipe(null);
   };
   const sorted = [...recipes].sort((a, b) => b.createdAt - a.createdAt);
 
@@ -823,13 +831,14 @@ function RecipeLibrary({ recipes, setRecipes }: { recipes: SavedRecipe[]; setRec
         <div className="recipe-form-actions"><button type="button" className="quiet-button" onClick={close}>취소</button><button type="button" className="primary-button" onClick={save}>{editingId === null ? "레시피 저장" : "수정 저장"}</button></div>
       </div>}
     </section>
+    {deletedRecipe && <div className="delete-notice" role="status"><span>레시피를 삭제했어요.</span><button type="button" onClick={undoRemove}>되돌리기</button></div>}
     <section className="recipe-library" aria-label="저장 레시피">
       <div className="recipe-library-list-header"><strong>저장한 레시피</strong><span>{recipes.length}개</span></div>
       <div className="recipe-library-list">
       {!sorted.length ? <div className="recipe-library-empty recipe-onboarding"><img className="onboarding-logo" src="/coffee-diary-logo-brown-96.png" width="38" height="38" alt="" /><h3>첫 레시피를 만들어보세요</h3><p>자주 쓰는 드립 방식을 저장해두면 브루잉 기록에 바로 적용할 수 있어요.</p><JourneySteps active="recipes" /><button type="button" className="primary-button" onClick={() => setOpen(true)}>첫 레시피 만들기</button></div> : sorted.map(recipe => {
         const water = recipe.steps.reduce((sum, step) => sum + (Number(step.amount) || 0), 0);
         return <article className="saved-recipe-card" key={recipe.id}>
-          <div className="saved-recipe-top"><div><h3>{recipe.name}</h3><p>원두 {fmt(recipe.coffee)}g · 물 {fmt(water)}g · {water && recipe.coffee ? `1:${(water / recipe.coffee).toFixed(1)}` : "1:–"}</p></div><div className="saved-recipe-actions"><button type="button" onClick={() => edit(recipe)}>수정</button><button type="button" onClick={() => setRecipes(recipes.filter(item => item.id !== recipe.id))}>삭제</button></div></div>
+          <div className="saved-recipe-top"><div><h3>{recipe.name}</h3><p>원두 {fmt(recipe.coffee)}g · 물 {fmt(water)}g · {water && recipe.coffee ? `1:${(water / recipe.coffee).toFixed(1)}` : "1:–"}</p></div><div className="saved-recipe-actions"><button type="button" onClick={() => edit(recipe)}>수정</button><button type="button" onClick={() => remove(recipe)}>삭제</button></div></div>
           <div className="saved-recipe-timeline">{recipe.steps.map((step, index) => { const cumulative = recipe.steps.slice(0, index + 1).reduce((sum, item) => sum + (Number(item.amount) || 0), 0); const action = normalizedRecipeAction(step.action); return <div className="saved-recipe-step" key={`${recipe.id}-${index}`}><span>{step.time}</span><i aria-hidden="true" /><p><b>{action}</b><em>{action === "마무리" ? "–" : `${fmt(step.amount)}g`} · 누적 {fmt(cumulative)}g</em></p></div>; })}</div>
           {recipe.memo && <p className="saved-recipe-memo">{recipe.memo}</p>}
         </article>;
@@ -861,6 +870,7 @@ function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, o
   const [selectedRecipeId, setSelectedRecipeId] = useState("");
   const [recipeMode, setRecipeMode] = useState<"saved" | "custom">("saved");
   const [brewError, setBrewError] = useState("");
+  const [deletedBrew, setDeletedBrew] = useState<{ brew: Brew; notes: TastingNote[] } | null>(null);
 
   const add = () => {
     const recipeReady = recipeMode === "saved" ? Boolean(selectedRecipeId) : Boolean(form.amount) && Boolean(form.waterAmount);
@@ -868,15 +878,15 @@ function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, o
     const nextBeanId = Number(form.beanId);
     const bean = beans.find(b => b.id === nextBeanId);
     const amt = parseFloat(form.amount);
-    if (!bean) return;
-    if (Number.isNaN(amt) || amt <= 0) return;
+    if (!bean) { setBrewError("선택한 원두를 찾을 수 없어요. 원두를 다시 선택해주세요."); return; }
+    if (Number.isNaN(amt) || amt <= 0) { setBrewError("사용량은 0보다 큰 숫자로 입력해주세요."); return; }
     const water = form.waterAmount.trim() ? parseFloat(form.waterAmount) : undefined;
-    if (water !== undefined && (Number.isNaN(water) || water <= 0)) return;
+    if (water !== undefined && (Number.isNaN(water) || water <= 0)) { setBrewError("물 양은 0보다 큰 숫자로 입력해주세요."); return; }
     const previous = editingId === null ? null : brews.find(item => item.id === editingId) ?? null;
     const previousNote = previous ? notes.find(note => note.brewId === previous.id) : null;
     const restoredBeans = previous ? beans.map(item => item.id === previous.beanId ? { ...item, remaining: Math.round((item.remaining + previous.amount) * 10) / 10 } : item) : beans;
     const available = restoredBeans.find(item => item.id === nextBeanId);
-    if (!available || available.remaining < amt) { alert(`잔여량(${fmt(available?.remaining ?? 0)}g)이 부족해요!`); return; }
+    if (!available || available.remaining < amt) { setBrewError(`잔여량(${fmt(available?.remaining ?? 0)}g)이 부족해요.`); return; }
     const startsConsuming = available.status === "배송 중" || available.status === "디개싱 중";
     const brew = { ...form, id: editingId ?? Date.now(), beanId: nextBeanId, amount: amt, waterAmount: water };
     setBrews(editingId === null ? [...brews, brew] : brews.map(item => item.id === editingId ? brew : item));
@@ -892,6 +902,16 @@ function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, o
   const remove = (brew: Brew) => {
     setBrews(brews.filter(b => b.id !== brew.id));
     setBeans(beans.map(b => b.id === brew.beanId ? { ...b, remaining: Math.round((b.remaining + brew.amount) * 10) / 10 } : b));
+    setNotes(notes.filter(note => note.brewId !== brew.id));
+    setDeletedBrew({ brew, notes: notes.filter(note => note.brewId === brew.id) });
+  };
+  const undoRemove = () => {
+    if (!deletedBrew) return;
+    const { brew, notes: removedNotes } = deletedBrew;
+    setBrews([...brews, brew]);
+    setBeans(beans.map(b => b.id === brew.beanId ? { ...b, remaining: Math.round((b.remaining - brew.amount) * 10) / 10 } : b));
+    setNotes([...notes, ...removedNotes]);
+    setDeletedBrew(null);
   };
   const edit = (brew: Brew) => {
     setEditingId(brew.id);
@@ -929,6 +949,7 @@ function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, o
         <div><p>총 {brews.length}회 브루잉을 기록했어요.</p></div>
         <div className="brew-log-heading-actions"><button type="button" className="primary-button brew-add-button" onClick={() => setShow(!show)}>+ 브루잉 추가</button></div>
       </div>
+      {deletedBrew && <div className="delete-notice" role="status"><span>브루잉 기록을 삭제했어요.</span><button type="button" onClick={undoRemove}>되돌리기</button></div>}
 
       {show && (
         <FormCard>
@@ -1001,157 +1022,6 @@ function BrewStats({ beans, brews }: { beans: Bean[]; brews: Brew[] }) {
   </div>;
 }
 
-function TastingNotes({ beans, notes, setNotes, brews, linkedBrewId, setLinkedBrewId }: {
-  beans: Bean[];
-  notes: TastingNote[];
-  setNotes: StorageSetter<TastingNote[]>;
-  brews: Brew[];
-  linkedBrewId: number | null;
-  setLinkedBrewId: (brewId: number | null) => void;
-}) {
-  const linkedBrew = linkedBrewId ? brews.find(b => b.id === linkedBrewId) : null;
-  const linkedBean = linkedBrew ? beans.find(b => b.id === linkedBrew.beanId) : null;
-  const noteTextFields: Array<[TastingNoteTextKey, string, string]> = [["flavor","Flavor","Fruity, Chocolate..."],["aroma","Aroma","Floral, Nutty..."],["acidity","Acidity","Bright, Mild..."],["body","Body","Light, Full..."],["finish","Finish","Clean, Long..."]];
-
-  const [show, setShow] = useState(!!linkedBrewId);
-  const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
-  const [form, setForm] = useState<TastingNoteForm>({
-    beanId: linkedBean?.id?.toString() || "",
-    brewId: linkedBrewId || null,
-    rating: 3, flavor: "", aroma: "", acidity: "", body: "", finish: "", memo: "",
-    date: linkedBrew?.date || localDate()
-  });
-
-  useEffect(() => {
-    if (!linkedBrewId || !linkedBrew) return;
-    const existing = notes.find(note => note.brewId === linkedBrewId);
-    setEditingNoteId(existing?.id ?? null);
-    setForm({
-      ...(existing ?? emptyNoteForm()),
-      beanId: linkedBrew.beanId.toString(),
-      brewId: linkedBrewId,
-      date: existing?.date ?? linkedBrew.date
-    });
-    setShow(true);
-  }, [linkedBrewId, linkedBrew, notes]);
-
-  const add = () => {
-    if (!form.beanId) return;
-    const note = { ...form, id: editingNoteId ?? Date.now(), beanId: Number(form.beanId), rating: Number(form.rating) };
-    setNotes(editingNoteId === null ? [...notes, note] : notes.map(item => item.id === editingNoteId ? note : item));
-    setForm(emptyNoteForm());
-    setEditingNoteId(null); setLinkedBrewId(null); setShow(false);
-  };
-
-  const remove = (id: number) => setNotes(notes.filter(n => n.id !== id));
-  const sorted = sortByDateDesc(notes);
-
-  const openNew = () => {
-    setLinkedBrewId(null);
-    setEditingNoteId(null);
-    setForm(emptyNoteForm());
-    setShow(true);
-  };
-  const editNote = (note: TastingNote) => {
-    setEditingNoteId(note.id);
-    setLinkedBrewId(null);
-    setForm({ ...note, beanId: String(note.beanId) });
-    setShow(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-        <p style={{ margin: 0, fontSize: 13, color: "var(--color-text-secondary)", fontFamily: FONT }}>총 {notes.length}개의 노트</p>
-        <Btn onClick={openNew} filled={show && !linkedBrewId}>+ 노트 추가</Btn>
-      </div>
-
-      {linkedBrew && !notes.some(n => n.brewId === linkedBrewId) && (
-        <div style={{ background: "#E1F5EE", border: "0.5px solid #9FE1CB", borderRadius: "var(--border-radius-md)", padding: "10px 14px", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 13, color: "#085041", fontFamily: FONT }}>
-            <strong>{linkedBean?.name}</strong> 브루잉 기록에서 연결됐어요 — {linkedBrew.date} · 원두 {fmt(linkedBrew.amount)}g {linkedBrew.waterAmount ? `· 물 ${fmt(linkedBrew.waterAmount)}g · ${brewRatio(linkedBrew.amount, linkedBrew.waterAmount)}` : ""}
-          </span>
-        </div>
-      )}
-
-      {(show || linkedBrewId) && (
-        <FormCard>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <Field label="원두*">
-              {linkedBean
-                ? <div style={{ padding: "7px 10px", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-md)", fontSize: 13, background: "var(--color-background-secondary)", fontFamily: FONT }}>{linkedBean.name}</div>
-                : <select value={form.beanId} onChange={e => setForm({ ...form, beanId: e.target.value })} style={{ width: "100%", boxSizing: "border-box", fontFamily: FONT }}>
-                    <option value="">선택하세요</option>
-                    {beans.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                  </select>
-              }
-            </Field>
-            <Field label="날짜"><input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} style={{ width: "100%", boxSizing: "border-box", fontFamily: FONT }} /></Field>
-            {noteTextFields.map(([k, label, ph]) => (
-              <Field key={k} label={label}><input placeholder={ph} value={form[k]} onChange={e => setForm({ ...form, [k]: e.target.value })} style={{ width: "100%", boxSizing: "border-box", fontFamily: FONT }} /></Field>
-            ))}
-            <Field label={`별점  ${"★".repeat(form.rating)}${"☆".repeat(5 - form.rating)}`}>
-              <input type="range" min={1} max={5} step={1} value={form.rating} onChange={e => setForm({ ...form, rating: Number(e.target.value) })} style={{ width: "100%" }} />
-            </Field>
-          </div>
-          <div style={{ marginTop: 10 }}>
-            <Field label="메모">
-              <textarea value={form.memo} onChange={e => setForm({ ...form, memo: e.target.value })} rows={2} style={{ width: "100%", boxSizing: "border-box", resize: "vertical", fontFamily: FONT }} placeholder="자유롭게 기록..." />
-            </Field>
-          </div>
-          <FormActions onSave={add} onCancel={() => { setShow(false); setEditingNoteId(null); setLinkedBrewId(null); }} saveLabel={editingNoteId === null ? "저장" : "수정 저장"} />
-        </FormCard>
-      )}
-
-      {sorted.length === 0 ? <Empty text="컵 노트를 추가해보세요" /> : sorted.map(n => {
-        const bean = beans.find(b => b.id === n.beanId);
-        const brew = n.brewId ? brews.find(b => b.id === n.brewId) : null;
-        const attrs = [["Flavor", n.flavor], ["Aroma", n.aroma], ["Acidity", n.acidity], ["Body", n.body], ["Finish", n.finish]].filter(([, v]) => v);
-        return (
-          <div key={n.id} style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.25rem", marginBottom: 10 }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                  <p style={{ margin: 0, fontSize: 15, fontWeight: 500, fontFamily: FONT }}>{bean?.name || "삭제된 원두"}</p>
-                  <span style={{ fontSize: 13, color: "#8B6F47" }}>{"★".repeat(n.rating)}{"☆".repeat(5 - n.rating)}</span>
-                </div>
-                <p style={{ margin: "0 0 8px", fontSize: 12, color: "var(--color-text-tertiary)", fontFamily: FONT }}>
-                  {n.date}
-                  {brew && <span style={{ marginLeft: 8, background: "#E1F5EE", color: "#0F6E56", padding: "1px 7px", borderRadius: 8, fontSize: 11, fontFamily: FONT }}>Brew linked</span>}
-                </p>
-                {attrs.length > 0 && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
-                    {attrs.map(([k, v]) => (
-                      <span key={k} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 10, background: "var(--color-background-secondary)", color: "var(--color-text-secondary)", fontFamily: FONT }}>
-                        <span style={{ color: "var(--color-text-tertiary)" }}>{k} </span>{v}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {n.memo && <p style={{ margin: 0, fontSize: 12, color: "var(--color-text-secondary)", fontStyle: "italic", fontFamily: FONT }}>{n.memo}</p>}
-              </div>
-              <div className="note-actions"><button onClick={() => editNote(n)} className="note-edit-button">수정</button><button onClick={() => remove(n.id)} className="note-delete-button">삭제</button></div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function Section({ title, children, onMore }: { title: string; children: ReactNode; onMore?: () => void }) {
-  return (
-    <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "1rem 1.25rem" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-        <p style={{ margin: 0, fontSize: 13, fontWeight: 500, fontFamily: FONT }}>{title}</p>
-        {onMore && <button onClick={onMore} style={{ fontSize: 12, border: "none", background: "none", color: "#8B6F47", cursor: "pointer", padding: 0, fontFamily: FONT }}>더 보기</button>}
-      </div>
-      {children}
-    </div>
-  );
-}
-
 function FormCard({ children }: { children: ReactNode }) {
   return <div className="form-card">{children}</div>;
 }
@@ -1176,10 +1046,6 @@ function FormActions({ onSave, onCancel, saveLabel }: { onSave: () => void; onCa
       <button type="button" className="primary-button" onClick={onSave}>{saveLabel}</button>
     </div>
   );
-}
-
-function Btn({ onClick, filled, children }: { onClick: () => void; filled: boolean; children: ReactNode }) {
-  return <button onClick={onClick} style={{ padding: "6px 16px", fontSize: 13, border: filled ? "1px solid #8B6F47" : "0.5px solid #8B6F47", borderRadius: 20, background: filled ? "#8B6F47" : "transparent", color: filled ? "#fff" : "#8B6F47", cursor: "pointer", fontFamily: FONT }}>{children}</button>;
 }
 
 function JourneySteps({ active }: { active: "beans" | "recipes" | "brews" }) {
