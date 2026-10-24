@@ -428,7 +428,7 @@ function Header({ page, setPage, user, authLoading }: { page: Page; setPage: (pa
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 0 0" }}>
         <div>
           <p style={{ fontSize: 11, color: "var(--color-text-tertiary)", margin: 0, letterSpacing: 1, textTransform: "uppercase", fontFamily: FONT }}>My Coffee Diary</p>
-          <h1 style={{ fontSize: 22, fontWeight: 500, margin: "2px 0 0", color: "var(--color-text-primary)", fontFamily: FONT }}>{PAGE_LABELS[page]}</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 700, margin: "2px 0 0", letterSpacing: "-0.02em", color: "var(--color-text-primary)", fontFamily: FONT }}>{PAGE_LABELS[page]}</h1>
         </div>
         <div className="account-actions">{user ? <button className="account-button" onClick={signOut}>{user.email?.split("@")[0] ?? "내 계정"} · 로그아웃</button> : <button className="google-button" onClick={signInGoogle}>Google 로그인</button>}<button className="refresh-button" onClick={() => window.location.reload()} aria-label="새로고침" title="새로고침">↻</button><img className="brand-mark" src="/coffee-diary-logo-brown-96.png" width="40" height="40" alt="커피 기록 로고" /></div>
       </div>
@@ -769,9 +769,9 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
           const pct = bean.purchased > 0 ? Math.max(0, Math.min(100, bean.remaining / bean.purchased * 100)) : 0;
           return <article className="inventory-card" key={bean.id}>
             <div className="bean-info">
-              <p className="roastery">{bean.roastery || "로스터리 미입력"}</p>
+              <p className="roastery"><span>{bean.roastery || "로스터리 미입력"}</span><RoastStamp bean={bean} today={cardToday} /></p>
               <h3>{bean.name}</h3>
-              <BeanDates bean={bean} today={cardToday} />
+              <BeanDates bean={bean} />
               <div className="compact-summary"><strong>{bean.roastery || "로스터리 미입력"}</strong><time className="compact-roast" dateTime={bean.roastDate}>로스팅 : {bean.roastDate || "날짜 미입력"}</time><b>{bean.name}</b>{bean.roasteryNotes && <span className="compact-cup-notes">{bean.roasteryNotes.split(/[\s,·、\n]+/).map(value => value.trim()).filter(Boolean).map((note, index) => <i key={index}>{note}</i>)}</span>}</div>
               {bean.roasteryNotes && <div className="roastery-cup-notes"><span className="detail-label">로스터리 컵노트</span><div className="flavor-tags">{bean.roasteryNotes.split(/[\s,·、\n]+/).map(value => value.trim()).filter(Boolean).map((note, index) => <span key={index}>{note}</span>)}</div></div>}
               <div className="bean-card-actions"><button className="edit-bean" onClick={() => edit(bean)} aria-label={`${bean.name} 원두 정보 수정`}>원두 정보 수정</button><details className="record-details"><summary>내 메모 보기</summary><BeanComments bean={bean} notes={notes.filter(note => note.beanId === bean.id)} onAdd={note => setNotes([...notes, note])} /></details></div>
@@ -798,13 +798,17 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
   );
 }
 
-function BeanDates({ bean, today }: { bean: Bean; today: string }) {
-  const days = bean.roastDate ? Math.round((Date.parse(today) - Date.parse(bean.roastDate)) / 86_400_000) : null;
+// Sits on the roastery line in the detailed card; the purchase date stays in the form only.
+function RoastStamp({ bean, today }: { bean: Bean; today: string }) {
+  if (!bean.roastDate) return null;
+  const days = Math.round((Date.parse(today) - Date.parse(bean.roastDate)) / 86_400_000);
+  return <span className="roast-stamp">로스팅 <time dateTime={bean.roastDate}>{bean.roastDate.slice(2).replace(/-/g, ".")}</time>{Number.isFinite(days) && <strong aria-label={days >= 0 ? `로스팅 후 ${days}일` : `로스팅까지 ${-days}일`}>{days >= 0 ? `D+${days}` : `D${days}`}</strong>}</span>;
+}
+
+function BeanDates({ bean }: { bean: Bean }) {
   const priceLabel = bean.price ? (Number.isFinite(Number(bean.price)) ? `₩${fmt(bean.price)}` : bean.price) : null;
-  if (!bean.date && !bean.roastDate && !priceLabel && !bean.quality) return null;
+  if (!priceLabel && !bean.quality) return null;
   return <div className="title-dates">
-    {bean.date && <span>구매일 <time dateTime={bean.date}>{bean.date}</time></span>}
-    {bean.roastDate && <span>로스팅 <time dateTime={bean.roastDate}>{bean.roastDate}</time>{days !== null && Number.isFinite(days) && <strong aria-label={days >= 0 ? `로스팅 후 ${days}일` : `로스팅까지 ${-days}일`}>{days >= 0 ? `D+${days}` : `D${days}`}</strong>}</span>}
     {(priceLabel || bean.quality) && <span className="bean-purchase-meta">{priceLabel && <span>구매가 {priceLabel}</span>}{bean.quality && <b className={`quality-tag quality-${bean.quality}`}>{bean.quality}</b>}</span>}
   </div>;
 }

@@ -1020,3 +1020,25 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .inventory .bean-list { padding-bottom: 72px; }
   .brew-log { padding-bottom: 72px; }
 }
+
+/* Feedback round 2: tighter summary row, roast date beside the roastery, one chip shape, steady brew actions, firmer titles. */
+.inventory-summary-cards { grid-template-columns: 3fr 2fr 2fr; }
+.inventory-summary-cards > div { padding: 12px 14px; }
+.inventory-summary-cards span { margin-bottom: 4px; }
+.inventory-summary-cards strong { font-size: 22px; }
+.inventory-summary-cards em { display: inline; margin: 0 0 0 6px; color: #6b5d50; font-size: 13px; }
+.roastery { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.roast-stamp { display: inline-flex; align-items: center; gap: 6px; color: #6b5d50; font-size: 12px; letter-spacing: 0; }
+.roast-stamp strong { padding: 2px 6px; border-radius: 5px; background: #eadecc; color: #705331; font-size: 11px; font-weight: 600; }
+.bean-list.density-compact .compact-cup-notes i { padding: 4px 10px; border-radius: 12px; background: #f5eee5; color: #5a4a3b; }
+.brew-card > div > div:first-child { min-width: 0; }
+.brew-card-actions { flex-shrink: 0; white-space: nowrap; }
+.page-intro, .inventory-intro, .stats-header, .recipe-intro, .brew-log-heading { margin-top: 6px; margin-bottom: 16px; }
+@media (max-width: 540px) {
+  .page-intro, .inventory-intro, .stats-header, .recipe-intro, .brew-log-heading { margin-top: 4px; margin-bottom: 12px; }
+  .inventory-summary-cards > div { padding: 10px 12px; }
+  .inventory-summary-cards strong { font-size: 20px; }
+  .inventory-summary-cards em { margin-left: 4px; font-size: 12px; }
+  .bean-list.density-detail .roastery { gap: 2px 8px; padding-right: 88px; }
+  .bean-list.density-detail .roast-stamp { gap: 4px; font-size: 11px; }
+}
