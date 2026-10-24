@@ -307,9 +307,11 @@ export default function App() {
 }
 
 function Header({ page, setPage, user, authLoading }: { page: Page; setPage: (page: Page) => void; user: { id: string; email?: string } | null; authLoading: boolean }) {
+  const [loginError, setLoginError] = useState("");
   const signInGoogle = async () => {
+    setLoginError("");
     const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/` } });
-    if (error) window.alert(error.message);
+    if (error) setLoginError(`Google 로그인에 실패했어요. ${error.message}`);
   };
   const signOut = async () => {
     if (hasPendingSync() && !window.confirm("아직 서버에 저장하지 못한 기록이 있어요. 로그아웃하면 이 기기에서 지워져요. 계속할까요?")) return;
@@ -326,6 +328,7 @@ function Header({ page, setPage, user, authLoading }: { page: Page; setPage: (pa
         </div>
         <div className="account-actions">{user ? <button className="account-button" onClick={signOut}>{user.email?.split("@")[0] ?? "내 계정"} · 로그아웃</button> : <button className="google-button" onClick={signInGoogle}>Google 로그인</button>}<button className="refresh-button" onClick={() => window.location.reload()} aria-label="새로고침" title="새로고침">↻</button><img className="brand-mark" src="/coffee-diary-logo-brown-96.png" width="40" height="40" alt="커피 기록 로고" /></div>
       </div>
+      {loginError && <p className="login-error" role="alert">{loginError}</p>}
       <nav className="page-tabs">
         {PAGES.map(p => (
           <button key={p} className="page-tab" onClick={() => setPage(p)} aria-current={page === p ? "page" : undefined} style={{
@@ -553,9 +556,6 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
     if (editingId === null) return;
     const relatedBrews = brews.filter(brew => brew.beanId === editingId);
     const relatedNotes = notes.filter(note => note.beanId === editingId);
-    const warning = relatedBrews.length > 0 ? `이 원두에 연결된 브루잉 기록 ${relatedBrews.length}개도 함께 삭제돼요.` : "연결된 브루잉 기록은 없어요.";
-    if (!window.confirm(`${warning}\n계속 삭제할까요?`)) return;
-    if (!window.confirm("원두와 관련 기록을 모두 삭제합니다. 정말 삭제할까요?")) return;
     setBeans(beans.map(bean => bean.id === editingId ? { ...bean, deleted: true } : bean));
     setBrews(brews.filter(brew => brew.beanId !== editingId));
     setNotes(notes.filter(note => note.beanId !== editingId));
@@ -604,7 +604,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
         <div className="summary-primary"><span>보유 중</span><strong>{active.length}<small>종</small>{fmt(Math.round(active.reduce((sum, b) => sum + b.remaining, 0) * 10) / 10)}<small>g</small></strong></div>
         <div className="summary-details"><div className="summary-status-breakdown"><span>디개싱 중 <b>{fmt(Math.round(degassingWeight * 10) / 10)}g</b></span><span>소비 중 <b>{fmt(Math.round(consumingWeight * 10) / 10)}g</b></span></div></div>
       </div>
-      {deletedId !== null && <div className="delete-notice" role="status"><span>원두를 삭제했어요.</span><button type="button" onClick={undoRemove}>되돌리기</button></div>}
+      {deletedId !== null && <div className="delete-notice" role="status"><span>{deletedBrews.length > 0 ? `원두와 연결된 브루잉 기록 ${deletedBrews.length}개를 삭제했어요.` : "원두를 삭제했어요."}</span><button type="button" onClick={undoRemove}>되돌리기</button></div>}
       {show && <form className="bean-form" onSubmit={save}>
         <h3>{editingId === null ? "새 원두 등록" : "원두 정보 수정"}</h3>
         {editingId === null && <section className="bean-photo-import" aria-label="사진으로 원두 정보 자동 입력">

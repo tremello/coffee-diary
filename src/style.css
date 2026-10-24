@@ -172,6 +172,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .brew-custom-recipe-fields input { width: 100%; min-height: 38px; box-sizing: border-box; }
 .custom-recipe-name { grid-column: 1 / -1; }
 .brew-form-error { margin: 10px 0 0; color: #b65f50; font-size: 11px; }
+.login-error { margin: 8px 0 0; text-align: right; color: #b65f50; font-size: 12px; }
 .brew-form-grid input[type="number"], .brew-form-grid input[type="date"], .brew-form-grid select, .recipe-memo-field textarea, .brew-note-form textarea { min-height: 42px; height: 42px; line-height: 20px; padding-top: 10px; padding-bottom: 10px; }
 .recent-recipes { display: grid; gap: 6px; margin-top: 9px; }
 .recent-recipes > span { color: #8b7a64; font-size: 11px; }
