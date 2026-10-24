@@ -147,7 +147,12 @@ function cleanText(value, field) {
 
 // Gemini has written a variety as "GEISHA Geisha 게이샤 GEISHA ...". Keep one spelling of a short name.
 function cleanVariety(value) {
-  const text = value.split(/\s*[([{|]/)[0].trim();
+  // Gemini has also offered alternatives like "게이샤주스/게이샤/게이샤"; keep the one it repeated most,
+  // or the shortest on a tie. Distinct names with no repeat (SL28/SL34) are a blend, so keep them all.
+  const options = value.split(/\s*[([{|]/)[0].split(/\s*\/\s*/).map(option => option.trim()).filter(Boolean);
+  const count = option => options.filter(other => other.toLowerCase() === option.toLowerCase()).length;
+  const repeated = options.some(option => count(option) > 1);
+  const text = repeated ? [...options].sort((a, b) => count(b) - count(a) || a.length - b.length)[0] : options.join(", ");
   const seen = new Set();
   let words = text.split(/\s+/).filter(word => {
     const key = word.toLowerCase().replace(/[,.]$/, "");
@@ -201,7 +206,8 @@ const FARM_ROW_PRIORITY = ["FARM", "ESTATE", "농장", "WASHING STATION", "PROJE
 
 function titleCase(value) {
   if (value !== value.toUpperCase()) return value;
-  return value.toLowerCase().replace(/(^|[\s,(-])(\p{L})/gu, (_, before, letter) => before + letter.toUpperCase());
+  // Code names like SL28 stay upper case.
+  return value.replace(/[^\s,()-]+/g, word => /\d/.test(word) ? word : word.charAt(0) + word.slice(1).toLowerCase());
 }
 
 // Reads "FARM: EL PALOMAR ESTATE"-style rows out of Gemini's copy of the label.
@@ -227,7 +233,11 @@ function fillFromLabelRows(bean, lines) {
   const valueOf = field => Object.values(rows).find(row => row.field === field)?.value;
   const filled = { ...bean };
   const variety = valueOf("variety");
-  if (variety && !(filledValue(filled.variety) && varietyIsFinal(filled.variety))) filled.variety = cleanVariety(cleanText(titleCase(variety), "variety"));
+  const rowVariety = variety ? cleanVariety(cleanText(titleCase(variety), "variety")) : "";
+  // A printed variety that is a code name or has a known Korean reading is more reliable than
+  // Gemini's own wording, which has drifted (e.g. "게이샤주스").
+  const rowIsKnown = rowVariety && (varietyIsFinal(rowVariety) || koreanVariety(rowVariety) !== rowVariety);
+  if (rowVariety && (rowIsKnown || !(filledValue(filled.variety) && varietyIsFinal(filled.variety)))) filled.variety = rowVariety;
   if (filledValue(filled.variety)) filled.variety = koreanVariety(filled.variety);
   if (!filledValue(filled.origin) && valueOf("origin")) filled.origin = cleanText(titleCase(valueOf("origin")), "origin");
   if (!filledValue(filled.process) && valueOf("process")) filled.process = cleanText(titleCase(valueOf("process")), "process");
