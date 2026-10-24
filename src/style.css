@@ -114,19 +114,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .page-tabs { display: flex; gap: 6px; margin-top: 1rem; }
 .page-tab { min-height: 38px; }
 .page-tab-icon { display: none; }
-.inventory-summary { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); padding: 24px 30px; background: #f0e9df; border-radius: 14px; margin-bottom: 14px; }
-.inventory-summary > div { display: flex; align-items: center; justify-content: flex-start; gap: 16px; padding: 0 16px; }
-.inventory-summary span { font-size: 13px; color: #756653; }
-.inventory-summary strong { font-size: 27px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.inventory-summary small { margin-left: 6px; font-size: 13px; font-weight: 400; }
-.summary-primary { display: flex !important; flex-direction: row; align-items: baseline !important; justify-content: center !important; gap: 9px !important; padding-top: 9px !important; white-space: nowrap; }
-.inventory-summary .summary-primary > span { font-size: 13px; }
-.summary-primary strong { display: flex; align-items: baseline; gap: 5px; font-size: 34px; }
-.summary-details { display: block !important; border-left: 1px solid #dcd0c1; }
-.summary-status-breakdown { display: grid; gap: 4px; margin-top: 9px; color: #8b7a64; font-size: 10px; }
-.summary-details { display: block !important; }
-.summary-status-breakdown span { display: flex; justify-content: space-between; gap: 12px; }
-.summary-status-breakdown b { color: #6f583d; font-weight: 600; font-variant-numeric: tabular-nums; }
 .inventory-toolbar { display: grid; gap: 8px; margin-bottom: 16px; font-size: 12px; color: #827363; }
 .inventory-toolbar-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
 .inventory-filters { display: flex; align-items: center; flex: 0 1 auto; gap: 2px; min-width: 0; padding: 3px; border: 1px solid #e1d6c7; border-radius: 10px; background: #f8f4ee; }
@@ -204,7 +191,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .stats-cards > div { padding: 18px; background: #f0e9df; border-radius: 12px; }
 .stats-cards span { display: block; color: #756653; font-size: 12px; margin-bottom: 8px; }
 .stats-cards strong { font-size: 25px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.stats-cards small { margin-left: 4px; font-size: 12px; font-weight: 400; }
+.stats-cards small { margin-left: 2px; font-size: 12px; font-weight: 400; }
 .stats-section { padding: 20px; border: 1px solid #e3d9cc; border-radius: 12px; background: #fffdf9; margin-bottom: 12px; }
 .stats-section h3 { margin: 0 0 14px; font-size: 15px; font-weight: 600; }
 .usage-list { display: grid; gap: 10px; }
@@ -250,9 +237,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .stock-status { font-size: 10px; border: 1px solid #d5c5b0; border-radius: 20px; padding: 4px 9px; color: #7b6446; }
 .stock-status.low { color: #975e38; border-color: #d8bda5; }
 .stock-status-row { display: flex; align-items: center; gap: 6px; }
-.status-edit-button { border: 0; background: transparent; color: #9a8061; font-size: 10px; padding: 3px 2px; cursor: pointer; }
-.status-edit-button:hover { color: #806444; text-decoration: underline; }
-.stock-status-select { max-width: 100%; border: 1px solid #d5c5b0; border-radius: 16px; background: #fffdf9; color: #7b6446; padding: 4px 7px; font-size: 10px; }
 .remaining-label { font-size: 11px; color: #8b7a64; margin: 22px 0 4px; }
 .remaining-weight { font-size: 36px; font-weight: 650; letter-spacing: -1.5px; margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; max-width: 100%; }
 .remaining-weight span { font-size: 16px; font-weight: 400; margin-left: 5px; letter-spacing: 0; }
@@ -293,13 +277,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .intro-actions button { padding: 8px 10px; font-size: 11px; }
   .inventory-intro h2 { font-size: 25px; }
   .inventory-intro p:last-child { font-size: 11px; max-width: 190px; line-height: 1.6; }
-  .inventory-summary { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); padding: 20px; }
-  .inventory-summary > div { align-items: flex-start; padding: 0 10px; gap: 6px; }
-  .inventory-summary strong { font-size: 22px; }
-  .summary-primary strong { font-size: 28px; }
-  .inventory-summary small { font-size: 10px; margin-left: 3px; }
-  .summary-primary small { font-size: 13px; }
-  .summary-status-breakdown { width: 100%; font-size: 8px; gap: 5px; }
   .inventory-toolbar-meta { gap: 4px; font-size: 10px; }
   .inventory-sort { max-width: 145px; padding: 6px 5px; font-size: 10px; }
   .inventory-toolbar { gap: 6px; }
@@ -375,7 +352,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .bean-list.density-dense .bean-info h3 { margin: 0; font-size: 13px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bean-list.density-dense .bean-stock { padding: 10px 8px; }
 .bean-list.density-dense .stock-status { font-size: 8px; padding: 3px 4px; }
-.bean-list.density-dense .status-edit-button { font-size: 9px; }
 .bean-list.density-dense .remaining-label { margin-bottom: 1px; font-size: 8px; }
 .bean-list.density-dense .remaining-weight { font-size: 21px; }
 .bean-list.density-dense .purchased-weight { display: none; }
@@ -958,4 +934,39 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .inventory-intro p:last-child { max-width: none; }
   .intro-actions { flex-direction: row; gap: 6px; }
   .intro-actions button { flex: 1; min-height: 38px; padding: 0 10px; font-size: 12px; }
+}
+
+/* The inventory summary reuses the stats-tab cards so both tabs read the same way. */
+.inventory-summary-cards { margin-bottom: 14px; }
+.inventory-summary-cards strong { white-space: nowrap; }
+.inventory-summary-cards em { display: block; margin-top: 4px; color: #8b7a64; font-size: 12px; font-style: normal; font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (max-width: 540px) {
+  .inventory-summary-cards { margin-bottom: 12px; }
+  .inventory-summary-cards em { font-size: 10px; }
+}
+/* iOS Safari gives native date fields a wide intrinsic size and its own height; drop that so they match the price fields. */
+.range-filter-group input[type="date"] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; width: 100%; box-sizing: border-box; height: 32px; line-height: 30px; text-align: left; }
+.range-filter-group input[type="date"]::-webkit-date-and-time-value { margin: 0; text-align: left; }
+.range-filter-group input[type="date"]::-webkit-calendar-picker-indicator { margin: 0; opacity: .55; }
+/* Empty date fields show a soft hint, since iOS has no date placeholder and otherwise shows a date that isn't set. */
+.date-field { position: relative; display: block; min-width: 0; }
+.date-field[data-empty="true"] input[type="date"] { color: transparent; }
+.date-field[data-empty="true"]::after { position: absolute; top: 50%; left: 10px; transform: translateY(-50%); color: #a18e78; font-size: 12px; pointer-events: none; content: attr(data-placeholder); }
+.range-filter-group > div > span.date-field { text-align: left; }
+/* The status badge is itself the control: tapping flips 소비 중 ↔ 디개싱 중. */
+.stock-status { white-space: nowrap; }
+.stock-status-toggle { display: inline-flex; align-items: center; gap: 4px; background: #fffdf9; font-family: inherit; line-height: 1.2; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
+.stock-status-toggle span { color: #a18e78; font-size: .9em; }
+.stock-status-toggle:hover { border-color: #a98b67; }
+.stock-status-toggle:active { background: #efe5d8; border-color: #8d7049; }
+/* Recipe timeline: every cell in a step row shares one quiet type size (the fixed 0:00 cell set the baseline), and the action select drops iOS native styling. */
+.recipe-step-row select { -webkit-appearance: none; appearance: none; box-sizing: border-box; padding: 0 20px 0 8px; line-height: 1; background: #fffdf9 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2375634d' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 7px center / 9px 5px; }
+.recipe-time-input, .recipe-fixed-time { box-sizing: border-box; font-weight: 400; line-height: 1; }
+@media (max-width: 720px) {
+  .recipe-fixed-time, .recipe-time-input, .recipe-step-row select, .recipe-amount-input input { font-size: 12px !important; }
+  .recipe-amount-input span, .recipe-cumulative { font-size: 11px; }
+}
+@media (max-width: 359px) {
+  .recipe-step-head, .recipe-step-row { grid-template-columns: 44px 86px minmax(0, 1fr) 34px 16px; }
+  .recipe-step-row select { padding: 0 16px 0 6px; background-position: right 5px center; }
 }

@@ -241,6 +241,19 @@ function useAuth() {
 }
 
 const fmt = (n: number | string) => Number(n).toLocaleString();
+const digitsOnly = (value: string) => value.replace(/\D/g, "").replace(/^0+(?=\d)/, "");
+const withCommas = (value: string) => /^\d+$/.test(value) ? fmt(value) : value;
+// Prices are stored as plain digits but shown with thousands commas; the caret stays after the same digit it was after.
+const handleNumericInput = (event: React.ChangeEvent<HTMLInputElement>, setValue: (value: string) => void) => {
+  const input = event.target;
+  const digitsBeforeCaret = digitsOnly(input.value.slice(0, input.selectionStart ?? input.value.length)).length;
+  setValue(digitsOnly(input.value));
+  window.setTimeout(() => {
+    let position = 0;
+    for (let seen = 0; position < input.value.length && seen < digitsBeforeCaret; position++) if (/\d/.test(input.value[position])) seen++;
+    if (document.activeElement === input) input.setSelectionRange(position, position);
+  });
+};
 const parseLocalDate = (date: string) => {
   const [year, month, day] = date.split("-").map(Number);
   return new Date(year, (month || 1) - 1, day || 1);
@@ -379,7 +392,6 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
   const [customOrigins, setCustomOrigins] = useStorage<string[]>("cf_origins", [], userId);
   const [addingOrigin, setAddingOrigin] = useState(false);
   const [newOrigin, setNewOrigin] = useState("");
-  const [editingStatusId, setEditingStatusId] = useState<number | null>(null);
   const origins = [...new Set([...DEFAULT_ORIGINS, ...customOrigins, ...beans.map(b => b.origin).filter(Boolean)])];
   const [hiddenRoasteries, setHiddenRoasteries] = useStorage<string[]>("cf_hidden_roasteries", [], userId);
   const [hiddenVarieties, setHiddenVarieties] = useStorage<string[]>("cf_hidden_varieties", [], userId);
@@ -571,7 +583,6 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
   };
   const updateStatus = (beanId: number, status: BeanStatus) => {
     setBeans(beans.map(bean => bean.id === beanId ? { ...bean, status } : bean));
-    setEditingStatusId(null);
   };
   const facetGroup = (key: BeanFacetKey, label: string, emptyText = "등록된 정보 없음") => {
     const options = facetOptions(key);
@@ -580,7 +591,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
       return <button type="button" key={value} aria-pressed={pressed} disabled={!pressed && count === 0} onClick={() => toggleFacet(key, value)}>{key === "note" ? `#${value}` : value}<small>{count}</small></button>;
     })}</div> : <p className="facet-empty">{emptyText}</p>}</fieldset>;
   };
-  const dateRange = (label: string, from: string, setFrom: (value: string) => void, to: string, setTo: (value: string) => void) => <fieldset className="range-filter-group"><legend>{label}</legend><div><input type="date" value={from} onChange={event => setFrom(event.target.value)} aria-label={`${label} 시작일`} /><span>~</span><input type="date" value={to} onChange={event => setTo(event.target.value)} aria-label={`${label} 종료일`} /></div></fieldset>;
+  const dateRange = (label: string, from: string, setFrom: (value: string) => void, to: string, setTo: (value: string) => void) => <fieldset className="range-filter-group"><legend>{label}</legend><div><span className="date-field" data-empty={!from} data-placeholder="시작일"><input type="date" value={from} onChange={event => setFrom(event.target.value)} aria-label={`${label} 시작일`} /></span><span>~</span><span className="date-field" data-empty={!to} data-placeholder="종료일"><input type="date" value={to} onChange={event => setTo(event.target.value)} aria-label={`${label} 종료일`} /></span></div></fieldset>;
   const save = (event: React.FormEvent) => {
     event.preventDefault();
     const purchased = Number(form.purchased);
@@ -600,10 +611,11 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
     <main className="inventory">
       <div className="inventory-intro"><div><p>좋아하는 맛을 기록하고, 남은 원두를 한눈에.</p></div>
         <div className="intro-actions"><button className="secondary-button" onClick={onBrew}>브루잉 추가</button><button className="primary-button" onClick={() => { close(); setShow(true); }}>+ 원두 추가</button></div></div>
-      <div className="inventory-summary">
-        <div className="summary-primary"><span>보유 중</span><strong>{active.length}<small>종</small>{fmt(Math.round(active.reduce((sum, b) => sum + b.remaining, 0) * 10) / 10)}<small>g</small></strong></div>
-        <div className="summary-details"><div className="summary-status-breakdown"><span>디개싱 중 <b>{fmt(Math.round(degassingWeight * 10) / 10)}g</b></span><span>소비 중 <b>{fmt(Math.round(consumingWeight * 10) / 10)}g</b></span></div></div>
-      </div>
+      {active.length > 0 && <div className="stats-cards inventory-summary-cards" aria-label="보유 원두 요약">
+        <div><span>보유 원두</span><strong>{active.length}<small>종</small></strong><em>총 {fmt(Math.round(active.reduce((sum, b) => sum + b.remaining, 0) * 10) / 10)}g</em></div>
+        <div><span>소비 중</span><strong>{fmt(Math.round(consumingWeight * 10) / 10)}<small>g</small></strong></div>
+        <div><span>디개싱 중</span><strong>{fmt(Math.round(degassingWeight * 10) / 10)}<small>g</small></strong></div>
+      </div>}
       {deletedId !== null && <div className="delete-notice" role="status"><span>{deletedBrews.length > 0 ? `원두와 연결된 브루잉 기록 ${deletedBrews.length}개를 삭제했어요.` : "원두를 삭제했어요."}</span><button type="button" onClick={undoRemove}>되돌리기</button></div>}
       {show && <form className="bean-form" onSubmit={save}>
         <h3>{editingId === null ? "새 원두 등록" : "원두 정보 수정"}</h3>
@@ -631,7 +643,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
           <label><span className="purchase-field-label">소비량 (g)<span className="input-hint">이미 소비한 원두</span></span><input type="number" min="0" step="0.1" value={form.consumed} placeholder="0" onChange={e => setForm({ ...form, consumed: e.target.value })} /></label>
           </div>
           <label className="full-width">로스터리 컵노트<input value={form.roasteryNotes ?? ""} placeholder="예: 자스민, 복숭아, 꿀" onChange={e => setForm({ ...form, roasteryNotes: e.target.value })} /></label>
-          <div className="bean-purchase-row full-width"><label>구매가격 (원)<input type="number" min="0" step="100" value={form.price} placeholder="예: 28000" onChange={e => setForm({ ...form, price: e.target.value })} /></label><fieldset className="origin-field"><legend>내 기준 분류</legend><div className="origin-options">{BEAN_QUALITIES.map(quality => <button type="button" key={quality} aria-pressed={form.quality === quality} onClick={() => setForm({ ...form, quality })}>{quality}</button>)}</div></fieldset></div>
+          <div className="bean-purchase-row full-width"><label>구매가격 (원)<input type="text" inputMode="numeric" value={withCommas(form.price)} placeholder="예: 28,000" onChange={e => handleNumericInput(e, price => setForm(current => ({ ...current, price })))} /></label><fieldset className="origin-field"><legend>내 기준 분류</legend><div className="origin-options">{BEAN_QUALITIES.map(quality => <button type="button" key={quality} aria-pressed={form.quality === quality} onClick={() => setForm({ ...form, quality })}>{quality}</button>)}</div></fieldset></div>
           <div className="bean-dates full-width">
             <label>구매일<input type="date" value={form.date} onChange={e => { const date = e.target.value; setForm(current => ({ ...current, date, roastDate: roastDateTouched ? current.roastDate : date })); }} /></label>
             <label>로스팅 날짜<input type="date" value={form.roastDate ?? ""} onChange={e => { setRoastDateTouched(true); setForm({ ...form, roastDate: e.target.value }); }} /></label>
@@ -651,7 +663,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
         <section className="filter-section" aria-label="상태·재고"><h4>상태·재고</h4><div className="facet-grid">{facetGroup("status", "원두 상태")}{facetGroup("remaining", "남은 양")}{facetGroup("age", "로스팅 후", "로스팅 날짜 정보 없음")}</div></section>
         <section className="filter-section" aria-label="가격·날짜"><h4>가격·날짜</h4><div className="facet-grid">
           <fieldset className="facet-group"><legend>가격 구분</legend><div className="facet-options">{BEAN_QUALITIES.map(quality => { const pressed = qualityFilter === quality; const count = qualityCount(quality); return <button type="button" key={quality} aria-pressed={pressed} disabled={!pressed && count === 0} onClick={() => setQualityFilter(pressed ? "all" : quality)}>{quality}<small>{count}</small></button>; })}</div></fieldset>
-          <fieldset className="range-filter-group"><legend>구매가 (원)</legend><div><input type="number" min="0" inputMode="numeric" value={priceMin} onChange={event => setPriceMin(event.target.value)} placeholder="최소" aria-label="최소 구매가" /><span>~</span><input type="number" min="0" inputMode="numeric" value={priceMax} onChange={event => setPriceMax(event.target.value)} placeholder="최대" aria-label="최대 구매가" /></div></fieldset>
+          <fieldset className="range-filter-group"><legend>구매가 (원)</legend><div><input type="text" inputMode="numeric" value={withCommas(priceMin)} onChange={event => handleNumericInput(event, setPriceMin)} placeholder="최소" aria-label="최소 구매가" /><span>~</span><input type="text" inputMode="numeric" value={withCommas(priceMax)} onChange={event => handleNumericInput(event, setPriceMax)} placeholder="최대" aria-label="최대 구매가" /></div></fieldset>
           {dateRange("로스팅 날짜", roastFrom, setRoastFrom, roastTo, setRoastTo)}
           {dateRange("구매일", purchaseFrom, setPurchaseFrom, purchaseTo, setPurchaseTo)}
         </div></section>
@@ -671,7 +683,11 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
               <div className="bean-card-actions"><button className="edit-bean" onClick={() => edit(bean)} aria-label={`${bean.name} 원두 정보 수정`}>원두 정보 수정</button><details className="record-details"><summary>내 메모 보기</summary><BeanComments bean={bean} notes={notes.filter(note => note.beanId === bean.id)} onAdd={note => setNotes([...notes, note])} /></details></div>
             </div>
             <div className="bean-stock">
-              <div className="stock-status-row">{editingStatusId === bean.id ? <select className="stock-status-select" value={bean.status ?? "소비 중"} aria-label={`${bean.name} 상태`} onChange={event => updateStatus(bean.id, event.target.value as BeanStatus)}>{BEAN_STATUSES.map(status => <option key={status} value={status}>{status}</option>)}</select> : <><span className={`stock-status ${pct <= 20 ? "low" : ""}`}>{bean.remaining <= 0 ? "다 마셨어요" : bean.status ?? "소비 중"}</span><button type="button" className="status-edit-button" onClick={() => setEditingStatusId(bean.id)}>상태 변경</button></>}</div>
+              <div className="stock-status-row">{bean.remaining <= 0 ? <span className={`stock-status ${pct <= 20 ? "low" : ""}`}>다 마셨어요</span> : (() => {
+                const status = bean.status ?? "소비 중";
+                const next: BeanStatus = status === "소비 중" ? "디개싱 중" : "소비 중";
+                return <button type="button" className={`stock-status stock-status-toggle ${pct <= 20 ? "low" : ""}`} onClick={() => updateStatus(bean.id, next)} aria-label={`${bean.name} 상태: ${status}. 눌러서 ${next}으로 변경`} title={`눌러서 ${next}으로 변경`}>{status}<span aria-hidden="true">⇄</span></button>;
+              })()}</div>
               <p className="remaining-label">남은 원두</p>
               <p className="remaining-weight">{fmt(bean.remaining)}<span>g</span></p>
               <p className="purchased-weight">구매 {fmt(bean.purchased)}g</p>
