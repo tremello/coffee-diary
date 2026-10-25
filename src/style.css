@@ -867,16 +867,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .comments-heading h4 { margin: 0; font-size: 13px; font-weight: 500; }
 .comments-heading h4 span { color: var(--fg-9a8061); margin-left: 4px; }
 .comments-heading .edit-bean { margin: 0; white-space: nowrap; }
-.comment-form { display: grid; gap: 12px; margin: 14px 0; padding: 14px; background: var(--bg-f7f2eb); border-radius: 8px; }
-.comment-form label { display: grid; gap: 6px; font-size: 11px; color: var(--fg-75634d); min-width: 0; }
-.comment-form input, .comment-form textarea { width: 100%; min-width: 0; }
-.comment-form .form-buttons { margin-top: 0; flex-wrap: wrap; }
-.comment-form button { padding: 8px 11px; font-size: 11px; }
 .taste-comment { border-left: 2px solid var(--bd-dfd0bb); padding: 2px 0 4px 13px; margin: 16px 0; }
 .taste-comment time { display: block; color: var(--fg-6b5d50); font-size: 11px; margin-bottom: 9px; }
 .taste-comment .bean-memo { margin-top: 8px; }
 .bean-stock { justify-content: flex-start; }
-@media (max-width: 540px) { .comment-form { padding: 10px; } }
 .process-custom { margin-top: 12px; }
 .process-custom > span { font-size: 11px; color: var(--fg-6b5d50); }
 .bean-dates { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
@@ -1565,3 +1559,5 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   .bean-purchase-row .origin-options { gap: 4px; }
   .bean-purchase-row .origin-options button { flex: 0 0 auto; padding: 7px 7px; font-size: 11px; }
 }
+/* Editors scrolled into view keep a little room above them. */
+.bean-form, .recipe-composer-card, .editor-anchor { scroll-margin-top: 16px; }

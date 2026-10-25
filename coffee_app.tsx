@@ -69,6 +69,8 @@ const BEAN_FACET_KEYS: BeanFacetKey[] = ["origin", "variety", "process", "roaste
 const emptyBeanFacetFilters = (): BeanFacetFilters => ({ origin: [], roastery: [], variety: [], process: [], note: [], status: [], remaining: [], age: [] });
 const REMAINING_OPTIONS = ["100g 이하", "100~200g", "200g 이상"];
 const AGE_OPTIONS = ["D+7 이내", "D+8~30", "D+31 이상"];
+// Scroll after React has rendered the editor: scrolling first lets the inserted form shift the page and stop the scroll short.
+const scrollToEditor = (editor: { current: HTMLElement | null }) => window.setTimeout(() => editor.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
 // Notes are separated by commas (or ·, 、, line breaks) only, so a note like "흰 꽃" stays whole.
 const splitCupNotes = (value?: string) => (value ?? "").split(/[,，·、\n]+/).map(note => note.trim()).filter(Boolean);
 
@@ -508,6 +510,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
   // True while the purchase date only mirrors the roast date. iOS date pickers fire a change with today's date the moment they open,
   // so an empty purchase date must keep following the roast date until the user edits it directly.
   const purchaseDateFollowsRoast = useRef(false);
+  const beanFormRef = useRef<HTMLFormElement>(null);
   const purchaseDateForRoast = (purchaseDate: string, roastDate: string) => {
     if (purchaseDate && !purchaseDateFollowsRoast.current) return purchaseDate;
     purchaseDateFollowsRoast.current = Boolean(roastDate);
@@ -689,13 +692,13 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
     }
   };
   const close = () => { clearPhoto(); setShow(false); setEditingId(null); setForm(emptyBeanForm); setError(""); setRoastDateTouched(false); purchaseDateFollowsRoast.current = false; setAddingOrigin(false); setNewOrigin(""); };
-  const openNewBean = () => { close(); setShow(true); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const openNewBean = () => { close(); setShow(true); scrollToEditor(beanFormRef); };
   const edit = (bean: Bean) => {
     setForm({ ...bean, status: bean.status ?? "소비 중", purchased: String(bean.purchased), consumed: String(bean.consumed ?? 0) });
     setRoastDateTouched(Boolean(bean.roastDate && bean.roastDate !== bean.date));
     purchaseDateFollowsRoast.current = false;
     setEditingId(bean.id); setError(""); setShow(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollToEditor(beanFormRef);
   };
   const remove = () => {
     if (editingId === null) return;
@@ -750,7 +753,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
         <div><span>디개싱 중</span><strong>{fmt(Math.round(degassingWeight * 10) / 10)}<small>g</small></strong></div>
       </div>}
       {deletedId !== null && <div className="delete-notice" role="status"><span>{deletedBrews.length > 0 ? `원두와 연결된 브루잉 기록 ${deletedBrews.length}개를 삭제했어요.` : "원두를 삭제했어요."}</span><button type="button" onClick={undoRemove}>되돌리기</button></div>}
-      {show && <form className="bean-form" onSubmit={save}>
+      {show && <form ref={beanFormRef} className="bean-form" onSubmit={save}>
         <h3>{editingId === null ? "새 원두 등록" : "원두 정보 수정"}</h3>
         {editingId === null && <section className="bean-photo-import" aria-label="사진으로 원두 정보 자동 입력">
           <div className="bean-photo-import-heading"><div><strong>사진으로 자동 입력</strong><p>원두 봉투 라벨을 찍으면 읽을 수 있는 정보만 초안에 채워드려요.</p></div><span className="bean-photo-actions"><label className="secondary-button bean-photo-picker"><input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" capture="environment" onChange={event => selectPhoto(event.target.files?.[0])} />사진 찍기</label><label className="secondary-button bean-photo-picker"><input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" onChange={event => selectPhoto(event.target.files?.[0])} />사진 선택</label></span></div>
@@ -817,7 +820,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
               <BeanDates bean={bean} />
               <div className="compact-summary"><strong>{bean.roastery || "로스터리 미입력"}</strong><time className="compact-roast" dateTime={bean.roastDate}>로스팅 : {bean.roastDate || "날짜 미입력"}</time><b>{bean.name}</b>{bean.roasteryNotes && <span className="compact-cup-notes">{splitCupNotes(bean.roasteryNotes).map((note, index) => <i key={index}>{note}</i>)}</span>}</div>
               {bean.roasteryNotes && <div className="roastery-cup-notes"><span className="detail-label">로스터리 컵노트</span><div className="flavor-tags">{splitCupNotes(bean.roasteryNotes).map((note, index) => <span key={index}>{note}</span>)}</div></div>}
-              <div className="bean-card-actions"><button className="edit-bean" onClick={() => edit(bean)} aria-label={`${bean.name} 원두 정보 수정`}>원두 정보 수정</button><details className="record-details"><summary>내 메모 보기</summary><BeanComments bean={bean} notes={notes.filter(note => note.beanId === bean.id)} onAdd={note => setNotes([...notes, note])} /></details></div>
+              <div className="bean-card-actions"><button className="edit-bean" onClick={() => edit(bean)} aria-label={`${bean.name} 원두 정보 수정`}>원두 정보 수정</button><details className="record-details"><summary>내 메모 보기</summary><BeanComments bean={bean} notes={notes.filter(note => note.beanId === bean.id)} /></details></div>
             </div>
             <div className="bean-stock">
               <div className="stock-status-row"><RoastAge bean={bean} today={cardToday} />{bean.remaining <= 0 ? <span data-status="finished" className={`stock-status ${pct <= 20 ? "low" : ""}`}>다 마셨어요</span> : (() => {
@@ -859,31 +862,13 @@ function BeanDates({ bean }: { bean: Bean }) {
   </div>;
 }
 
-function BeanComments({ bean, notes, onAdd }: { bean: Bean; notes: TastingNote[]; onAdd: (note: TastingNote) => void }) {
-  const [open, setOpen] = useState(false);
-  const [date, setDate] = useState(localDate);
-  const [flavor, setFlavor] = useState("");
-  const [memo, setMemo] = useState("");
-  const [error, setError] = useState("");
+function BeanComments({ bean, notes }: { bean: Bean; notes: TastingNote[] }) {
   const [expanded, setExpanded] = useState(false);
   const legacy = Boolean(bean.flavor || bean.memo);
   const sorted = [...notes].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
-  const save = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!date || (!flavor.trim() && !memo.trim())) { setError("내린 날짜와 향미 또는 감상을 입력해주세요."); return; }
-    onAdd({ ...emptyNoteForm(), id: Date.now(), beanId: bean.id, date, flavor: flavor.trim(), memo: memo.trim() });
-    setFlavor(""); setMemo(""); setError(""); setOpen(false);
-  };
-  return <section className="bean-comments" aria-label={`${bean.name} 맛 메모`}>
-    <div className="comments-heading"><h4>맛 메모 <span>{notes.length + Number(legacy)}</span></h4><button type="button" className="edit-bean" aria-expanded={open} onClick={() => setOpen(!open)}>+ 맛 메모 추가</button></div>
-    {open && <form className="comment-form" onSubmit={save}>
-      <label>내린 날짜<input type="date" required value={date} onChange={e => setDate(e.target.value)} /></label>
-      <label>향미 노트<input value={flavor} onChange={e => setFlavor(e.target.value)} placeholder="예: 자스민, 복숭아, 꿀" /></label>
-      <label>오늘의 감상<textarea rows={3} value={memo} onChange={e => setMemo(e.target.value)} placeholder="오늘 내린 커피는 어땠나요?" /></label>
-      {error && <p role="alert">{error}</p>}
-      <div className="form-buttons"><button type="button" className="quiet-button" onClick={() => { setOpen(false); setError(""); }}>취소</button><button className="primary-button" type="submit">메모 저장</button></div>
-    </form>}
-    {!notes.length && !legacy && <p className="placeholder-note">마실 때마다 달라지는 맛을 남겨보세요.</p>}
+  return <section className="bean-comments" aria-label={`${bean.name} 내 메모`}>
+    <div className="comments-heading"><h4>내 메모 <span>{notes.length + Number(legacy)}</span></h4></div>
+    {!notes.length && !legacy && <p className="placeholder-note">브루잉 기록에서 컵 노트를 남기면 여기에 모여요.</p>}
     <div className={`comment-list ${expanded ? "expanded" : "collapsed"}`}>{(expanded ? sorted : sorted.slice(0, 1)).map(note => <div className="taste-comment" key={note.id}><time dateTime={note.date}>{note.date}</time>{note.flavor && <div className="flavor-tags">{splitCupNotes(note.flavor).map((tag, index) => <span key={index}>{tag}</span>)}</div>}{note.memo && <p className="bean-memo">{note.memo}</p>}</div>)}
       {legacy && (expanded || !sorted.length) && <div className="taste-comment legacy-comment"><span className="detail-label">이전에 저장한 노트 · 날짜 미지정</span>{bean.flavor && <p className="bean-memo">{bean.flavor}</p>}{bean.memo && <p className="bean-memo">{bean.memo}</p>}</div>}
     </div>
@@ -934,6 +919,7 @@ function RecipeLibrary({ recipes, setRecipes }: { recipes: SavedRecipe[]; setRec
   const [steps, setSteps] = useState<RecipeStep[]>(defaultRecipeSteps);
   const [showErrors, setShowErrors] = useState(false);
   const [deletedRecipe, setDeletedRecipe] = useState<SavedRecipe | null>(null);
+  const composerRef = useRef<HTMLElement>(null);
 
   const { extraction: totalWater, bypass: bypassWater } = recipeWater(steps);
   const explicitTimeRows = useRef(new Set<number>());
@@ -963,6 +949,7 @@ function RecipeLibrary({ recipes, setRecipes }: { recipes: SavedRecipe[]; setRec
   const edit = (recipe: SavedRecipe) => {
     setEditingId(recipe.id); setName(recipe.name); setCoffee(String(recipe.coffee)); setMemo(recipe.memo ?? ""); setShowErrors(false);
     setSteps(recipe.steps.length >= 2 ? recipe.steps.map(step => ({ ...step, action: normalizedRecipeAction(step.action) })) : defaultRecipeSteps()); setOpen(true);
+    scrollToEditor(composerRef);
   };
   const save = () => {
     const coffeeAmount = Number(coffee);
@@ -983,7 +970,7 @@ function RecipeLibrary({ recipes, setRecipes }: { recipes: SavedRecipe[]; setRec
   const sorted = [...recipes].sort((a, b) => b.createdAt - a.createdAt);
 
   return <>
-    <section className="recipe-composer-card" aria-label="새 레시피">
+    <section ref={composerRef} className="recipe-composer-card" aria-label="새 레시피">
       <button type="button" className="recipe-library-toggle" aria-expanded={open} onClick={() => open ? close() : setOpen(true)}>
         <span><strong>{editingId === null ? "새 레시피 만들기" : "레시피 수정"}</strong><small>{editingId === null ? "시간과 붓는 양을 단계별로 저장해보세요." : "수정 후 저장하면 기존 레시피에 반영됩니다."}</small></span>
         <span className="recipe-toggle-mark" aria-hidden="true">+</span>
@@ -1046,6 +1033,7 @@ function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, o
   onOpened: () => void;
 }) {
   const [show, setShow] = useState(openInitially);
+  const brewFormRef = useRef<HTMLDivElement>(null);
   useEffect(() => { if (openInitially) onOpened(); }, [openInitially, onOpened]);
   const [form, setForm] = useState<BrewForm>(emptyBrewForm);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -1105,7 +1093,7 @@ function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, o
     const note = notes.find(item => item.brewId === brew.id);
     setNoteMemo(note?.memo ?? ""); setNoteRating(note?.rating ?? 0); setSelectedRecipeId(""); setRecipeMode("custom"); setBrewError("");
     setShow(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollToEditor(brewFormRef);
   };
 
   const normalizedQuery = query.trim().toLowerCase();
@@ -1137,6 +1125,7 @@ function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, o
       </div>
       {deletedBrew && <div className="delete-notice" role="status"><span>브루잉 기록을 삭제했어요.</span><button type="button" onClick={undoRemove}>되돌리기</button></div>}
 
+      {show && <div ref={brewFormRef} className="editor-anchor" aria-hidden="true" />}
       {show && (
         <FormCard>
           <div className="brew-core-grid">
@@ -1178,7 +1167,7 @@ function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, o
           </article>
         );
       })}
-      {!show && <button type="button" className="bean-fab brew-fab" onClick={() => { setShow(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>브루잉 추가</button>}
+      {!show && <button type="button" className="bean-fab brew-fab" onClick={() => { setShow(true); scrollToEditor(brewFormRef); }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>브루잉 추가</button>}
     </div>
   );
 }
