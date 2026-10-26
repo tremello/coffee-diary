@@ -1628,3 +1628,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .bean-list.density-compact .compact-stock-donut strong { font-size: 16px; }
 .bean-list.density-compact .compact-stock-donut strong span { font-size: 10px; }
 .bean-list.density-compact .stock-status { padding: 4px 8px; font-size: 10px; }
+/* The donut fills the stock column down to the card's bottom padding. */
+.bean-list.density-compact .compact-stock-donut { width: 70px; }
+.bean-list.density-compact .compact-stock-donut::before { inset: 7px; }
+.bean-list.density-compact .compact-stock-donut strong { font-size: 18px; }
+.bean-list.density-compact .compact-stock-donut strong span { font-size: 11px; }
