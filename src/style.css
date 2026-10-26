@@ -643,6 +643,38 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .brew-custom-recipe-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
 .brew-custom-recipe-fields input { width: 100%; min-height: 38px; box-sizing: border-box; }
 .custom-recipe-name { grid-column: 1 / -1; }
+.brew-conditions { display: grid; gap: 8px; margin-top: 10px; padding: 10px 11px; border: 1px solid var(--bd-e4d8ca); border-radius: 8px; background: var(--bg-fbf8f3); }
+.brew-conditions small { margin-left: 4px; color: var(--fg-806d58); font-size: 11px; }
+.brew-conditions-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+.brew-conditions-grid > * { min-width: 0; }
+.brew-conditions-grid input { width: 100%; min-height: 38px; box-sizing: border-box; font-size: 12px; }
+.brew-conditions .recipe-time-hint { margin: -2px 2px 0; }
+.brew-dripper-field { min-width: 0; margin: 0; padding: 0; border: 0; }
+.brew-dripper-field legend { margin-bottom: 6px; padding: 0; color: var(--color-text-secondary); font-size: 12px; }
+.brew-dripper-option[data-selected="true"] { border-color: var(--bd-7a5733); background: var(--bg-7a5733); }
+.brew-dripper-option[data-selected="true"] > button:first-child { color: var(--fg-ffffff); font-weight: 600; }
+.brew-dripper-option[data-selected="true"] > button:first-child:hover { background: transparent; }
+.brew-dripper-option[data-selected="true"] .remove-purchaser { border-left-color: var(--bd-e4d9cc); color: var(--fg-ffffff); opacity: .75; }
+.brew-dripper-suggestion { border: 1px dashed var(--bd-e0d2c0); border-radius: 16px; background: transparent; color: var(--fg-765d42); padding: 6px 10px; font-size: 11px; cursor: pointer; }
+.brew-dripper-suggestion:hover { border-color: var(--bd-ae9272); background: var(--bg-f0e6d8); }
+.brew-dripper-hint { margin: 6px 0 0; color: var(--fg-806d58); font-size: 11px; line-height: 1.45; }
+.brew-dripper-field .origin-add { margin-top: 8px; }
+.brew-unit-input { position: relative; display: block; }
+.brew-unit-input input { padding-right: 40px; font-variant-numeric: tabular-nums; text-align: right; }
+.brew-unit-input span { position: absolute; top: 50%; right: 10px; color: var(--fg-8a7967); font-size: 11px; transform: translateY(-50%); pointer-events: none; }
+.brew-recipe-block p.brew-conditions-line { margin-bottom: 4px; color: var(--fg-806d58); font-size: 12px; font-style: normal; }
+.brew-taste { display: grid; gap: 6px; margin-top: 10px; padding: 9px 11px; border: 1px solid var(--bd-e4d8ca); border-radius: 8px; background: var(--bg-fbf8f3); }
+.brew-taste small { margin-left: 4px; color: var(--fg-806d58); font-size: 11px; }
+.brew-taste-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 14px; }
+.brew-taste-row { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--fg-6b5d50); font-size: 11px; }
+.brew-taste-row > span:first-child { flex: 0 0 34px; }
+.brew-taste-row em { flex: 0 0 10px; color: var(--fg-806d58); font-size: 10px; font-style: normal; font-variant-numeric: tabular-nums; text-align: right; }
+.brew-taste-scale { display: flex; flex: 0 0 auto; gap: 2px; }
+.brew-taste-scale button { display: grid; place-items: center; width: 20px; height: 22px; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.brew-taste-scale button::before { content: ""; width: 9px; height: 9px; border: 1px solid var(--bd-e0d2c0); border-radius: 50%; background: var(--bg-ffffff); }
+.brew-taste-scale button[aria-pressed="true"]::before { border-color: var(--bd-7a5733); background: var(--bg-7a5733); }
+.brew-taste-inline { margin: 6px 0 0; color: var(--fg-806d58); font-size: 11px; }
+@media (max-width: 720px) { .brew-conditions-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .brew-grind-field { grid-column: 1 / -1; }  .brew-taste-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2px 10px; } .brew-taste-row { gap: 4px; } .brew-taste-row > span:first-child { flex-basis: 30px; } .brew-taste-scale { gap: 1px; } .brew-taste-scale button { width: 16px; } }
 .brew-form-error { margin: 10px 0 0; color: var(--fg-b65f50); font-size: 11px; }
 .login-error { margin: 8px 0 0; text-align: right; color: var(--fg-b65f50); font-size: 12px; }
 .brew-form-grid input[type="number"], .brew-form-grid input[type="date"], .brew-form-grid select, .recipe-memo-field textarea, .brew-note-form textarea { min-height: 42px; height: 42px; line-height: 20px; padding-top: 10px; padding-bottom: 10px; }
