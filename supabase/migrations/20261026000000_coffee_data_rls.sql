@@ -5,14 +5,17 @@
 -- Safe to run more than once, and safe on the existing production table:
 -- it creates only what is missing and replaces whatever policies the table has with the four below.
 
+-- Matches the live table as of 2026-10-26 (checked with checks/inspect_coffee_data_security.sql).
 create table if not exists public.coffee_data (
-  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  user_id uuid not null,
   key text not null,
-  data jsonb not null,
-  constraint coffee_data_user_id_key_key unique (user_id, key)
+  data jsonb not null default '[]'::jsonb,
+  updated_at timestamptz default now(),
+  constraint coffee_data_pkey primary key (user_id, key)
 );
 
--- The app upserts with onConflict "user_id,key", which needs a unique index on exactly those columns.
+-- The app upserts with onConflict "user_id,key", which needs a unique index on exactly those columns
+-- (the live table's primary key is one).
 do $$
 begin
   if not exists (

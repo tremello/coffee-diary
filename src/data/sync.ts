@@ -73,16 +73,52 @@ export const fetchRemote = async (key: string, userId: string) => {
   if (error) throw error;
   return data?.data as unknown;
 };
+// Rows carry a version the database bumps on every write (supabase/migrations). A save only lands if the row still has the version
+// it was merged against, so two devices can't overwrite each other; the one that loses reads again and re-merges.
+// Without the column (migration not applied yet, or a row that predates it) saves fall back to upsert plus a re-check.
+const MAX_SAVE_ROUNDS = 5;
+let hasVersionColumn = true;
+const fetchRemoteRow = async (key: string, userId: string): Promise<{ data: unknown; version?: number } | undefined> => {
+  if (hasVersionColumn) {
+    const { data, error } = await supabase.from("coffee_data").select("data, version").eq("user_id", userId).eq("key", key).maybeSingle();
+    if (!error) return data ? { data: data.data as unknown, version: typeof data.version === "number" ? data.version : undefined } : undefined;
+    if (error.code !== "42703") throw error;
+    hasVersionColumn = false;
+  }
+  const data = await fetchRemote(key, userId);
+  return data === undefined ? undefined : { data };
+};
 export const pushOnce = async (key: string, userId: string) => {
   const sync = keySync(key);
   const mine = readLocal<unknown>(key);
   if (mine === undefined) return;
   let failed = true;
   try {
-    const theirs = await fetchRemote(key, userId);
+    const remote = await fetchRemoteRow(key, userId);
+    const theirs = remote?.data;
     // A newer local edit arrived while reading; the next round pushes it instead.
     if (!sameJson(readLocal(key), mine)) { sync.again = true; return; }
     const base = readLocal<unknown>(BASE_PREFIX + key);
+    if (remote?.version !== undefined) {
+      const value = !sameJson(theirs, base) ? mergeSynced(base, mine, theirs) : mine;
+      const { data: saved, error } = await supabase.from("coffee_data").update({ data: value })
+        .eq("user_id", userId).eq("key", key).eq("version", remote.version).select("version");
+      if (error) console.error("Coffee sync save failed", error);
+      else if (!saved?.length) {
+        // Another device saved after our read: nothing was written, so read again and merge with theirs.
+        if (sync.rounds < MAX_SAVE_ROUNDS) { sync.rounds++; sync.again = true; return; }
+      } else {
+        failed = false;
+        if (sameJson(readLocal(key), mine)) {
+          if (!sameJson(value, mine)) { writeLocal(key, value); sync.apply?.(value); }
+          writeLocal(BASE_PREFIX + key, value);
+        } else {
+          // Edited again during the save: measure the new edit from what this round sent, and merge the saved copy back in.
+          writeLocal(BASE_PREFIX + key, mine);
+          sync.again = true;
+        }
+      }
+    } else {
     const value = theirs !== undefined && !sameJson(theirs, base) ? mergeSynced(base, mine, theirs, sync.rounds === 0) : mine;
     if (!sameJson(value, mine)) { writeLocal(key, value); sync.apply?.(value); }
     const { error } = await supabase.from("coffee_data").upsert({ key, data: value, user_id: userId }, { onConflict: "user_id,key" });
@@ -94,6 +130,7 @@ export const pushOnce = async (key: string, userId: string) => {
       await new Promise(resolve => setTimeout(resolve, VERIFY_DELAY));
       const check = await fetchRemote(key, userId).catch(() => value);
       if (!sameJson(check, value) && sync.rounds < MAX_VERIFY_ROUNDS) { sync.rounds++; writeLocal(BASE_PREFIX + key, theirs ?? base); sync.again = true; }
+    }
     }
   } catch (error) { console.error("Coffee sync save failed", error); }
   try { if (failed) localStorage.setItem(PENDING_PREFIX + key, "1"); else localStorage.removeItem(PENDING_PREFIX + key); } catch {}
