@@ -405,10 +405,12 @@ export default function App() {
     <div style={{ fontFamily: FONT, maxWidth: 960, margin: "0 auto", padding: "0 0 3rem" }}>
       <Header page={page} setPage={navigate} user={user} authLoading={authLoading} />
       {syncFailed && <div className="sync-alert" role="alert"><span>최근 변경을 서버에 저장하지 못했어요. 이 기기에는 남아 있어요.</span><button type="button" onClick={retryFailedSync}>다시 시도</button></div>}
-      {page === "Beans" && <BeansPage beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} userId={user?.id ?? null} onBrew={() => { setOpenBrewForm(true); navigate("Brew Log"); }} />}
-      {page === "Brew Log" && <BrewLog beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} recipes={recipes} openInitially={openBrewForm} onOpened={() => setOpenBrewForm(false)} />}
-      {page === "Recipes" && <RecipePage recipes={recipes} setRecipes={setRecipes} />}
-      {page === "Brew Stats" && <BrewStats beans={beans} brews={brews} />}
+      <div className="page-transition" key={page}>
+        {page === "Beans" && <BeansPage beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} userId={user?.id ?? null} onBrew={() => { setOpenBrewForm(true); navigate("Brew Log"); }} />}
+        {page === "Brew Log" && <BrewLog beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} recipes={recipes} openInitially={openBrewForm} onOpened={() => setOpenBrewForm(false)} />}
+        {page === "Recipes" && <RecipePage recipes={recipes} setRecipes={setRecipes} />}
+        {page === "Brew Stats" && <BrewStats beans={beans} brews={brews} />}
+      </div>
     </div>
   );
 }

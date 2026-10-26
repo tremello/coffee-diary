@@ -1561,3 +1561,12 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 }
 /* Editors scrolled into view keep a little room above them. */
 .bean-form, .recipe-composer-card, .editor-anchor { scroll-margin-top: 16px; }
+/* Tab switches: the new tab's content fades in and rises a few pixels; header, tab bar and floating buttons stay put. */
+@keyframes page-enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* Animate the tab's sections, not the wrapper: a transformed ancestor would make the fixed floating buttons jump. */
+.page-transition > * > :not(.bean-fab) { animation: page-enter 200ms ease-out both; }
+.page-tab, .page-tab svg { transition: color 150ms ease, background-color 150ms ease, transform 150ms ease; }
+@media (prefers-reduced-motion: reduce) {
+  .page-transition > * > :not(.bean-fab) { animation: none; }
+  .page-tab, .page-tab svg { transition: none; }
+}
