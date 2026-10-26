@@ -1,0 +1,42 @@
+/* Tab switches: the new tab's content fades in and rises a few pixels; header, tab bar and floating buttons stay put. */
+@keyframes page-enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* Animate the tab's sections, not the wrapper: a transformed ancestor would make the fixed floating buttons jump. */
+.page-transition > * > :not(.bean-fab) { animation: page-enter 200ms ease-out both; }
+.page-tab, .page-tab svg { transition: color 150ms ease, background-color 150ms ease, transform 150ms ease; }
+@media (prefers-reduced-motion: reduce) {
+  .page-transition > * > :not(.bean-fab) { animation: none; }
+  .page-tab, .page-tab svg { transition: none; }
+}
+/* Floating glass tab bar on phones: a translucent pill with one highlight that slides to the selected tab. */
+:root { --glass-bg: rgba(255, 253, 249, .72); --glass-bg-solid: #fffdf9; --glass-bd: rgba(255, 255, 255, .75); --glass-edge: rgba(122, 87, 51, .12); --glass-pill: rgba(122, 87, 51, .13); --sh-glass: 0 10px 30px rgba(60, 40, 20, .14), 0 2px 6px rgba(60, 40, 20, .06); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --glass-bg: rgba(34, 30, 25, .66); --glass-bg-solid: #221e19; --glass-bd: rgba(255, 255, 255, .1); --glass-edge: rgba(0, 0, 0, .35); --glass-pill: rgba(255, 255, 255, .12); --sh-glass: 0 12px 32px rgba(0, 0, 0, .45), 0 2px 6px rgba(0, 0, 0, .3); }
+}
+:root[data-theme="dark"] { --glass-bg: rgba(34, 30, 25, .66); --glass-bg-solid: #221e19; --glass-bd: rgba(255, 255, 255, .1); --glass-edge: rgba(0, 0, 0, .35); --glass-pill: rgba(255, 255, 255, .12); --sh-glass: 0 12px 32px rgba(0, 0, 0, .45), 0 2px 6px rgba(0, 0, 0, .3); }
+.page-tab-indicator { display: none; }
+@media (max-width: 540px) {
+  /* Every tab ends with enough room that its last card clears the floating bar. */
+  #root { padding-bottom: env(safe-area-inset-bottom) !important; }
+  .page-transition { padding-bottom: 64px; }
+  .page-tabs { left: 14px; right: 14px; bottom: calc(10px + env(safe-area-inset-bottom)); width: auto; padding: 6px; border: 1px solid var(--glass-edge); border-radius: 32px; background: var(--glass-bg-solid); box-shadow: var(--sh-glass), inset 0 1px 0 var(--glass-bd); }
+  @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+    .page-tabs { background: var(--glass-bg); -webkit-backdrop-filter: blur(20px) saturate(1.6); backdrop-filter: blur(20px) saturate(1.6); }
+  }
+  .page-tab { z-index: 1; min-height: 54px !important; border-radius: 26px !important; }
+  .page-tab[aria-current="page"]::after { display: none; }
+  .page-tab-indicator { position: absolute; top: 6px; bottom: 6px; left: 6px; display: block; width: calc((100% - 12px) / 4); border-radius: 26px; background: var(--glass-pill); box-shadow: inset 0 1px 0 var(--glass-bd); transition: transform 320ms cubic-bezier(.34, 1.3, .64, 1); pointer-events: none; }
+}
+@media (max-width: 540px) and (prefers-reduced-motion: reduce) {
+  .page-tab-indicator { transition: none; }
+}
+/* 일별 사용량: one vertical bar per day, a week per screen on phones, older days by dragging right. */
+.daily-chart { --daily-days: 7; display: grid; grid-auto-flow: column; grid-auto-columns: calc((100% - (var(--daily-days) - 1) * 8px) / var(--daily-days)); gap: 8px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-top: 4px; }
+.daily-chart::-webkit-scrollbar { display: none; }
+.daily-bar { display: grid; grid-template-rows: 16px 120px 18px; justify-items: center; align-items: end; gap: 4px; scroll-snap-align: end; min-width: 0; }
+.daily-bar b { color: var(--fg-59432c); font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.daily-bar-track { display: flex; align-items: flex-end; justify-content: center; width: 100%; height: 100%; }
+.daily-bar-track i { display: block; width: min(28px, 70%); border-radius: 6px 6px 3px 3px; background: var(--bg-7a5733); }
+.daily-bar.is-empty .daily-bar-track i { height: 3px; border-radius: 2px; background: var(--bg-eee4d6); }
+.daily-bar span { color: var(--fg-75634d); font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (min-width: 721px) { .daily-chart { --daily-days: 14; } }
+@media (hover: hover) and (pointer: fine) { .daily-chart:hover { scrollbar-width: thin; } }
