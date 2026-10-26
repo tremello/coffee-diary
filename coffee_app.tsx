@@ -373,7 +373,7 @@ const parseLocalDate = (date: string) => {
 const emptyBeanForm: BeanForm = { name: "", origin: "", process: "", roastery: "", date: "", purchased: "", consumed: "", price: "", roasteryNotes: "", roastDate: "", farm: "", variety: "", flavor: "", memo: "", status: undefined, quality: undefined };
 const emptyBrewForm = (): BrewForm => ({ beanId: "", amount: "", waterAmount: "", method: "", date: localDate(), recipe: "", grindSize: "", waterTemp: "", brewTime: "" });
 // Shown only until the user registers drippers of their own.
-const DRIPPER_SUGGESTIONS = ["하리오 V60", "칼리타 웨이브", "오리가미", "케멕스", "에어로프레스", "클레버"];
+const DRIPPER_SUGGESTIONS = ["하리오 V60", "오리가미", "칼리타"];
 // The form keeps brew time as m:ss (typed as digits, 245 → 2:45); seconds past 59 roll over into minutes.
 const normalizeBrewTime = (value: string) => {
   const match = value.trim().match(/^(\d{1,2}):(\d{2})$/);
@@ -1305,12 +1305,12 @@ function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, u
                 <button type="button" className="brew-dripper-suggestion" aria-expanded={addingDripper} onClick={() => setAddingDripper(!addingDripper)}>+ 직접 추가</button>
               </div>
               {drippers.length === 0 && <p className="brew-dripper-hint">가지고 있는 드리퍼를 눌러 등록하면 다음부터 바로 고를 수 있어요.</p>}
-              {addingDripper && <div className="origin-add"><label>새 드리퍼<input value={newDripper} onChange={event => setNewDripper(event.target.value)} placeholder="예: 하리오 스위치" onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); addDripper(newDripper); } }} /></label><button type="button" className="quiet-button" disabled={!newDripper.trim()} onClick={() => addDripper(newDripper)}>추가</button></div>}
+              {addingDripper && <div className="brew-dripper-add"><input autoFocus value={newDripper} onChange={event => setNewDripper(event.target.value)} placeholder="새 드리퍼 이름 (예: 하리오 스위치)" aria-label="새 드리퍼 이름" onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); addDripper(newDripper); } if (event.key === "Escape") { setNewDripper(""); setAddingDripper(false); } }} /><button type="button" disabled={!newDripper.trim()} onClick={() => addDripper(newDripper)}>등록</button></div>}
             </fieldset>
             <div className="brew-conditions-grid">
-            <div className="brew-grind-field"><Field label="분쇄도"><input value={form.grindSize} onChange={event => setForm({ ...form, grindSize: event.target.value })} placeholder="예: 코만단테 24클릭" /></Field></div>
+            <div><Field label="분쇄도"><input value={form.grindSize} onChange={event => setForm({ ...form, grindSize: event.target.value })} placeholder="예: 코만단테 24클릭" /></Field></div>
             <Field label="물 온도"><label className="brew-unit-input"><input type="number" inputMode="decimal" min="1" max="100" step="0.5" value={form.waterTemp} onChange={event => { setForm({ ...form, waterTemp: event.target.value }); setBrewError(""); }} placeholder="92" aria-label="물 온도 (℃)" /><span aria-hidden="true">℃</span></label></Field>
-            <Field label="추출 시간"><label className="brew-unit-input"><input inputMode="numeric" value={form.brewTime} onFocus={event => event.target.select()} onChange={event => { setForm({ ...form, brewTime: brewTimeFromDigits(event.target.value) }); setBrewError(""); }} placeholder="2:45" aria-label="추출 시간 (분:초)" /><span aria-hidden="true">분:초</span></label></Field>
+            <Field label="추출 시간"><label className="brew-unit-input is-time"><input inputMode="numeric" value={form.brewTime} onFocus={event => event.target.select()} onChange={event => { setForm({ ...form, brewTime: brewTimeFromDigits(event.target.value) }); setBrewError(""); }} placeholder="2:45" aria-label="추출 시간 (분:초)" /><span aria-hidden="true">분:초</span></label></Field>
             </div>
             <p className="recipe-time-hint">시간은 숫자만 눌러도 돼요. 130 → 1:30</p>
           </div>
