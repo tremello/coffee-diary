@@ -1,7 +1,6 @@
 // One "device": its own localStorage and its own copy of the sync module, run in a worker thread
 // so that two devices really do sync independently against the shared fake server.
 import { parentPort, workerData } from "node:worker_threads";
-import { loadSync } from "./load.mjs";
 
 const store = new Map();
 const methods = {
@@ -24,7 +23,7 @@ globalThis.fetch = (input, init) => {
   return realFetch(workerData.origin + url.pathname + url.search, init);
 };
 
-const { sync } = await loadSync();
+const sync = await import(workerData.syncModule);
 const read = key => { const s = localStorage.getItem(key); return s ? JSON.parse(s) : undefined; };
 const write = (key, value) => localStorage.setItem(key, JSON.stringify(value));
 

@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, test } from "node:test";
 import { Worker } from "node:worker_threads";
 import { startFakeSupabase } from "./fake-supabase.mjs";
-import { loadSync } from "./load.mjs";
+import { buildSync } from "./load.mjs";
 
 const KEY = "cf_beans";
 const USER = "00000000-0000-4000-a000-00000000000a";
@@ -15,8 +15,8 @@ const BASE = [
 const byId = list => Object.fromEntries(list.map(item => [item.id, item]));
 const edit = (list, id, changes) => list.map(item => item.id === id ? { ...item, ...changes } : item);
 
-function startDevice(origin) {
-  const worker = new Worker(new URL("./device.mjs", import.meta.url), { workerData: { origin } });
+function startDevice(origin, syncModule) {
+  const worker = new Worker(new URL("./device.mjs", import.meta.url), { workerData: { origin, syncModule } });
   const waiting = new Map();
   let next = 0;
   const ready = new Promise((resolve, reject) => {
@@ -45,15 +45,15 @@ function startDevice(origin) {
 }
 
 for (const versionColumn of [true, false]) describe(`two devices saving at the same time (${versionColumn ? "versioned saves" : "database without the version column"})`, { concurrency: false }, () => {
-  let server, phone, laptop;
-  before(async () => { server = await startFakeSupabase(); });
+  let server, phone, laptop, syncModule;
+  before(async () => { server = await startFakeSupabase(); syncModule = await buildSync(); });
   after(async () => { await server.close(); });
   beforeEach(async () => {
     await phone?.stop(); await laptop?.stop();
     server.state.versionColumn = versionColumn;
     server.set(USER, KEY, BASE);
     server.state.readDelay = 0; server.state.writeDelay = 0;
-    phone = startDevice(server.origin); laptop = startDevice(server.origin);
+    phone = startDevice(server.origin, syncModule); laptop = startDevice(server.origin, syncModule);
     await Promise.all([phone.ready, laptop.ready]);
     await Promise.all([phone.start(BASE), laptop.start(BASE)]);
   });
@@ -140,9 +140,7 @@ for (const versionColumn of [true, false]) describe(`two devices saving at the s
 });
 
 describe("mergeSynced (the merge used before every save)", async () => {
-  const { sync, close } = await loadSync();
-  after(close);
-  const { mergeSynced } = sync;
+  const { mergeSynced } = await import(await buildSync());
 
   test("takes each field from the side that changed it", () => {
     const merged = mergeSynced(BASE, edit(BASE, 1, { name: "mine" }), edit(BASE, 1, { roastery: "theirs" }));

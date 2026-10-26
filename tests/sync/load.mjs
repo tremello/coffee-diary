@@ -1,14 +1,24 @@
-// Loads the app's TypeScript sync code in Node through Vite, the same compiler the app build uses.
-import { fileURLToPath } from "node:url";
-import { createServer } from "vite";
+// Compiles the app's TypeScript sync code once with Vite (the app's own compiler) into a plain ES module.
+// Devices import that file inside worker threads; Vite itself never runs in a worker, because its native
+// parts crash the process when a worker that loaded them is stopped (seen on Node 24 / macOS).
+import { readdir } from "node:fs/promises";
+import { join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { build } from "vite";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
+let built;
 
-export async function loadSync() {
-  const server = await createServer({
-    root, configFile: false, logLevel: "silent", appType: "custom",
-    server: { middlewareMode: true, hmr: false, ws: false },
-  });
-  const sync = await server.ssrLoadModule("/src/data/sync.ts");
-  return { sync, close: () => server.close() };
+export function buildSync() {
+  built ??= (async () => {
+    // Inside node_modules so the compiled file still finds react and supabase-js, and git ignores it.
+    const outDir = join(root, "node_modules", ".cache", "coffee-sync-test");
+    await build({
+      root, configFile: false, logLevel: "silent",
+      build: { ssr: "src/data/sync.ts", outDir, emptyOutDir: true, minify: false, copyPublicDir: false },
+    });
+    const file = (await readdir(outDir)).find(name => /\.m?js$/.test(name));
+    return pathToFileURL(join(outDir, file)).href;
+  })();
+  return built;
 }
