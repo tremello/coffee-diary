@@ -468,6 +468,7 @@ function Header({ page, setPage, user, authLoading }: { page: Page; setPage: (pa
       </div>
       {loginError && <p className="login-error" role="alert">{loginError}</p>}
       <nav className="page-tabs">
+        <span className="page-tab-indicator" aria-hidden="true" style={{ transform: `translateX(${PAGES.indexOf(page) * 100}%)` }} />
         {PAGES.map(p => (
           <button key={p} className="page-tab" onClick={() => setPage(p)} aria-current={page === p ? "page" : undefined} style={{
             padding: "8px 16px", fontSize: 14, borderRadius: 10, fontFamily: FONT,
