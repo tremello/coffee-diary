@@ -348,6 +348,15 @@ const handleNumericInput = (event: React.ChangeEvent<HTMLInputElement>, setValue
     if (document.activeElement === input) input.setSelectionRange(position, position);
   });
 };
+// The bean list view is a per-device preference, kept outside the synced cf_ keys: phones start compact, wider screens detailed.
+type BeanDensity = "detail" | "compact";
+const BEAN_DENSITY_KEY = "coffee-bean-density";
+const SWIPE_HINT_KEY = "coffee-swipe-hint-dismissed";
+const initialBeanDensity = (): BeanDensity => {
+  try { const saved = localStorage.getItem(BEAN_DENSITY_KEY); if (saved === "detail" || saved === "compact") return saved; } catch {}
+  return window.matchMedia?.("(max-width: 540px)").matches ? "compact" : "detail";
+};
+const toDateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 const parseLocalDate = (date: string) => {
   const [year, month, day] = date.split("-").map(Number);
   return new Date(year, (month || 1) - 1, day || 1);
@@ -372,6 +381,7 @@ const emptyNoteForm = (): TastingNoteForm => ({
 export default function App() {
   const [page, setPage] = useState<Page>(() => pageFromHash(window.location.hash));
   const [openBrewForm, setOpenBrewForm] = useState(false);
+  const [brewBeanId, setBrewBeanId] = useState<number | null>(null);
   const { user, loading: authLoading } = useAuth();
   const [storedBeans, setBeans] = useStorage<Bean[]>(STORAGE_KEYS.beans, [], user?.id ?? null);
   const beans = useMemo(() => normalizeBeans(storedBeans), [storedBeans]);
@@ -406,8 +416,8 @@ export default function App() {
       <Header page={page} setPage={navigate} user={user} authLoading={authLoading} />
       {syncFailed && <div className="sync-alert" role="alert"><span>최근 변경을 서버에 저장하지 못했어요. 이 기기에는 남아 있어요.</span><button type="button" onClick={retryFailedSync}>다시 시도</button></div>}
       <div className="page-transition" key={page}>
-        {page === "Beans" && <BeansPage beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} userId={user?.id ?? null} onBrew={() => { setOpenBrewForm(true); navigate("Brew Log"); }} />}
-        {page === "Brew Log" && <BrewLog beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} recipes={recipes} openInitially={openBrewForm} onOpened={() => setOpenBrewForm(false)} />}
+        {page === "Beans" && <BeansPage beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} userId={user?.id ?? null} onBrew={beanId => { setBrewBeanId(beanId ?? null); setOpenBrewForm(true); navigate("Brew Log"); }} />}
+        {page === "Brew Log" && <BrewLog beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} recipes={recipes} openInitially={openBrewForm} initialBeanId={brewBeanId} onOpened={() => { setOpenBrewForm(false); setBrewBeanId(null); }} />}
         {page === "Recipes" && <RecipePage recipes={recipes} setRecipes={setRecipes} />}
         {page === "Brew Stats" && <BrewStats beans={beans} brews={brews} />}
       </div>
@@ -491,14 +501,24 @@ function PageIcon({ page }: { page: Page }) {
   return <svg {...props}><path d="M5 19V9M12 19V5M19 19v-7" /><path d="M3 19h18" /></svg>;
 }
 
-function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, onBrew }: { beans: Bean[]; setBeans: StorageSetter<Bean[]>; brews: Brew[]; setBrews: StorageSetter<Brew[]>; notes: TastingNote[]; setNotes: StorageSetter<TastingNote[]>; userId: string | null; onBrew: () => void }) {
+function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, onBrew }: { beans: Bean[]; setBeans: StorageSetter<Bean[]>; brews: Brew[]; setBrews: StorageSetter<Brew[]>; notes: TastingNote[]; setNotes: StorageSetter<TastingNote[]>; userId: string | null; onBrew: (beanId?: number) => void }) {
   const [show, setShow] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<BeanForm>(emptyBeanForm);
   const [filter, setFilter] = useState("active");
   const [sort, setSort] = useState<BeanSort>("registered");
   const [qualityFilter, setQualityFilter] = useState<"all" | BeanQuality>("all");
-  const [density, setDensity] = useState<"detail" | "compact" | "dense">("detail");
+  const [density, setDensity] = useState<BeanDensity>(initialBeanDensity);
+  const [swipeOpenId, setSwipeOpenId] = useState<number | null>(null);
+  const [swipeHint, setSwipeHint] = useState(() => { try { return window.matchMedia?.("(pointer: coarse)").matches && !localStorage.getItem(SWIPE_HINT_KEY); } catch { return false; } });
+  const dismissSwipeHint = () => { setSwipeHint(false); try { localStorage.setItem(SWIPE_HINT_KEY, "1"); } catch {} };
+  useEffect(() => {
+    if (swipeOpenId === null) return;
+    const closeOutside = (event: PointerEvent) => { if (!(event.target as HTMLElement).closest(`[data-swipe-id="${swipeOpenId}"]`)) setSwipeOpenId(null); };
+    document.addEventListener("pointerdown", closeOutside);
+    return () => document.removeEventListener("pointerdown", closeOutside);
+  }, [swipeOpenId]);
+  const chooseDensity = (next: BeanDensity) => { setDensity(next); try { localStorage.setItem(BEAN_DENSITY_KEY, next); } catch {} };
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [facetFilters, setFacetFilters] = useState<BeanFacetFilters>(emptyBeanFacetFilters);
   const [priceMin, setPriceMin] = useState("");
@@ -749,7 +769,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
   return (
     <main className="inventory">
       <div className="inventory-intro"><div><p>좋아하는 맛을 기록하고, 남은 원두를 한눈에.</p></div>
-        <div className="intro-actions"><button className="secondary-button" onClick={onBrew}>브루잉 추가</button><button className="primary-button intro-add-bean" onClick={openNewBean}>+ 원두 추가</button></div></div>
+        <div className="intro-actions"><button className="secondary-button" onClick={() => onBrew()}>브루잉 추가</button><button className="primary-button intro-add-bean" onClick={openNewBean}>+ 원두 추가</button></div></div>
       {active.length > 0 && <div className="stats-cards inventory-summary-cards" aria-label="보유 원두 요약">
         <div><span>보유 원두</span><strong>{active.length}<small>종</small></strong><em>{fmt(Math.round(active.reduce((sum, b) => sum + b.remaining, 0) * 10) / 10)}<small>g</small></em></div>
         <div><span>소비 중</span><strong>{fmt(Math.round(consumingWeight * 10) / 10)}<small>g</small></strong></div>
@@ -797,7 +817,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
         <div className="form-buttons">{editingId !== null && <button type="button" className="delete-bean-button" onClick={remove}>삭제</button>}<button type="button" className="quiet-button" onClick={close}>취소</button><button type="submit" className="primary-button">저장</button></div>
       </form>}
       <label className="bean-search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4 4" /></svg><span className="sr-only">원두 검색</span><input type="search" value={beanQuery} onChange={event => setBeanQuery(event.target.value)} placeholder="원산지, 로스터리, 컵노트로 검색" /></label>
-      <div className="inventory-toolbar"><div className="inventory-toolbar-top"><label className="view-mode-control" htmlFor="bean-density">보기<select id="bean-density" className="inventory-sort" value={density} onChange={event => setDensity(event.target.value as "detail" | "compact")}><option value="detail">자세히</option><option value="compact">간략하게</option></select></label><button type="button" className="advanced-filter-button" aria-expanded={advancedFiltersOpen} onClick={() => setAdvancedFiltersOpen(!advancedFiltersOpen)}>세부 검색{activeDetailCount > 0 && <b>{activeDetailCount}</b>}</button></div><div className="inventory-toolbar-row"><div className="inventory-filters" aria-label="원두 재고 필터">
+      <div className="inventory-toolbar"><div className="inventory-toolbar-top"><label className="view-mode-control" htmlFor="bean-density">보기<select id="bean-density" className="inventory-sort" value={density} onChange={event => chooseDensity(event.target.value as BeanDensity)}><option value="detail">자세히</option><option value="compact">간략하게</option></select></label><button type="button" className="advanced-filter-button" aria-expanded={advancedFiltersOpen} onClick={() => setAdvancedFiltersOpen(!advancedFiltersOpen)}>세부 검색{activeDetailCount > 0 && <b>{activeDetailCount}</b>}</button></div><div className="inventory-toolbar-row"><div className="inventory-filters" aria-label="원두 재고 필터">
         {[["active", "보유 중"], ["finished", "소비 완료"], ["all", "전체"]].map(([value, label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}
       </div><div className="inventory-toolbar-meta"><label htmlFor="bean-sort">정렬</label><select id="bean-sort" className="inventory-sort" value={sort} onChange={event => setSort(event.target.value as BeanSort)}><option value="registered">등록순</option><option value="latest">최신순</option><option value="roastOldest">로스팅 날짜 빠른 순</option><option value="remaining">재고 적은 순</option><option value="unitPriceDesc">단가 높은 순</option><option value="unitPriceAsc">단가 낮은 순</option></select></div></div></div>
       {advancedFiltersOpen && <section className="advanced-filter-panel" aria-label="원두 세부 검색">
@@ -813,10 +833,11 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
         <div className="advanced-filter-footer"><span role="status">원두 <b>{visible.length}</b>개 찾음</span><div><button type="button" className="quiet-button" onClick={clearDetailFilters} disabled={activeDetailCount === 0}>초기화</button><button type="button" className="primary-button" onClick={() => setAdvancedFiltersOpen(false)}>닫기</button></div></div>
       </section>}
       {!advancedFiltersOpen && activeFilterChips.length > 0 && <div className="active-filter-chips" aria-label="적용된 세부 검색 조건">{activeFilterChips.map(chip => <button type="button" key={chip.key} onClick={chip.clear} aria-label={`${chip.label} 조건 해제`}>{chip.label}<span aria-hidden="true">×</span></button>)}<button type="button" className="active-filter-clear" onClick={clearDetailFilters}>모두 지우기</button></div>}
+      {swipeHint && active.length > 0 && <p className="swipe-hint">카드를 왼쪽으로 밀면 바로 브루잉을 기록할 수 있어요.<button type="button" onClick={dismissSwipeHint} aria-label="안내 닫기">×</button></p>}
       <div className={`bean-list density-${density}`}>
         {sortedVisible.map(bean => {
           const pct = bean.purchased > 0 ? Math.max(0, Math.min(100, bean.remaining / bean.purchased * 100)) : 0;
-          return <article className="inventory-card" key={bean.id}>
+          return <SwipeToBrew key={bean.id} beanId={bean.id} beanName={bean.name} disabled={bean.remaining <= 0} open={swipeOpenId === bean.id} onOpenChange={open => { setSwipeOpenId(open ? bean.id : null); if (open) dismissSwipeHint(); }} onBrew={() => onBrew(bean.id)}><article className="inventory-card">
             <div className="bean-info">
               <p className="roastery"><span>{bean.roastery || "로스터리 미입력"}</span></p>
               <h3>{bean.name}</h3>
@@ -838,7 +859,7 @@ function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, 
               <p className="stock-percent">{Math.round(pct)}% 남음</p>
               <div className="compact-stock-donut" style={{ "--stock-progress": `${pct}%` } as CSSProperties}><strong>{fmt(bean.remaining)}<span>g</span></strong><small>남음</small></div>
             </div>
-          </article>;
+          </article></SwipeToBrew>;
         })}
         {visible.length === 0 && <div className="inventory-empty"><img className="onboarding-logo" src="/coffee-diary-logo-brown-96.png" width="38" height="38" alt="" /><h3>{available.length === 0 ? "첫 원두를 등록해보세요" : "해당하는 원두가 없어요"}</h3><p>{available.length === 0 ? "원두부터 기록하면 나만의 브루잉 흐름이 시작돼요." : "원두 정보와 향미 노트, 남은 양을 한곳에서 관리해요."}</p>{available.length === 0 && <><JourneySteps active="beans" /><button className="primary-button" onClick={() => { close(); setShow(true); }}>첫 원두 등록하기</button></>}</div>}
       </div>
@@ -862,6 +883,48 @@ function BeanDates({ bean }: { bean: Bean }) {
   return <div className="title-dates">
     {bean.roastDate && <span className="roast-date">로스팅 <time dateTime={bean.roastDate}>{bean.roastDate.slice(2).replace(/-/g, ".")}</time></span>}
     {(priceLabel || bean.quality) && <span className="bean-purchase-meta">{priceLabel && <span>구매가 {priceLabel}</span>}{bean.quality && <b className={`quality-tag quality-${bean.quality}`}>{bean.quality}</b>}</span>}
+  </div>;
+}
+
+// Swiping a bean card left reveals a brew button (touch only); vertical scrolls, the cup-note strip and the iOS back-swipe edge are left alone.
+const SWIPE_ACTION_WIDTH = 92;
+function SwipeToBrew({ beanId, beanName, disabled, open, onOpenChange, onBrew, children }: { beanId: number; beanName: string; disabled: boolean; open: boolean; onOpenChange: (open: boolean) => void; onBrew: () => void; children: ReactNode }) {
+  const drag = useRef<{ x: number; y: number; axis: "x" | "y" | null; pointerId: number } | null>(null);
+  const swiped = useRef(false);
+  const [dragOffset, setDragOffset] = useState<number | null>(null);
+  const begin = (event: React.PointerEvent<HTMLDivElement>) => {
+    swiped.current = false;
+    if (disabled || event.pointerType === "mouse" || event.clientX < 20) return;
+    if ((event.target as HTMLElement).closest(".flavor-tags, .compact-cup-notes, input, textarea, select")) return;
+    drag.current = { x: event.clientX, y: event.clientY, axis: null, pointerId: event.pointerId };
+  };
+  const track = (event: React.PointerEvent<HTMLDivElement>) => {
+    const current = drag.current;
+    if (!current || current.pointerId !== event.pointerId) return;
+    const dx = event.clientX - current.x;
+    const dy = event.clientY - current.y;
+    if (!current.axis) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      current.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+      if (current.axis === "x") { try { event.currentTarget.setPointerCapture(event.pointerId); } catch {} }
+    }
+    if (current.axis !== "x") return;
+    swiped.current = true;
+    setDragOffset(Math.min(0, Math.max(-SWIPE_ACTION_WIDTH * 1.2, (open ? -SWIPE_ACTION_WIDTH : 0) + dx)));
+  };
+  const finish = () => {
+    if (drag.current?.axis === "x" && dragOffset !== null) onOpenChange(dragOffset < -SWIPE_ACTION_WIDTH * 0.4);
+    drag.current = null;
+    setDragOffset(null);
+    // Only the click that ends this swipe is swallowed.
+    window.setTimeout(() => { swiped.current = false; });
+  };
+  const offset = dragOffset ?? (open ? -SWIPE_ACTION_WIDTH : 0);
+  return <div className={`swipe-card ${dragOffset !== null ? "is-dragging" : ""} ${open ? "is-open" : ""}`} data-swipe-id={beanId} onPointerDown={begin} onPointerMove={track} onPointerUp={finish} onPointerCancel={finish}
+    onClickCapture={event => { if (swiped.current) { event.stopPropagation(); event.preventDefault(); swiped.current = false; } }}>
+    {!disabled && <button type="button" className="swipe-brew-action" tabIndex={-1} aria-hidden="true" onClick={onBrew}><span aria-hidden="true">☕</span>브루잉</button>}
+    <div className="swipe-card-body" style={offset ? { transform: `translateX(${offset}px)` } : undefined}>{children}</div>
+    {!disabled && <button type="button" className="swipe-brew-a11y" onClick={onBrew}>☕ {beanName} 브루잉 기록</button>}
   </div>;
 }
 
@@ -1024,7 +1087,7 @@ function RecipeLibrary({ recipes, setRecipes }: { recipes: SavedRecipe[]; setRec
   </>;
 }
 
-function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, openInitially, onOpened }: {
+function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, openInitially, initialBeanId, onOpened }: {
   beans: Bean[];
   setBeans: StorageSetter<Bean[]>;
   brews: Brew[];
@@ -1033,12 +1096,13 @@ function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, o
   setNotes: StorageSetter<TastingNote[]>;
   recipes: SavedRecipe[];
   openInitially: boolean;
+  initialBeanId: number | null;
   onOpened: () => void;
 }) {
   const [show, setShow] = useState(openInitially);
   const brewFormRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { if (openInitially) onOpened(); }, [openInitially, onOpened]);
-  const [form, setForm] = useState<BrewForm>(emptyBrewForm);
+  useEffect(() => { if (openInitially) { onOpened(); scrollToEditor(brewFormRef); } }, [openInitially, onOpened]);
+  const [form, setForm] = useState<BrewForm>(() => initialBeanId ? { ...emptyBrewForm(), beanId: String(initialBeanId) } : emptyBrewForm());
   const [editingId, setEditingId] = useState<number | null>(null);
   const [noteMemo, setNoteMemo] = useState("");
   const [noteRating, setNoteRating] = useState(0);
@@ -1185,19 +1249,30 @@ function BrewStats({ beans, brews }: { beans: Bean[]; brews: Brew[] }) {
     const bean = beans.find(item => item.id === beanId);
     return { name: bean?.name || "삭제된 원두", amount: filtered.filter(brew => brew.beanId === beanId).reduce((sum, brew) => sum + brew.amount, 0) };
   }).sort((a, b) => b.amount - a.amount);
-  const dailyUsage = Object.entries(filtered.reduce<Record<string, number>>((result, brew) => {
-    result[brew.date] = (result[brew.date] || 0) + brew.amount;
-    return result;
-  }, {})).sort(([a], [b]) => b.localeCompare(a)).slice(0, 14);
-  const dailyMax = Math.max(...dailyUsage.map(([, amount]) => amount), 1);
-  const usageRows = (items: Array<[string, number]>, max: number, label: (key: string) => string) => items.length === 0
-    ? <p className="stats-empty">선택한 기간에 브루잉 기록이 없어요.</p>
-    : <div className="usage-list">{items.map(([key, amount]) => <div className="usage-row" key={key}><span>{label(key)}</span><div className="usage-row-value"><div className="usage-bar"><i style={{ width: `${Math.max(8, amount / max * 100)}%` }} /></div><b>{fmt(Math.round(amount * 10) / 10)}g</b></div></div>)}</div>;
+  // One bar per day from the period start (or first brew for 전체) through today, empty days included; at least a week.
+  const dailyTotals = filtered.reduce<Record<string, number>>((result, brew) => ({ ...result, [brew.date]: (result[brew.date] || 0) + brew.amount }), {});
+  const todayDate = parseLocalDate(localDate());
+  const firstBrewDate = filtered.reduce<string | null>((first, brew) => !first || brew.date < first ? brew.date : first, null);
+  const spanDays = Math.max(7, days ?? (firstBrewDate ? Math.round((todayDate.getTime() - parseLocalDate(firstBrewDate).getTime()) / 86_400_000) + 1 : 7));
+  const dailyUsage = Array.from({ length: spanDays }, (_, index) => {
+    const date = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate() - (spanDays - 1 - index));
+    return { date, amount: dailyTotals[toDateKey(date)] || 0 };
+  });
+  const dailyMax = Math.max(...dailyUsage.map(day => day.amount), 1);
+  const dailyChartRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { const chart = dailyChartRef.current; if (chart) chart.scrollLeft = chart.scrollWidth; }, [period, spanDays, filtered.length]);
   return <div className="brew-stats">
     <div className="inventory-intro stats-header"><div><p>기간을 골라 내 기록을 가볍게 돌아봐요.</p></div><select aria-label="통계 기간" value={period} onChange={event => setPeriod(event.target.value as "all" | "7" | "30" | "90")}><option value="7">최근 7일</option><option value="30">최근 30일</option><option value="90">최근 90일</option><option value="all">전체 기간</option></select></div>
     <div className="stats-cards"><div><span>브루잉 횟수</span><strong>{filtered.length}<small>회</small></strong></div><div><span>사용한 원두</span><strong>{beanUsage.length}<small>종</small></strong></div><div><span>사용량</span><strong>{fmt(Math.round(totalAmount * 10) / 10)}<small>g</small></strong></div></div>
     <section className="stats-section"><h3>원두별 사용량</h3>{beanUsage.length === 0 ? <p className="stats-empty">선택한 기간에 브루잉 기록이 없어요.</p> : <div className="usage-list">{beanUsage.map(item => <div className="usage-row" key={item.name}><span>{item.name}</span><b>{fmt(Math.round(item.amount * 10) / 10)}g</b></div>)}</div>}</section>
-    <section className="stats-section"><h3>일별 사용량</h3>{usageRows(dailyUsage, dailyMax, key => { const date = parseLocalDate(key); return `${date.getMonth() + 1}/${date.getDate()}`; })}</section>
+    <section className="stats-section"><h3>일별 사용량</h3>{filtered.length === 0 ? <p className="stats-empty">선택한 기간에 브루잉 기록이 없어요.</p> : <div className="daily-chart" ref={dailyChartRef} role="list" aria-label="일별 사용량, 왼쪽으로 끌면 이전 날짜">{dailyUsage.map(({ date, amount }) => {
+      const grams = fmt(Math.round(amount * 10) / 10);
+      return <div className={`daily-bar ${amount ? "" : "is-empty"}`} role="listitem" key={toDateKey(date)} aria-label={`${date.getMonth() + 1}월 ${date.getDate()}일 ${amount ? `${grams}g` : "기록 없음"}`}>
+        <b aria-hidden="true">{amount ? `${grams}g` : ""}</b>
+        <div className="daily-bar-track" aria-hidden="true"><i style={{ height: amount ? `${Math.max(4, amount / dailyMax * 100)}%` : undefined }} /></div>
+        <span aria-hidden="true">{date.getMonth() + 1}/{date.getDate()}</span>
+      </div>;
+    })}</div>}</section>
   </div>;
 }
 
