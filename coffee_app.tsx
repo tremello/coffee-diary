@@ -1309,8 +1309,8 @@ function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, u
             </fieldset>
             <div className="brew-conditions-grid">
             <div><Field label="분쇄도"><input value={form.grindSize} onChange={event => setForm({ ...form, grindSize: event.target.value })} placeholder="예: 코만단테 24클릭" /></Field></div>
-            <Field label="물 온도"><label className="brew-unit-input"><input type="number" inputMode="decimal" min="1" max="100" step="0.5" value={form.waterTemp} onChange={event => { setForm({ ...form, waterTemp: event.target.value }); setBrewError(""); }} placeholder="92" aria-label="물 온도 (℃)" /><span aria-hidden="true">℃</span></label></Field>
-            <Field label="추출 시간"><label className="brew-unit-input is-time"><input inputMode="numeric" value={form.brewTime} onFocus={event => event.target.select()} onChange={event => { setForm({ ...form, brewTime: brewTimeFromDigits(event.target.value) }); setBrewError(""); }} placeholder="2:45" aria-label="추출 시간 (분:초)" /><span aria-hidden="true">분:초</span></label></Field>
+            <Field label="물 온도"><label className="brew-unit-input" style={{ "--chars": Math.max((form.waterTemp || "92").length, 1) } as CSSProperties}><input type="number" inputMode="decimal" min="1" max="100" step="0.5" value={form.waterTemp} onChange={event => { setForm({ ...form, waterTemp: event.target.value }); setBrewError(""); }} placeholder="92" aria-label="물 온도 (℃)" /><span aria-hidden="true">℃</span></label></Field>
+            <Field label="추출 시간"><input className="brew-time-input" inputMode="numeric" value={form.brewTime} onFocus={event => event.target.select()} onChange={event => { setForm({ ...form, brewTime: brewTimeFromDigits(event.target.value) }); setBrewError(""); }} placeholder="2:45" aria-label="추출 시간 (분:초)" /></Field>
             </div>
             <p className="recipe-time-hint">시간은 숫자만 눌러도 돼요. 130 → 1:30</p>
           </div>
