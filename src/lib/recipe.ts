@@ -2,7 +2,14 @@ import { type RecipeStep } from "../types";
 
 export const recipeActions: RecipeStep["action"][] = ["블룸", "센터 푸어", "원형 푸어", "마무리", "가수"];
 
-export const normalizedRecipeAction = (action: string): RecipeStep["action"] => action === "스파이럴" ? "원형 푸어" : recipeActions.includes(action as RecipeStep["action"]) ? action as RecipeStep["action"] : "원형 푸어";
+// 침출형: 스위치만 조작하는 단계를 위해 동작이 비어 있음("–")을 고를 수 있다.
+export const immersionActions: RecipeStep["action"][] = ["없음", ...recipeActions];
+export const recipeSwitches: NonNullable<RecipeStep["switch"]>[] = ["닫고", "열고"];
+
+// 이 동작은 붓는 양 없이 시점만 기록한다.
+export const isAmountlessStep = (step: RecipeStep) => step.action === "마무리" || step.action === "없음";
+
+export const normalizedRecipeAction = (action: string): RecipeStep["action"] => action === "스파이럴" ? "원형 푸어" : immersionActions.includes(action as RecipeStep["action"]) ? action as RecipeStep["action"] : "원형 푸어";
 
 // 가수 (bypass water added to the server after extraction) is kept out of the brew ratio and shown on its own.
 export const isBypassStep = (step: RecipeStep) => normalizedRecipeAction(step.action) === "가수";
@@ -11,6 +18,22 @@ export const recipeWater = (steps: RecipeStep[]) => steps.reduce((total, step) =
   const amount = Number(step.amount) || 0;
   return isBypassStep(step) ? { ...total, bypass: total.bypass + amount } : { ...total, extraction: total.extraction + amount };
 }, { extraction: 0, bypass: 0 });
+
+// 침출 시간: 스위치를 닫은 시점부터 연 시점까지의 합. 열린 적이 없으면 null.
+export const immersionSeconds = (steps: RecipeStep[]) => {
+  let closedAt: number | null = null;
+  let total = 0;
+  let opened = false;
+  for (const step of steps) {
+    const at = recipeTimeToSeconds(step.time);
+    if (step.switch === "닫고" && closedAt === null) closedAt = at;
+    else if (step.switch === "열고" && closedAt !== null) { total += Math.max(0, at - closedAt); closedAt = null; opened = true; }
+  }
+  return opened ? total : null;
+};
+
+// 기본형으로 저장할 때는 스위치 조작과 스위치만 있는 단계를 정리한다.
+export const basicRecipeSteps = (steps: RecipeStep[]): RecipeStep[] => steps.filter(step => step.action !== "없음").map(({ switch: _switch, ...step }) => step);
 
 export const extractionCumulative = (steps: RecipeStep[], index: number) => recipeWater(steps.slice(0, index + 1)).extraction;
 

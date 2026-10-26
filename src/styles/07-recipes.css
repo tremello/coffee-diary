@@ -76,3 +76,33 @@
   .recipe-step-head { font-size: 11px; }
   .recipe-step-row select, .recipe-amount-input input { font-size: 11px; }
 }
+/* 기본형 ⇄ 침출형: 재고 카드의 상태 버튼과 같은 알약 모양. */
+.recipe-library-head { position: relative; }
+.recipe-library-head .recipe-library-toggle { padding-right: 16px; }
+.recipe-type-toggle { position: absolute; top: 50%; right: 44px; display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border: 0; border-radius: 99px; font-family: inherit; font-size: 11px; font-weight: 700; line-height: 1.2; cursor: pointer; transform: translateY(-50%); }
+.recipe-type-toggle span { opacity: .7; font-size: .9em; }
+.recipe-type-toggle[data-type="기본형"] { background: var(--bg-e3eedf); color: var(--fg-2f5a2a); }
+.recipe-type-toggle[data-type="침출형"] { background: var(--bg-f6e7cf); color: var(--fg-7a4e12); }
+.recipe-type-toggle:hover { filter: brightness(.97); }
+.recipe-step-editor.is-immersion .recipe-step-head, .recipe-step-editor.is-immersion .recipe-step-row { grid-template-columns: 58px 62px 92px minmax(0, 1fr) 55px 22px; }
+.recipe-switch-select.has-switch { border-color: var(--bd-c9b195); color: var(--fg-5e472d); background: var(--bg-f3ece2); font-weight: 700; }
+.recipe-type-badge { margin-left: 6px; padding: 1px 7px; border-radius: 99px; color: var(--fg-7a5733); background: var(--bg-f3ece2); font-size: 10px; font-weight: 700; vertical-align: middle; }
+.recipe-switch-note { margin-left: 6px; color: var(--fg-967b5a); font-size: 10px; font-weight: 500; }
+/* 스위치가 닫힌(침출) 구간: 점을 채우고 다음 단계까지 선을 굵게 */
+.saved-recipe-step.is-closed > i::before { background: var(--bd-b08b5d); }
+.saved-recipe-step.is-closed:not(:last-child) > i::after { left: 5px; width: 3px; border-radius: 2px; background: var(--bd-b08b5d); opacity: .45; }
+@media (max-width: 540px) {
+  .recipe-step-editor.is-immersion .recipe-step-head, .recipe-step-editor.is-immersion .recipe-step-row { grid-template-columns: 42px 52px 66px minmax(0, 1fr) 38px 14px; gap: 3px; padding-left: 6px; padding-right: 6px; }
+  .recipe-step-editor.is-immersion .recipe-step-row::before { left: 30px; }
+  .recipe-step-editor.is-immersion .recipe-step-row select { padding-left: 3px; padding-right: 2px; }
+}
+/* 침출형 편집기: 스위치 칸은 상태 토글, 닫힌 구간은 저장 카드처럼 세로선을 굵게 */
+.recipe-switch-toggle { height: 29px; min-width: 0; padding: 0; border: 1px solid transparent; border-radius: 7px; color: var(--fg-b49c83); background: transparent; font-size: 11px; font-weight: 500; }
+.recipe-switch-toggle:hover { border-color: var(--bd-e6dacb); }
+.recipe-switch-toggle.is-closed { color: var(--fg-967b5a); }
+.recipe-switch-toggle.is-changed { border-color: var(--bd-c9b195); color: var(--fg-5e472d); background: var(--bg-f3ece2); font-weight: 700; }
+.recipe-step-row.closed-top::after, .recipe-step-row.closed-bottom::after { position: absolute; top: 0; bottom: 0; left: 37px; width: 3px; border-radius: 2px; background: var(--bd-b08b5d); opacity: .45; content: ""; }
+.recipe-step-row.closed-bottom:not(.closed-top)::after { top: 50%; }
+.recipe-step-row.closed-top:not(.closed-bottom)::after { bottom: 50%; }
+@media (max-width: 540px) { .recipe-step-editor.is-immersion .recipe-step-row::after { left: 29px; } }
+@media (max-width: 720px) { .recipe-switch-toggle { height: 36px; font-size: 12px; } }

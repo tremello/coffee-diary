@@ -69,8 +69,10 @@ export type BrewForm = Omit<Brew, "id" | "beanId" | "amount" | "waterAmount" | "
 
 export type RecipeStep = {
   time: string;
-  action: "블룸" | "센터 푸어" | "원형 푸어" | "마무리" | "가수";
+  action: "블룸" | "센터 푸어" | "원형 푸어" | "마무리" | "가수" | "없음";
   amount: number;
+  // 침출형 레시피에서만 쓰는 스위치(밸브) 조작. 비어 있으면 조작 없음.
+  switch?: "닫고" | "열고";
 };
 
 export type SavedRecipe = {
@@ -78,6 +80,7 @@ export type SavedRecipe = {
   name: string;
   coffee: number;
   steps: RecipeStep[];
+  immersion?: boolean;
   memo: string;
   createdAt: number;
 };
