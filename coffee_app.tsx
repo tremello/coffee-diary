@@ -1273,7 +1273,9 @@ function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, u
     const recipe = recipes.find(item => String(item.id) === recipeId);
     if (!recipe) return;
     const water = recipeWater(recipe.steps).extraction;
-    setForm(current => ({ ...current, amount: String(recipe.coffee), waterAmount: water ? String(water) : "", recipe: recipe.name }));
+    // The recipe's 마무리 step marks when the brew ends; carry it over as the extraction time when it has one.
+    const finishSeconds = recipe.steps.filter(step => normalizedRecipeAction(step.action) === "마무리").reduce((latest, step) => Math.max(latest, recipeTimeToSeconds(step.time)), 0);
+    setForm(current => ({ ...current, amount: String(recipe.coffee), waterAmount: water ? String(water) : "", recipe: recipe.name, ...(finishSeconds > 0 ? { brewTime: recipeTime(finishSeconds) } : {}) }));
   };
 
   return (
