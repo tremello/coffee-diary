@@ -1,5 +1,8 @@
 /* Settings: a bottom sheet on phones and a right-hand panel on wider screens, built from the same white cards and thin borders as the rest of the app. */
-.settings-button svg { display: block; }
+/* The header menu: three bare lines at the far right, no ring, so it reads as "more" rather than another round action. */
+.menu-button { display: inline-grid; place-items: center; width: 36px; height: 36px; margin-right: -6px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--fg-5e472d); }
+.menu-button:hover { background: var(--bg-f4eee6); }
+.menu-button svg { display: block; }
 .settings-layer { position: fixed; inset: 0; z-index: 100; }
 .settings-backdrop { position: absolute; inset: 0; background: rgba(26, 20, 15, .42); animation: settings-fade .2s ease-out; }
 .settings-sheet { position: absolute; left: 0; right: 0; bottom: 0; top: max(56px, env(safe-area-inset-top)); display: flex; flex-direction: column; background: var(--bg-fbf7f1); color: var(--fg-2a211a); border-radius: 22px 22px 0 0; box-shadow: 0 -8px 30px rgba(var(--sh-5c442a), calc(0.18 * var(--shadow-k))); animation: settings-rise .26s cubic-bezier(.2, .8, .2, 1); }

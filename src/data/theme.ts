@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 // Theme: follows the system setting unless the user picks light or dark. The choice lives outside the cf_ keys so logging out keeps it.
-// index.html applies the stored choice before first paint. The header toggle and the settings sheet share this store.
+// index.html applies the stored choice before first paint. The settings sheet sets it; the hook keeps every reader in step with the system.
 export type ThemeChoice = "light" | "dark" | null;
 
 const THEME_KEY = "coffee-theme";
