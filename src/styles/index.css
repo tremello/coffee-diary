@@ -13,3 +13,4 @@
 @import "./11-design-a.css"; /* Design A refresh and feedback round 2: cards, chips, search, floating add, cup notes. */
 @import "./12-motion-tabbar.css"; /* Tab transitions, the floating glass tab bar and daily usage bars. */
 @import "./13-swipe-compact.css"; /* Bean card swipe-to-brew and the compact donut. */
+@import "./14-settings.css"; /* Settings sheet opened from the header gear. */

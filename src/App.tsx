@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "./data/auth";
 import { retryFailedSync, useStorage, useSyncFailed } from "./data/sync";
+import { readLocal } from "./data/storage";
 import { Header } from "./components/Header";
+import { SettingsSheet } from "./components/settings/SettingsSheet";
 import { STORAGE_KEYS } from "./data/keys";
+import { readStartPage } from "./data/settings";
 import { FONT } from "./lib/format";
 import { type Page, PAGE_HASHES, pageFromHash } from "./lib/pages";
 import { BeansPage } from "./pages/BeansPage";
@@ -17,7 +20,10 @@ const LEGACY_SHIPPING_STATUS = "배송 중";
 const normalizeBeans = (beans: Bean[]) => beans.some(bean => (bean.status as string) === LEGACY_SHIPPING_STATUS) ? beans.map(bean => (bean.status as string) === LEGACY_SHIPPING_STATUS ? { ...bean, status: "디개싱 중" as BeanStatus } : bean) : beans;
 
 export default function App() {
-  const [page, setPage] = useState<Page>(() => pageFromHash(window.location.hash));
+  // A bare link opens the tab chosen in settings; a link with #beans, #brews, … opens that tab.
+  const [page, setPage] = useState<Page>(() => window.location.hash ? pageFromHash(window.location.hash) : readStartPage());
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const closeSettings = useCallback(() => setSettingsOpen(false), []);
   const [openBrewForm, setOpenBrewForm] = useState(false);
   const [brewBeanId, setBrewBeanId] = useState<number | null>(null);
   const { user, loading: authLoading } = useAuth();
@@ -39,7 +45,7 @@ export default function App() {
 
   useEffect(() => {
     const syncPageFromUrl = () => setPage(pageFromHash(window.location.hash));
-    const resolvedPage = pageFromHash(window.location.hash);
+    const resolvedPage = window.location.hash ? pageFromHash(window.location.hash) : readStartPage();
     if (window.location.hash !== PAGE_HASHES[resolvedPage]) window.history.replaceState({ page: resolvedPage }, "", PAGE_HASHES[resolvedPage]);
     window.addEventListener("popstate", syncPageFromUrl);
     window.addEventListener("hashchange", syncPageFromUrl);
@@ -51,14 +57,16 @@ export default function App() {
 
   return (
     <div style={{ fontFamily: FONT, maxWidth: 960, margin: "0 auto", padding: "0 0 3rem" }}>
-      <Header page={page} setPage={navigate} user={user} authLoading={authLoading} />
+      <Header page={page} setPage={navigate} user={user} authLoading={authLoading} onOpenSettings={() => setSettingsOpen(true)} />
       {syncFailed && <div className="sync-alert" role="alert"><span>최근 변경을 서버에 저장하지 못했어요. 이 기기에는 남아 있어요.</span><button type="button" onClick={retryFailedSync}>다시 시도</button></div>}
-      <div className="page-transition" key={page}>
+      {settingsOpen && <SettingsSheet user={user} data={{ beans, brews, notes, recipes, drippers: readLocal<string[]>(STORAGE_KEYS.drippers) ?? [] }} setBeans={setBeans} onClose={closeSettings} />}
+      {/* Pages step aside while settings is open so the lists it edits have a single owner; they remount with the new values. */}
+      {!settingsOpen && <div className="page-transition" key={page}>
         {page === "Beans" && <BeansPage beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} userId={user?.id ?? null} onBrew={beanId => { setBrewBeanId(beanId ?? null); setOpenBrewForm(true); navigate("Brew Log"); }} />}
         {page === "Brew Log" && <BrewLog beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} recipes={recipes} userId={user?.id ?? null} openInitially={openBrewForm} initialBeanId={brewBeanId} onOpened={() => { setOpenBrewForm(false); setBrewBeanId(null); }} />}
         {page === "Recipes" && <RecipePage recipes={recipes} setRecipes={setRecipes} brews={brews} setBrews={setBrews} />}
         {page === "Brew Stats" && <BrewStats beans={beans} brews={brews} />}
-      </div>
+      </div>}
     </div>
   );
 }

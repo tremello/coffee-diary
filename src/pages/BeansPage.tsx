@@ -6,6 +6,8 @@ import { JourneySteps } from "../components/ui";
 import { beanName, fmt, handleNumericInput, localDate, scrollToEditor, splitCupNotes, withCommas } from "../lib/format";
 import { localizedPhotoField, MAX_PHOTO_SELECT_BYTES, PHOTO_ORIGIN_LABELS, PHOTO_PROCESS_LABELS, preparePhoto } from "../lib/photo";
 import { type Bean, BEAN_QUALITIES, BEAN_STATUSES, type BeanForm, type BeanQuality, type BeanStatus, type Brew, type RecognizedBeanFields, type TastingNote } from "../types";
+import { LIST_KEYS } from "../data/keys";
+import { DEVICE_KEYS } from "../data/settings";
 
 const DEFAULT_PROCESSES = ["워시드", "내추럴", "허니", "무산소 내추럴", "무산소 워시드"];
 
@@ -26,13 +28,13 @@ const REMAINING_OPTIONS = ["100g 이하", "100~200g", "200g 이상"];
 const AGE_OPTIONS = ["D+7 이내", "D+8~30", "D+31 이상"];
 
 // The bean list view is a per-device preference, kept outside the synced cf_ keys: phones start compact, wider screens detailed.
-type BeanDensity = "detail" | "compact";
+export type BeanDensity = "detail" | "compact";
 
-const BEAN_DENSITY_KEY = "coffee-bean-density";
+const BEAN_DENSITY_KEY = DEVICE_KEYS.beanDensity;
 
-const SWIPE_HINT_KEY = "coffee-swipe-hint-dismissed";
+const SWIPE_HINT_KEY = DEVICE_KEYS.swipeHint;
 
-const initialBeanDensity = (): BeanDensity => {
+export const initialBeanDensity = (): BeanDensity => {
   try { const saved = localStorage.getItem(BEAN_DENSITY_KEY); if (saved === "detail" || saved === "compact") return saved; } catch {}
   return window.matchMedia?.("(max-width: 540px)").matches ? "compact" : "detail";
 };
@@ -82,12 +84,12 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState("");
   const [photoMessage, setPhotoMessage] = useState("");
-  const [customOrigins, setCustomOrigins] = useStorage<string[]>("cf_origins", [], userId);
+  const [customOrigins, setCustomOrigins] = useStorage<string[]>(LIST_KEYS.origins, [], userId);
   const [addingOrigin, setAddingOrigin] = useState(false);
   const [newOrigin, setNewOrigin] = useState("");
   const origins = [...new Set([...DEFAULT_ORIGINS, ...customOrigins, ...beans.map(b => b.origin).filter(Boolean)])];
-  const [hiddenRoasteries, setHiddenRoasteries] = useStorage<string[]>("cf_hidden_roasteries", [], userId);
-  const [hiddenVarieties, setHiddenVarieties] = useStorage<string[]>("cf_hidden_varieties", [], userId);
+  const [hiddenRoasteries, setHiddenRoasteries] = useStorage<string[]>(LIST_KEYS.hiddenRoasteries, [], userId);
+  const [hiddenVarieties, setHiddenVarieties] = useStorage<string[]>(LIST_KEYS.hiddenVarieties, [], userId);
   const roasteries = [...new Set(beans.map(bean => bean.roastery?.trim()).filter((roastery): roastery is string => Boolean(roastery)))].filter(roastery => !hiddenRoasteries.includes(roastery));
   const varieties = [...new Set(beans.map(bean => bean.variety?.trim()).filter((variety): variety is string => Boolean(variety)))].filter(variety => !hiddenVarieties.includes(variety));
   const addOrigin = () => {

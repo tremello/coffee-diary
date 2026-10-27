@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import { readStatsPeriod, type StatsPeriod } from "../data/settings";
 import { fmt, localDate, parseLocalDate, toDateKey } from "../lib/format";
 import { type Bean, type Brew } from "../types";
 
 export function BrewStats({ beans, brews }: { beans: Bean[]; brews: Brew[] }) {
-  const [period, setPeriod] = useState<"all" | "7" | "30" | "90">("30");
+  const [period, setPeriod] = useState<StatsPeriod>(readStatsPeriod);
   const days = period === "all" ? null : Number(period);
   const cutoff = days === null ? null : Date.parse(localDate()) - (days - 1) * 86_400_000;
   const filtered = brews.filter(brew => cutoff === null || Date.parse(brew.date) >= cutoff);

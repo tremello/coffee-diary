@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { signInWithGoogle, signOutAndClear } from "../data/auth";
-import { hasPendingSync } from "../data/storage";
+import { confirmAndSignOut, signInWithGoogle } from "../data/auth";
 import { ThemeToggle } from "./ThemeToggle";
 import { FONT } from "../lib/format";
 import { type Page, PAGE_LABELS, PAGES } from "../lib/pages";
 
-export function Header({ page, setPage, user, authLoading }: { page: Page; setPage: (page: Page) => void; user: { id: string; email?: string } | null; authLoading: boolean }) {
+export function Header({ page, setPage, user, authLoading, onOpenSettings }: { page: Page; setPage: (page: Page) => void; user: { id: string; email?: string } | null; authLoading: boolean; onOpenSettings: () => void }) {
   const [loginError, setLoginError] = useState("");
   const signInGoogle = async () => {
     setLoginError("");
@@ -13,11 +12,7 @@ export function Header({ page, setPage, user, authLoading }: { page: Page; setPa
     if (error) setLoginError(`Google 로그인에 실패했어요. ${error.message}`);
   };
   const accountName = user?.email?.split("@")[0] || "내 계정";
-  const signOut = async () => {
-    if (!hasPendingSync() && !window.confirm(`${accountName} 계정에서 로그아웃할까요?`)) return;
-    if (hasPendingSync() && !window.confirm("아직 서버에 저장하지 못한 기록이 있어요. 로그아웃하면 이 기기에서 지워져요. 계속할까요?")) return;
-    await signOutAndClear();
-  };
+  const signOut = () => confirmAndSignOut(accountName);
   return (
     <div className="app-header" style={{ borderBottom: "0.5px solid var(--color-border-tertiary)", marginBottom: "1.5rem" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 0 0" }}>
@@ -25,7 +20,7 @@ export function Header({ page, setPage, user, authLoading }: { page: Page; setPa
           <p style={{ fontSize: 11, color: "var(--color-text-tertiary)", margin: 0, letterSpacing: 1, textTransform: "uppercase", fontFamily: FONT }}>My Coffee Diary</p>
           <h1 style={{ fontSize: 24, fontWeight: 700, margin: "2px 0 0", letterSpacing: "-0.02em", color: "var(--color-text-primary)", fontFamily: FONT }}>{PAGE_LABELS[page]}</h1>
         </div>
-        <div className="account-actions">{user ? <button type="button" className="refresh-button account-button" onClick={signOut} aria-label={`${accountName} 로그아웃`} title={`${accountName} · 로그아웃`}>{accountName.slice(0, 1).toUpperCase()}</button> : <button type="button" className="google-button" onClick={signInGoogle} aria-label="Google 계정으로 로그인" title="Google 계정으로 로그인">로그인</button>}<ThemeToggle /><button className="refresh-button" onClick={() => window.location.reload()} aria-label="새로고침" title="새로고침">↻</button><img className="brand-mark" src="/coffee-diary-logo-brown-96.png" width="40" height="40" alt="커피 기록 로고" /></div>
+        <div className="account-actions">{user ? <button type="button" className="refresh-button account-button" onClick={signOut} aria-label={`${accountName} 로그아웃`} title={`${accountName} · 로그아웃`}>{accountName.slice(0, 1).toUpperCase()}</button> : <button type="button" className="google-button" onClick={signInGoogle} aria-label="Google 계정으로 로그인" title="Google 계정으로 로그인">로그인</button>}<ThemeToggle /><button type="button" className="refresh-button settings-button" onClick={onOpenSettings} aria-label="설정" title="설정"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg></button><button className="refresh-button" onClick={() => window.location.reload()} aria-label="새로고침" title="새로고침">↻</button><img className="brand-mark" src="/coffee-diary-logo-brown-96.png" width="40" height="40" alt="커피 기록 로고" /></div>
       </div>
       {loginError && <p className="login-error" role="alert">{loginError}</p>}
       <nav className="page-tabs">
