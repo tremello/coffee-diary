@@ -27,7 +27,8 @@ const REMAINING_OPTIONS = ["100g 이하", "100~200g", "200g 이상"];
 
 const AGE_OPTIONS = ["D+7 이내", "D+8~30", "D+31 이상"];
 
-// The bean list view is a per-device preference, kept outside the synced cf_ keys: phones start compact, wider screens detailed.
+// The default bean list view is a per-device setting (설정 > 화면), kept outside the synced cf_ keys: phones start compact, wider screens detailed.
+// Switching the view on the page lasts until the app is reopened; only settings change the default.
 export type BeanDensity = "detail" | "compact";
 
 const BEAN_DENSITY_KEY = DEVICE_KEYS.beanDensity;
@@ -58,7 +59,7 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
     document.addEventListener("pointerdown", closeOutside);
     return () => document.removeEventListener("pointerdown", closeOutside);
   }, [swipeOpenId]);
-  const chooseDensity = (next: BeanDensity) => { setDensity(next); try { localStorage.setItem(BEAN_DENSITY_KEY, next); } catch {} };
+  const chooseDensity = (next: BeanDensity) => setDensity(next);
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [facetFilters, setFacetFilters] = useState<BeanFacetFilters>(emptyBeanFacetFilters);
   const [priceMin, setPriceMin] = useState("");

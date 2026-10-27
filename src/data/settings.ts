@@ -19,4 +19,3 @@ export function useDeviceSetting<T extends string>(key: string, read: () => T): 
   return [value, next => { writeString(key, next); setValue(next); }];
 }
 
-export const showSwipeHintAgain = () => writeString(DEVICE_KEYS.swipeHint, null);

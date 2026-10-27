@@ -1,8 +1,13 @@
-import { SettingsGroup, SettingsRow } from "./parts";
+import { RELEASES } from "../../data/changelog";
+import { SettingsDisclosure, SettingsGroup, SettingsRow } from "./parts";
 
+// The version is the newest changelog entry; on Vercel the deployed commit is shown beside it, locally it says so.
 export function AboutSection() {
+  const [latest] = RELEASES;
   return <SettingsGroup title="정보">
-    <SettingsRow label="앱 버전" hint="이 화면이 만들어진 시점이에요."><span className="settings-status-text">{__APP_VERSION__}</span></SettingsRow>
-    <SettingsRow label="새로 고침" hint="다른 기기에서 바꾼 내용을 바로 보고 싶을 때"><button type="button" className="settings-action" onClick={() => window.location.reload()}>새로 고침</button></SettingsRow>
+    <SettingsRow label="앱 버전" hint={__APP_COMMIT__ ? `배포 ${__APP_COMMIT__}` : "내 컴퓨터에서 실행 중"}><span className="settings-status-text">v{latest.version}</span></SettingsRow>
+    <SettingsDisclosure label="업데이트 기록" summary={latest.date.replace(/-/g, ".")}>
+      <ol className="settings-releases">{RELEASES.map(release => <li key={release.version}><div><strong>v{release.version}</strong><time dateTime={release.date}>{release.date.replace(/-/g, ".")}</time></div><ul>{release.changes.map(change => <li key={change}>{change}</li>)}</ul></li>)}</ol>
+    </SettingsDisclosure>
   </SettingsGroup>;
 }

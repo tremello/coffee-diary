@@ -48,6 +48,15 @@
 .settings-trash li:first-child { border-top: 0; }
 .settings-trash strong { display: block; font-size: 13px; font-weight: 600; }
 .settings-trash small { display: block; color: var(--fg-82715e); font-size: 11px; }
+.settings-action.settings-danger { color: var(--fg-a64f43); }
+.settings-empty-trash { width: 100%; margin-top: 10px; }
+.settings-releases { margin: 0; padding: 0; list-style: none; }
+.settings-releases > li { padding: 10px 0; border-top: 1px solid var(--bd-ece2d6); }
+.settings-releases > li:first-child { border-top: 0; padding-top: 4px; }
+.settings-releases div { display: flex; justify-content: space-between; align-items: baseline; }
+.settings-releases strong { font-size: 13px; color: var(--fg-5e472d); }
+.settings-releases time { color: var(--fg-82715e); font-size: 11px; }
+.settings-releases ul { margin: 4px 0 0; padding-left: 16px; color: var(--fg-6b5d50); font-size: 12px; line-height: 1.55; }
 @media (min-width: 720px) {
   .settings-sheet { left: auto; top: 0; width: 420px; border-radius: 22px 0 0 22px; animation-name: settings-slide; }
   .settings-grab { display: none; }
