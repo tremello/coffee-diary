@@ -123,5 +123,7 @@ button.be-row:hover { background: var(--bg-f7f1e9); }
 /* Phones keep form fields at 16px (iOS zooms smaller ones), so every row's text is 16px to match. */
 @media (max-width: 720px) {
   .be-row { font-size: 16px; }
+  /* "직접 쓰기" under 가공 stays at its smaller size, input included (it may zoom on focus in iOS). */
+  .be-row.sub .be-row-name, .be-row.sub input { font-size: 14px !important; }
 }
 @media (prefers-reduced-motion: reduce) { .be-backdrop, .be-panel, .be-pick { animation: none; transition: none; } }

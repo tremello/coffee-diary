@@ -307,9 +307,8 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
   const save = (event: React.FormEvent) => {
     event.preventDefault();
     const purchased = Number(form.purchased);
-    if (!form.origin.trim() || !Number.isFinite(purchased) || purchased <= 0) {
-      setError("원산지와 0보다 큰 구매량을 입력해주세요."); return;
-    }
+    const missing = [!form.origin.trim() && "원산지", !form.variety?.trim() && "품종", !form.process.trim() && "가공방식", !(Number.isFinite(purchased) && purchased > 0) && "구매량"].filter(Boolean);
+    if (missing.length) { setError(`${missing.join("·")} 칸을 채워주세요.`); return; }
     const previous = beans.find(b => b.id === editingId);
     const consumed = Number(form.consumed);
     if (!Number.isFinite(consumed) || consumed < 0) { setError("소비량은 0 이상의 숫자로 입력해주세요."); return; }

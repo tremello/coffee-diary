@@ -57,6 +57,8 @@ export function BeanEditor({ editing, form, setForm, processes, origins, roaster
   const isOther = otherProcess || (Boolean(form.process) && !processes.includes(form.process));
   const name = beanName(form);
   const missingOrigin = Boolean(error) && !form.origin.trim();
+  const missingVariety = Boolean(error) && !form.variety?.trim();
+  const missingProcess = Boolean(error) && !form.process.trim();
   const missingAmount = Boolean(error) && !(Number(form.purchased) > 0);
 
   // On phones the form is a sheet floating over the list: it slides down when closed, and can be dragged down by its top.
@@ -154,7 +156,7 @@ export function BeanEditor({ editing, form, setForm, processes, origins, roaster
             </span>
           </div>}
           {photo.error && !photo.preview && <p className="be-photo-note" role="alert">{photo.error}</p>}
-          {pastBeans.length > 0 && <button type="button" className="be-row" onClick={() => setPicker("rebuy")}><span className="be-row-name"><RepeatIcon />예전에 산 원두 또 샀어요</span><span className="be-chev" aria-hidden="true">›</span></button>}
+          <button type="button" className="be-row" onClick={() => setPicker("rebuy")}><span className="be-row-name"><RepeatIcon />예전에 산 원두 또 샀어요</span><span className="be-chev" aria-hidden="true">›</span></button>
         </div>}
 
         <div className="be-columns">
@@ -163,15 +165,15 @@ export function BeanEditor({ editing, form, setForm, processes, origins, roaster
             <div className="be-card">
               {pickRow("origin", "원산지", true, missingOrigin)}
               <label className={rowClass("farm")}>{rowName("farm", "농장·지역")}<input value={form.farm ?? ""} placeholder="예: 구지" onChange={event => set("farm", event.target.value)} /></label>
-              {pickRow("variety", "품종")}
-              <div className={`${rowClass("process")} seg-row`}>
-                {rowName("process", "가공")}
+              {pickRow("variety", "품종", true, missingVariety)}
+              <div className={`${rowClass("process", missingProcess && !isOther)} seg-row`}>
+                {rowName("process", "가공", true)}
                 <div className="be-seg" role="group" aria-label="가공방식">
                   {processes.map(process => <button type="button" key={process} aria-pressed={!isOther && form.process === process} onClick={() => { setOtherProcess(false); set("process", form.process === process ? "" : process); }}>{process}</button>)}
                   <button type="button" aria-pressed={isOther} onClick={() => { if (isOther) { setOtherProcess(false); set("process", ""); } else { setOtherProcess(true); set("process", ""); } }}>기타</button>
                 </div>
               </div>
-              {isOther && <label className="be-row sub"><span className="be-row-name">직접 쓰기</span><input autoFocus={!form.process} value={form.process} placeholder="예: 무산소 내추럴" onChange={event => set("process", event.target.value)} /></label>}
+              {isOther && <label className={`be-row sub${missingProcess ? " bad" : ""}`}><span className="be-row-name">직접 쓰기</span><input autoFocus={!form.process} value={form.process} placeholder="예: 무산소 내추럴" onChange={event => set("process", event.target.value)} /></label>}
             </div>
           </section>
 
