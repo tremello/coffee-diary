@@ -42,7 +42,7 @@
 .recipe-library-list-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0 0; color: var(--fg-5e472d); }
 .recipe-library-heading { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 .recipe-sort-control { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; color: var(--fg-6b5d50); font-size: 12px; }
-.recipe-sort-select { width: 128px; max-width: 128px; height: 32px; padding-top: 0; padding-bottom: 0; font-size: 12px; }
+.recipe-sort-select { width: 112px; max-width: 112px; height: 32px; padding-top: 0; padding-bottom: 0; font-size: 12px; }
 .recipe-library-list-header strong { font-size: 14px; }
 .recipe-library-list-header span { color: var(--fg-6b5d50); font-size: 11px; }
 .recipe-library-list { display: grid; gap: 9px; padding: 12px 0 0; }

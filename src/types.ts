@@ -53,12 +53,14 @@ export type Brew = {
   method: string;
   date: string;
   recipe: string;
+  // Saved recipe this brew used, so renaming the recipe keeps its usage history. Older brews are linked by name.
+  recipeId?: number;
   grindSize?: string;
   waterTemp?: number;
   brewTime?: string;
 };
 
-export type BrewForm = Omit<Brew, "id" | "beanId" | "amount" | "waterAmount" | "grindSize" | "waterTemp" | "brewTime"> & {
+export type BrewForm = Omit<Brew, "id" | "beanId" | "recipeId" | "amount" | "waterAmount" | "grindSize" | "waterTemp" | "brewTime"> & {
   beanId: string;
   amount: string;
   waterAmount: string;

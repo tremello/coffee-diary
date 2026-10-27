@@ -111,7 +111,8 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     const available = restoredBeans.find(item => item.id === nextBeanId);
     if (!available || available.remaining < amt) { setBrewError(`잔여량(${fmt(available?.remaining ?? 0)}g)이 부족해요.`); return; }
     const startsConsuming = available.status === "디개싱 중";
-    const brew: Brew = { id: editingId ?? Date.now(), beanId: nextBeanId, amount: amt, waterAmount: water, method: form.method.trim(), date: form.date, recipe: form.recipe, grindSize: form.grindSize.trim() || undefined, waterTemp: temp, brewTime: brewTime || undefined };
+    const recipeId = recipeMode === "saved" && selectedRecipeId ? Number(selectedRecipeId) : previous && previous.recipe === form.recipe ? previous.recipeId : undefined;
+    const brew: Brew = { id: editingId ?? Date.now(), beanId: nextBeanId, amount: amt, waterAmount: water, method: form.method.trim(), date: form.date, recipe: form.recipe, ...(recipeId !== undefined ? { recipeId } : {}), grindSize: form.grindSize.trim() || undefined, waterTemp: temp, brewTime: brewTime || undefined };
     setBrews(editingId === null ? [...brews, brew] : brews.map(item => item.id === editingId ? brew : item));
     if (brew.method && !drippers.includes(brew.method)) setDrippers([...drippers, brew.method]);
     setBeans(restoredBeans.map(item => item.id === nextBeanId ? { ...item, remaining: Math.round((item.remaining - amt) * 10) / 10, ...(startsConsuming ? { status: "소비 중" as BeanStatus } : {}) } : item));
@@ -227,7 +228,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
       )}
 
       <div className="brew-log-tools">
-        <label className="brew-search"><span className="sr-only">브루잉 기록 검색</span><input value={query} onChange={event => setQuery(event.target.value)} placeholder="원두, 로스터리, 레시피 검색" /></label>
+        <label className="brew-search bean-search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4 4" /></svg><span className="sr-only">브루잉 기록 검색</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="원두, 로스터리, 레시피로 검색" /></label>
         <select className="inventory-sort" aria-label="브루잉 기록 정렬" value={brewSort} onChange={event => setBrewSort(event.target.value as "latest" | "oldest")}><option value="latest">최신순</option><option value="oldest">오래된 순</option></select>
       </div>
 

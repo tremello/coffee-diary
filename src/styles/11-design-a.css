@@ -39,6 +39,21 @@
 .bean-search input::placeholder { color: var(--fg-6b5d50); }
 .bean-search:has(input:focus-visible) { outline: 2px solid var(--bd-7a5733); outline-offset: 2px; }
 .bean-search input:focus-visible { outline: none; }
+/* The native clear button is a fixed blue; draw it in the theme's muted text color instead. */
+.bean-search input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; margin: 0 0 0 6px; background-color: var(--fg-6b5d50); cursor: pointer;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 4l8 8M12 4l-8 8' stroke='%23000' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 4l8 8M12 4l-8 8' stroke='%23000' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") center / 16px 16px no-repeat; }
+.bean-search input:placeholder-shown::-webkit-search-cancel-button { display: none; }
+
+/* Brew log search reuses the bean search look; its sort select keeps the dropdown arrow. */
+.brew-log-tools .brew-search.bean-search { min-width: 0; margin: 0; }
+.brew-log-tools .brew-search.bean-search input { min-height: 0; border: 0; background: transparent; }
+/* Narrow phones: the input stays 16px (no iOS zoom), only the placeholder shrinks so the whole hint fits. */
+@media (max-width: 400px) {
+  .brew-log-tools .brew-search.bean-search { gap: 6px; padding: 0 10px; }
+  .brew-log-tools .brew-search.bean-search input::placeholder { font-size: clamp(11px, calc((100vw - 182px) * 0.083), 16px); letter-spacing: -0.02em; }
+}
+.brew-log-tools select.inventory-sort { padding: 0 26px 0 10px; background: var(--bg-ffffff) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2375634d' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 10px center / 10px 6px; }
 .bean-fab { display: none; }
 @media (max-width: 540px) {
   .inventory > .inventory-intro .intro-actions, .brew-log-heading-actions { display: none; }

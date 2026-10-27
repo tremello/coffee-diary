@@ -1,4 +1,4 @@
-import { type RecipeStep } from "../types";
+import { type Brew, type RecipeStep, type SavedRecipe } from "../types";
 
 export const recipeActions: RecipeStep["action"][] = ["블룸", "센터 푸어", "원형 푸어", "마무리", "가수"];
 
@@ -57,3 +57,18 @@ export const defaultRecipeSteps = (): RecipeStep[] => [
   { time: "0:00", action: "블룸", amount: 0 },
   { time: "0:30", action: "원형 푸어", amount: 0 }
 ];
+
+// Links brews without a recipeId to the one saved recipe of the same name; ambiguous or unknown names stay unlinked.
+export const linkBrewsToRecipes = (brews: Brew[], recipes: SavedRecipe[]): Brew[] | null => {
+  const idsByName = new Map<string, number[]>();
+  recipes.forEach(recipe => idsByName.set(recipe.name, [...(idsByName.get(recipe.name) ?? []), recipe.id]));
+  let changed = false;
+  const linked = brews.map(brew => {
+    if (brew.recipeId !== undefined) return brew;
+    const ids = idsByName.get(brew.recipe.trim());
+    if (ids?.length !== 1) return brew;
+    changed = true;
+    return { ...brew, recipeId: ids[0] };
+  });
+  return changed ? linked : null;
+};
