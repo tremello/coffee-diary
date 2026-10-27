@@ -3,13 +3,15 @@ import { supabase } from "../supabase";
 import { type StorageSetter, useStorage } from "../data/sync";
 import { SwipeToBrew } from "../components/SwipeToBrew";
 import { JourneySteps } from "../components/ui";
-import { beanName, fmt, handleNumericInput, localDate, scrollToEditor, splitCupNotes, withCommas } from "../lib/format";
+import { BeanEditor } from "../components/bean-editor/BeanEditor";
+import { beanName, fmt, handleNumericInput, localDate, splitCupNotes, withCommas } from "../lib/format";
 import { localizedPhotoField, MAX_PHOTO_SELECT_BYTES, PHOTO_ORIGIN_LABELS, PHOTO_PROCESS_LABELS, preparePhoto } from "../lib/photo";
 import { type Bean, BEAN_QUALITIES, BEAN_STATUSES, type BeanForm, type BeanQuality, type BeanStatus, type Brew, type RecognizedBeanFields, type TastingNote } from "../types";
 import { LIST_KEYS } from "../data/keys";
 import { DEVICE_KEYS } from "../data/settings";
 
-const DEFAULT_PROCESSES = ["워시드", "내추럴", "허니", "무산소 내추럴", "무산소 워시드"];
+// 무산소 가공은 직접 입력칸에 적어요. 이미 등록된 무산소 원두는 세부 검색에 그대로 나와요.
+const DEFAULT_PROCESSES = ["워시드", "내추럴", "허니"];
 
 const DEFAULT_ORIGINS = ["에티오피아", "파나마", "콜롬비아", "케냐"];
 
@@ -74,7 +76,6 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
   // True while the purchase date only mirrors the roast date. iOS date pickers fire a change with today's date the moment they open,
   // so an empty purchase date must keep following the roast date until the user edits it directly.
   const purchaseDateFollowsRoast = useRef(false);
-  const beanFormRef = useRef<HTMLFormElement>(null);
   const purchaseDateForRoast = (purchaseDate: string, roastDate: string) => {
     if (purchaseDate && !purchaseDateFollowsRoast.current) return purchaseDate;
     purchaseDateFollowsRoast.current = Boolean(roastDate);
@@ -84,21 +85,15 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
   const [photoPreview, setPhotoPreview] = useState("");
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState("");
-  const [photoMessage, setPhotoMessage] = useState("");
+  // How many fields the last photo filled, and which ones, so the editor can mark them for checking.
+  const [photoReadCount, setPhotoReadCount] = useState<number | null>(null);
+  const [readFields, setReadFields] = useState<Set<string>>(() => new Set());
   const [customOrigins, setCustomOrigins] = useStorage<string[]>(LIST_KEYS.origins, [], userId);
-  const [addingOrigin, setAddingOrigin] = useState(false);
-  const [newOrigin, setNewOrigin] = useState("");
   const origins = [...new Set([...DEFAULT_ORIGINS, ...customOrigins, ...beans.map(b => b.origin).filter(Boolean)])];
   const [hiddenRoasteries, setHiddenRoasteries] = useStorage<string[]>(LIST_KEYS.hiddenRoasteries, [], userId);
   const [hiddenVarieties, setHiddenVarieties] = useStorage<string[]>(LIST_KEYS.hiddenVarieties, [], userId);
   const roasteries = [...new Set(beans.map(bean => bean.roastery?.trim()).filter((roastery): roastery is string => Boolean(roastery)))].filter(roastery => !hiddenRoasteries.includes(roastery));
   const varieties = [...new Set(beans.map(bean => bean.variety?.trim()).filter((variety): variety is string => Boolean(variety)))].filter(variety => !hiddenVarieties.includes(variety));
-  const addOrigin = () => {
-    const origin = newOrigin.trim();
-    if (!origin) return;
-    if (!origins.includes(origin)) setCustomOrigins([...customOrigins, origin]);
-    setForm({ ...form, origin }); setNewOrigin(""); setAddingOrigin(false);
-  };
   const hideRoastery = (roastery: string) => setHiddenRoasteries([...hiddenRoasteries, roastery]);
   const hideVariety = (variety: string) => setHiddenVarieties([...hiddenVarieties, variety]);
   const [deletedId, setDeletedId] = useState<number | null>(null);
@@ -198,7 +193,7 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
   });
   const clearPhoto = () => {
     if (photoPreview) URL.revokeObjectURL(photoPreview);
-    setPhotoFile(null); setPhotoPreview(""); setPhotoBusy(false); setPhotoError(""); setPhotoMessage("");
+    setPhotoFile(null); setPhotoPreview(""); setPhotoBusy(false); setPhotoError(""); setPhotoReadCount(null); setReadFields(new Set());
   };
   const photoMimeType = (file: File) => {
     if (file.type) return file.type.toLowerCase();
@@ -212,14 +207,16 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
     if (!new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]).has(mimeType)) { setPhotoError("JPG, PNG, WebP, HEIC 사진만 선택할 수 있어요."); return; }
     if (file.size > MAX_PHOTO_SELECT_BYTES) { setPhotoError("사진은 25MB 이하로 선택해주세요."); return; }
     setPhotoFile(file); setPhotoPreview(URL.createObjectURL(file));
+    // Read the label right away; the button below stays for retrying after an error.
+    if (userId) void recognizePhoto(file);
   };
-  const recognizePhoto = async () => {
-    if (!photoFile || photoBusy) return;
-    setPhotoBusy(true); setPhotoError(""); setPhotoMessage("");
+  const recognizePhoto = async (file = photoFile) => {
+    if (!file || photoBusy) return;
+    setPhotoBusy(true); setPhotoError(""); setPhotoReadCount(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("사진 인식은 Google 로그인 후 사용할 수 있어요.");
-      const photo = await preparePhoto(photoFile, photoMimeType(photoFile));
+      const photo = await preparePhoto(file, photoMimeType(file));
       const response = await fetch("/api/recognize-bean", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
@@ -248,21 +245,25 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
         ...(result.price !== undefined && String(result.price).trim() ? { price: String(result.price) } : {})
       }));
       setRoastDateTouched(Boolean(text(result.roastDate)));
-      setPhotoMessage("읽어온 정보를 입력칸에 채웠어요. 저장하기 전에 확인해주세요.");
+      const read = new Set([
+        ...(origin ? ["origin"] : []), ...(process ? ["process"] : []),
+        ...(["farm", "variety", "roastery", "roasteryNotes", "roastDate"] as const).filter(field => text(result[field])),
+        ...(["purchased", "price"] as const).filter(field => result[field] !== undefined && String(result[field]).trim())
+      ]);
+      setReadFields(read); setPhotoReadCount(read.size);
     } catch (photoRecognitionError) {
       setPhotoError(photoRecognitionError instanceof Error ? photoRecognitionError.message : "사진에서 정보를 읽지 못했어요.");
     } finally {
       setPhotoBusy(false);
     }
   };
-  const close = () => { clearPhoto(); setShow(false); setEditingId(null); setForm(emptyBeanForm); setError(""); setRoastDateTouched(false); purchaseDateFollowsRoast.current = false; setAddingOrigin(false); setNewOrigin(""); };
-  const openNewBean = () => { close(); setShow(true); scrollToEditor(beanFormRef); };
+  const close = () => { clearPhoto(); setShow(false); setEditingId(null); setForm(emptyBeanForm); setError(""); setRoastDateTouched(false); purchaseDateFollowsRoast.current = false; };
+  const openNewBean = () => { close(); setShow(true); };
   const edit = (bean: Bean) => {
     setForm({ ...bean, status: bean.status ?? "소비 중", purchased: String(bean.purchased), consumed: String(bean.consumed ?? 0) });
     setRoastDateTouched(Boolean(bean.roastDate && bean.roastDate !== bean.date));
     purchaseDateFollowsRoast.current = false;
     setEditingId(bean.id); setError(""); setShow(true);
-    scrollToEditor(beanFormRef);
   };
   const remove = () => {
     if (editingId === null) return;
@@ -292,6 +293,17 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
     })}</div> : <p className="facet-empty">{emptyText}</p>}</fieldset>;
   };
   const dateRange = (label: string, from: string, setFrom: (value: string) => void, to: string, setTo: (value: string) => void) => <fieldset className="range-filter-group"><legend>{label}</legend><div><span className="date-field" data-empty={!from} data-placeholder="시작일"><input type="date" value={from} onChange={event => setFrom(event.target.value)} aria-label={`${label} 시작일`} /></span><span>~</span><span className="date-field" data-empty={!to} data-placeholder="종료일"><input type="date" value={to} onChange={event => setTo(event.target.value)} aria-label={`${label} 종료일`} /></span></div></fieldset>;
+  // Picker options, most used first; values nobody has used yet keep their listed order after them.
+  const rankByUse = (values: string[], field: (bean: Bean) => string | undefined) => {
+    const counts = new Map<string, number>();
+    available.forEach(bean => { const value = field(bean)?.trim(); if (value) counts.set(value, (counts.get(value) ?? 0) + 1); });
+    return values.map((value, index) => ({ value, count: counts.get(value) ?? 0, index })).sort((a, b) => b.count - a.count || a.index - b.index).map(({ value, count }) => ({ value, count }));
+  };
+  // Buying the same bean again: copy what describes the bean, leave the amount, dates and status for this bag.
+  const rebuy = (bean: Bean) => {
+    setForm(current => ({ ...current, origin: bean.origin, farm: bean.farm ?? "", variety: bean.variety ?? "", process: bean.process, roastery: bean.roastery, roasteryNotes: bean.roasteryNotes ?? "", price: bean.price, quality: bean.quality }));
+    setReadFields(new Set());
+  };
   const save = (event: React.FormEvent) => {
     event.preventDefault();
     const purchased = Number(form.purchased);
@@ -317,46 +329,29 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
         <div><span>디개싱 중</span><strong>{fmt(Math.round(degassingWeight * 10) / 10)}<small>g</small></strong></div>
       </div>}
       {deletedId !== null && <div className="delete-notice" role="status"><span>{deletedBrews.length > 0 ? `원두와 연결된 브루잉 기록 ${deletedBrews.length}개를 삭제했어요.` : "원두를 삭제했어요."}</span><button type="button" onClick={undoRemove}>되돌리기</button></div>}
-      {show && <form ref={beanFormRef} className="bean-form" onSubmit={save}>
-        <h3>{editingId === null ? "새 원두 등록" : "원두 정보 수정"}</h3>
-        {editingId === null && <section className="bean-photo-import" aria-label="사진으로 원두 정보 자동 입력">
-          <div className="bean-photo-import-heading"><div><strong>사진으로 자동 입력</strong><p>원두 봉투 라벨을 찍으면 읽을 수 있는 정보만 초안에 채워드려요.</p></div><span className="bean-photo-actions"><label className="secondary-button bean-photo-picker"><input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" capture="environment" onChange={event => selectPhoto(event.target.files?.[0])} />사진 찍기</label><label className="secondary-button bean-photo-picker"><input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" onChange={event => selectPhoto(event.target.files?.[0])} />사진 선택</label></span></div>
-          {photoPreview && <div className="bean-photo-preview"><img src={photoPreview} alt="선택한 원두 봉투 사진 미리보기" /><div><strong>{photoFile?.name}</strong><span>{userId ? "사진은 정보를 읽는 동안에만 사용하고 저장하지 않아요." : "사진 인식은 Google 로그인 후 사용할 수 있어요."}</span>{photoMessage && <p className="bean-photo-success" role="status">{photoMessage}</p>}{photoError && <p className="bean-photo-error" role="alert">{photoError}</p>}<button type="button" className="primary-button" disabled={photoBusy || !userId} onClick={recognizePhoto}>{photoBusy ? "정보 읽는 중…" : "사진에서 정보 읽기"}</button></div><button className="bean-photo-remove" type="button" onClick={clearPhoto} aria-label="선택한 사진 제거">×</button></div>}
-          {!photoPreview && photoError && <p className="bean-photo-error" role="alert">{photoError}</p>}
-        </section>}
-        <div className="bean-form-grid">
-          <fieldset className="origin-field full-width"><legend>원산지 *</legend>
-            <div className="origin-options">{origins.map(origin => <button type="button" key={origin} aria-pressed={form.origin === origin} onClick={() => setForm({ ...form, origin })}>{origin}</button>)}<button type="button" aria-expanded={addingOrigin} onClick={() => setAddingOrigin(!addingOrigin)}>+ 원산지 추가</button></div>
-            {addingOrigin && <div className="origin-add"><label>새 원산지<input value={newOrigin} onChange={e => setNewOrigin(e.target.value)} placeholder="예: 과테말라" onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addOrigin(); } }} /></label><button type="button" className="quiet-button" disabled={!newOrigin.trim()} onClick={addOrigin}>추가</button></div>}
-          </fieldset>
-          <div className="bean-origin-row full-width"><label>농장 및 지역<input value={form.farm ?? ""} placeholder="예: 세로아줄" onChange={e => setForm({ ...form, farm: e.target.value })} /></label><label>품종<input value={form.variety ?? ""} placeholder="예: 게이샤" onChange={e => setForm({ ...form, variety: e.target.value })} /></label></div>
-          {editingId === null && varieties.length > 0 && <div className="existing-purchasers existing-varieties full-width"><span>기존 품종</span><span className="existing-purchaser-options">{varieties.map(variety => <span className="existing-purchaser-option" key={variety}><button type="button" onClick={() => setForm({ ...form, variety })}>{variety}</button><button type="button" className="remove-purchaser" aria-label={`${variety} 기존 품종에서 삭제`} onClick={() => hideVariety(variety)}>×</button></span>)}</span></div>}
-          <fieldset className="origin-field full-width"><legend>가공방식</legend>
-            <div className="origin-options process-options">{DEFAULT_PROCESSES.slice(0, 3).map(process => <button type="button" key={process} aria-pressed={form.process === process} onClick={() => setForm({ ...form, process })}>{process}</button>)}<span className="process-anaerobic-pair">{DEFAULT_PROCESSES.slice(3).map(process => <button type="button" key={process} aria-pressed={form.process === process} onClick={() => setForm({ ...form, process })}>{process}</button>)}</span></div>
-            <label className="process-custom">가공방식 직접 입력<input value={DEFAULT_PROCESSES.includes(form.process) ? "" : form.process} placeholder="예: 카보닉 매서레이션" onChange={e => setForm({ ...form, process: e.target.value })} /><span>이 원두에만 적용돼요.</span></label>
-          </fieldset>
-          <div className="generated-name full-width"><span>자동으로 만들어지는 원두 이름</span><output>{beanName(form) || "원두 정보를 입력해주세요"}</output></div>
-          <label className="full-width">로스터리<input value={form.roastery} placeholder="로스터리 이름" onChange={e => setForm({ ...form, roastery: e.target.value })} />{editingId === null && roasteries.length > 0 && <span className="existing-purchasers"><span>기존 구매처</span><span className="existing-purchaser-options">{roasteries.map(roastery => <span className="existing-purchaser-option" key={roastery}><button type="button" onClick={() => setForm({ ...form, roastery })}>{roastery}</button><button type="button" className="remove-purchaser" aria-label={`${roastery} 기존 구매처에서 삭제`} onClick={() => hideRoastery(roastery)}>×</button></span>)}</span></span>}</label>
-          <fieldset className="origin-field full-width"><legend>원두 상태</legend><div className="origin-options">{BEAN_STATUSES.map(status => <button type="button" key={status} aria-pressed={form.status === status} onClick={() => setForm({ ...form, status })}>{status}</button>)}</div></fieldset>
-          <div className="bean-dates full-width">
-          <label>구매량 (g) *<input type="number" min="0.1" step="0.1" required value={form.purchased} placeholder="200" onChange={e => setForm({ ...form, purchased: e.target.value })} /></label>
-          <label><span className="purchase-field-label">소비량 (g)<span className="input-hint">이미 소비한 원두</span></span><input type="number" min="0" step="0.1" value={form.consumed} placeholder="0" onChange={e => setForm({ ...form, consumed: e.target.value })} /></label>
-          </div>
-          <label className="full-width"><span className="purchase-field-label">로스터리 컵노트<span className="input-hint">쉼표(,)로 구분해요</span></span><input value={form.roasteryNotes ?? ""} placeholder="예: 흰 꽃, 복숭아, 꿀" onChange={e => setForm({ ...form, roasteryNotes: e.target.value })} /></label>
-          <div className="bean-purchase-row full-width"><label>구매가격 (원)<input type="text" inputMode="numeric" value={withCommas(form.price)} placeholder="예: 28,000" onChange={e => handleNumericInput(e, price => setForm(current => ({ ...current, price })))} /></label><fieldset className="origin-field"><legend>내 기준 분류</legend><div className="origin-options">{BEAN_QUALITIES.map(quality => <button type="button" key={quality} aria-pressed={form.quality === quality} onClick={() => setForm({ ...form, quality })}>{quality}</button>)}</div></fieldset></div>
-          <div className="bean-dates full-width">
-            <label>구매일<input type="date" value={form.date} onChange={e => { const date = e.target.value; purchaseDateFollowsRoast.current = false; setForm(current => ({ ...current, date, roastDate: roastDateTouched ? current.roastDate : date })); }} /></label>
-            <label>로스팅 날짜<input type="date" value={form.roastDate ?? ""} onChange={e => {
-              const roastDate = e.target.value;
-              setRoastDateTouched(true);
-              setForm(current => ({ ...current, roastDate, date: purchaseDateForRoast(current.date, roastDate) }));
-            }} /></label>
-          </div>
-
-        </div>
-        {error && <p role="alert">{error}</p>}
-        <div className="form-buttons">{editingId !== null && <button type="button" className="delete-bean-button" onClick={remove}>삭제</button>}<button type="button" className="quiet-button" onClick={close}>취소</button><button type="submit" className="primary-button">저장</button></div>
-      </form>}
+      {show && <BeanEditor
+        key={editingId ?? "new"}
+        editing={editingId !== null}
+        form={form}
+        setForm={setForm}
+        processes={DEFAULT_PROCESSES}
+        origins={rankByUse(origins, bean => bean.origin)}
+        roasteries={rankByUse(roasteries, bean => bean.roastery)}
+        varieties={rankByUse(varieties, bean => bean.variety)}
+        pastBeans={editingId === null ? available : []}
+        readFields={readFields}
+        photo={editingId === null ? { preview: photoPreview, busy: photoBusy, error: photoError, readCount: photoReadCount, canRead: Boolean(userId), onSelect: selectPhoto, onRetry: () => recognizePhoto(), onClear: clearPhoto } : null}
+        error={error}
+        onAddOrigin={origin => { if (!origins.includes(origin)) setCustomOrigins([...customOrigins, origin]); }}
+        onHideRoastery={hideRoastery}
+        onHideVariety={hideVariety}
+        onRebuy={rebuy}
+        onRoastDate={roastDate => { setRoastDateTouched(true); setForm(current => ({ ...current, roastDate, date: purchaseDateForRoast(current.date, roastDate) })); }}
+        onPurchaseDate={date => { purchaseDateFollowsRoast.current = false; setForm(current => ({ ...current, date, roastDate: roastDateTouched ? current.roastDate : date })); }}
+        onSave={save}
+        onCancel={close}
+        onDelete={editingId !== null ? remove : undefined}
+      />}
       <label className="bean-search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4 4" /></svg><span className="sr-only">원두 검색</span><input type="search" value={beanQuery} onChange={event => setBeanQuery(event.target.value)} placeholder="원산지, 로스터리, 컵노트로 검색" /></label>
       <div className="inventory-toolbar"><div className="inventory-toolbar-top"><label className="view-mode-control" htmlFor="bean-density">보기<select id="bean-density" className="inventory-sort" value={density} onChange={event => chooseDensity(event.target.value as BeanDensity)}><option value="detail">자세히</option><option value="compact">간략하게</option></select></label><button type="button" className="advanced-filter-button" aria-expanded={advancedFiltersOpen} onClick={() => setAdvancedFiltersOpen(!advancedFiltersOpen)}>세부 검색{activeDetailCount > 0 && <b>{activeDetailCount}</b>}</button></div><div className="inventory-toolbar-row"><div className="inventory-filters" aria-label="원두 재고 필터">
         {[["active", "보유 중"], ["finished", "소비 완료"], ["all", "전체"]].map(([value, label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}

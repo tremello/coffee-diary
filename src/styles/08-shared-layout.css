@@ -208,14 +208,12 @@
   .process-options button { padding-right: 4px; padding-left: 4px; font-size: 11px; }
 }
 
-/* Process chips keep their natural text width; anaerobic options wrap as one pair. */
+/* Process chips keep their natural text width. */
 .process-options { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
 .process-options > button { flex: 0 0 auto; padding-right: 12px; padding-left: 12px; }
-.process-anaerobic-pair { display: inline-flex; flex: 0 0 auto; gap: 7px; }
-.process-anaerobic-pair > button { flex: 0 0 auto; min-width: 0; padding: 8px 12px; white-space: nowrap; }
 @media (max-width: 540px) {
-  .process-options, .process-anaerobic-pair { gap: 6px; }
-  .process-options > button, .process-anaerobic-pair > button { padding-right: 10px; padding-left: 10px; font-size: 12px; }
+  .process-options { gap: 6px; }
+  .process-options > button { padding-right: 10px; padding-left: 10px; font-size: 12px; }
 }
 
 /* Center the shared three-step guide in every empty-state card. */
