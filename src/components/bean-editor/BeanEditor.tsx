@@ -1,4 +1,4 @@
-import { useEffect, useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
+import { useEffect, useRef, useState, type Dispatch, type FormEvent, type PointerEvent, type SetStateAction } from "react";
 import { beanName, handleNumericInput, withCommas } from "../../lib/format";
 import { type Bean, BEAN_QUALITIES, BEAN_STATUSES, type BeanForm } from "../../types";
 import { type PickOption, PickSheet } from "./PickSheet";
@@ -47,6 +47,10 @@ export function BeanEditor({ editing, form, setForm, processes, origins, roaster
   onDelete?: () => void;
 }) {
   const [picker, setPicker] = useState<Picker>(null);
+  const [closing, setClosing] = useState(false);
+  const panelRef = useRef<HTMLFormElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ y: number; t: number; dy: number; v: number } | null>(null);
   const extras = [form.date, Number(form.consumed) > 0 ? form.consumed : "", form.price, form.quality].filter(Boolean).length;
   const [moreOpen, setMoreOpen] = useState(editing);
   const [otherProcess, setOtherProcess] = useState(() => Boolean(form.process) && !processes.includes(form.process));
@@ -55,11 +59,45 @@ export function BeanEditor({ editing, form, setForm, processes, origins, roaster
   const missingOrigin = Boolean(error) && !form.origin.trim();
   const missingAmount = Boolean(error) && !(Number(form.purchased) > 0);
 
+  // On phones the form is a sheet floating over the list: it slides down when closed, and can be dragged down by its top.
+  const isSheet = () => window.matchMedia("(max-width: 759px)").matches && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const dismiss = () => {
+    if (closing) return;
+    if (!isSheet()) { onCancel(); return; }
+    setClosing(true);
+    window.setTimeout(onCancel, 240);
+  };
+  const onDragStart = (event: PointerEvent<HTMLDivElement>) => {
+    if (closing || !isSheet() || (event.target as HTMLElement).closest("button")) return;
+    drag.current = { y: event.clientY, t: event.timeStamp, dy: 0, v: 0 };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const onDragMove = (event: PointerEvent<HTMLDivElement>) => {
+    const current = drag.current, panel = panelRef.current;
+    if (!current || !panel) return;
+    const dy = Math.max(0, event.clientY - current.y);
+    current.v = (dy - current.dy) / Math.max(1, event.timeStamp - current.t);
+    current.dy = dy;
+    current.t = event.timeStamp;
+    panel.style.transition = "none";
+    panel.style.transform = `translateY(${dy}px)`;
+    if (backdropRef.current) backdropRef.current.style.opacity = String(1 - Math.min(1, dy / panel.offsetHeight));
+  };
+  const onDragEnd = () => {
+    const current = drag.current, panel = panelRef.current;
+    drag.current = null;
+    if (!current || !panel) return;
+    panel.style.transition = "";
+    panel.style.transform = "";
+    if (backdropRef.current) backdropRef.current.style.opacity = "";
+    if (current.dy > 120 || (current.dy > 20 && current.v > 0.6)) dismiss();
+  };
+
   useEffect(() => {
-    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") { if (picker) setPicker(null); else onCancel(); } };
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") { if (picker) setPicker(null); else dismiss(); } };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [picker, onCancel]);
+  });
   useEffect(() => {
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -82,16 +120,19 @@ export function BeanEditor({ editing, form, setForm, processes, origins, roaster
     setPicker(null);
   };
 
-  return <div className="be-layer">
-    <div className="be-backdrop" aria-hidden="true" />
-    <form className="be-panel" role="dialog" aria-modal="true" aria-labelledby="be-title" onSubmit={onSave} noValidate>
-      <div className="be-head">
-        <button type="button" className="be-head-button" onClick={onCancel}>취소</button>
-        <h2 id="be-title">{editing ? "원두 정보 수정" : "새 원두"}</h2>
-        <button type="submit" className="be-head-button save">저장</button>
+  return <div className={`be-layer${closing ? " closing" : ""}`}>
+    <div className="be-backdrop" ref={backdropRef} aria-hidden="true" onClick={() => { if (isSheet()) dismiss(); }} />
+    <form className="be-panel" ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="be-title" onSubmit={onSave} noValidate>
+      <div className="be-top" onPointerDown={onDragStart} onPointerMove={onDragMove} onPointerUp={onDragEnd} onPointerCancel={onDragEnd}>
+        <div className="be-grab" aria-hidden="true" />
+        <div className="be-head">
+          <button type="button" className="be-head-button" onClick={dismiss}>취소</button>
+          <h2 id="be-title">{editing ? "원두 정보 수정" : "새 원두"}</h2>
+          <button type="submit" className="be-head-button save">저장</button>
+        </div>
+        <p className="be-name">{name || "원산지를 고르면 이름이 만들어져요"}</p>
       </div>
-      <p className="be-name">{name || "원산지를 고르면 이름이 만들어져요"}</p>
-      <div className="be-body">
+      <div className="be-body"><div className="be-body-inner">
         {error && <p className="be-alert" role="alert">{error}</p>}
 
         {photo && <div className="be-card be-quick">
@@ -167,7 +208,7 @@ export function BeanEditor({ editing, form, setForm, processes, origins, roaster
         </section> : <button type="button" className="be-more" onClick={() => setMoreOpen(true)}><span>구매일 · 소비량 · 가격 · 분류</span><b>{extras > 0 ? `${extras}개 입력됨 ›` : "더 보기 ›"}</b></button>}
 
         {onDelete && <button type="button" className="be-delete" onClick={onDelete}>이 원두 삭제</button>}
-      </div>
+      </div></div>
 
       {picker === "origin" && <PickSheet title="원산지" layout="grid" value={form.origin} options={origins} placeholder="목록에 없으면 직접 쓰기" onPick={pick("origin")} onClose={() => setPicker(null)} />}
       {picker === "variety" && <PickSheet title="품종" layout="list" value={form.variety ?? ""} options={varieties} placeholder="품종 이름" onPick={pick("variety")} onHide={onHideVariety} onClose={() => setPicker(null)} />}
