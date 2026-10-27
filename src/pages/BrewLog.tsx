@@ -85,7 +85,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   const [addingDripper, setAddingDripper] = useState(false);
   const [newDripper, setNewDripper] = useState("");
   const [query, setQuery] = useState("");
-  const [brewSort, setBrewSort] = useState<"latest" | "oldest" | "amount">("latest");
+  const [brewSort, setBrewSort] = useState<"latest" | "oldest">("latest");
   const [selectedRecipeId, setSelectedRecipeId] = useState("");
   const [recipeMode, setRecipeMode] = useState<"saved" | "custom">("saved");
   const [brewError, setBrewError] = useState("");
@@ -155,7 +155,6 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     return [bean?.name, bean?.roastery, brew.recipe, brew.method, brew.date].filter(Boolean).join(" ").toLowerCase().includes(normalizedQuery);
   });
   const sorted = [...filteredBrews].sort((a, b) => {
-    if (brewSort === "amount") return b.amount - a.amount || b.date.localeCompare(a.date);
     return brewSort === "latest" ? b.date.localeCompare(a.date) || b.id - a.id : a.date.localeCompare(b.date) || a.id - b.id;
   });
   const activeBeans = beans.filter(b => !b.deleted && b.remaining > 0);
@@ -229,7 +228,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
 
       <div className="brew-log-tools">
         <label className="brew-search"><span className="sr-only">브루잉 기록 검색</span><input value={query} onChange={event => setQuery(event.target.value)} placeholder="원두, 로스터리, 레시피 검색" /></label>
-        <select aria-label="브루잉 기록 정렬" value={brewSort} onChange={event => setBrewSort(event.target.value as "latest" | "oldest" | "amount")}><option value="latest">최신순</option><option value="oldest">오래된 순</option><option value="amount">사용량 많은 순</option></select>
+        <select className="inventory-sort" aria-label="브루잉 기록 정렬" value={brewSort} onChange={event => setBrewSort(event.target.value as "latest" | "oldest")}><option value="latest">최신순</option><option value="oldest">오래된 순</option></select>
       </div>
 
       {sorted.length === 0 ? (brews.length === 0 ? <div className="brew-empty inventory-empty"><img className="onboarding-logo" src="/coffee-diary-logo-brown-96.png" width="38" height="38" alt="" /><h3>첫 브루잉을 기록해보세요</h3><p>원두와 레시피를 골라 오늘의 한 잔을 남겨보세요.</p><JourneySteps active="brews" /><button type="button" className="primary-button" onClick={() => setShow(true)}>첫 브루잉 기록하기</button></div> : <Empty text="검색 결과가 없어요" />) : sorted.map(brew => {

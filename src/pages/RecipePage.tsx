@@ -3,16 +3,16 @@ import { type StorageSetter } from "../data/sync";
 import { Field, JourneySteps } from "../components/ui";
 import { fmt, scrollToEditor } from "../lib/format";
 import { basicRecipeSteps, defaultRecipeSteps, extractionCumulative, immersionActions, immersionSeconds, isAmountlessStep, isBypassStep, normalizedRecipeAction, recipeActions, recipeTime, recipeTimeFromDigits, recipeTimeToSeconds, recipeWater } from "../lib/recipe";
-import { type RecipeStep, type SavedRecipe } from "../types";
+import { type Brew, type RecipeStep, type SavedRecipe } from "../types";
 
-export function RecipePage({ recipes, setRecipes }: { recipes: SavedRecipe[]; setRecipes: StorageSetter<SavedRecipe[]> }) {
+export function RecipePage({ recipes, setRecipes, brews }: { recipes: SavedRecipe[]; setRecipes: StorageSetter<SavedRecipe[]>; brews: Brew[] }) {
   return <div className="recipe-page">
     <div className="inventory-intro recipe-intro"><div><p>자주 쓰는 추출 흐름을 내 방식으로 저장해요.</p></div></div>
-    <RecipeLibrary recipes={recipes} setRecipes={setRecipes} />
+    <RecipeLibrary recipes={recipes} setRecipes={setRecipes} brews={brews} />
   </div>;
 }
 
-function RecipeLibrary({ recipes, setRecipes }: { recipes: SavedRecipe[]; setRecipes: StorageSetter<SavedRecipe[]> }) {
+function RecipeLibrary({ recipes, setRecipes, brews }: { recipes: SavedRecipe[]; setRecipes: StorageSetter<SavedRecipe[]>; brews: Brew[] }) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [name, setName] = useState("");
@@ -22,6 +22,7 @@ function RecipeLibrary({ recipes, setRecipes }: { recipes: SavedRecipe[]; setRec
   const [steps, setSteps] = useState<RecipeStep[]>(defaultRecipeSteps);
   const [showErrors, setShowErrors] = useState(false);
   const [deletedRecipe, setDeletedRecipe] = useState<SavedRecipe | null>(null);
+  const [sort, setSort] = useState<"latest" | "registered" | "recentlyUsed">("latest");
   const composerRef = useRef<HTMLElement>(null);
 
   const { extraction: totalWater, bypass: bypassWater } = recipeWater(steps);
@@ -72,7 +73,22 @@ function RecipeLibrary({ recipes, setRecipes }: { recipes: SavedRecipe[]; setRec
     setRecipes([...recipes, deletedRecipe]);
     setDeletedRecipe(null);
   };
-  const sorted = [...recipes].sort((a, b) => b.createdAt - a.createdAt);
+  const lastUsedByName = new Map<string, Brew>();
+  brews.forEach(brew => {
+    const name = brew.recipe.trim();
+    if (!name) return;
+    const previous = lastUsedByName.get(name);
+    if (!previous || brew.date > previous.date || (brew.date === previous.date && brew.id > previous.id)) lastUsedByName.set(name, brew);
+  });
+  const sorted = [...recipes].sort((a, b) => {
+    if (sort === "registered") return a.createdAt - b.createdAt || a.id - b.id;
+    if (sort === "recentlyUsed") {
+      const aLast = lastUsedByName.get(a.name)?.date ?? "";
+      const bLast = lastUsedByName.get(b.name)?.date ?? "";
+      return bLast.localeCompare(aLast) || b.createdAt - a.createdAt || b.id - a.id;
+    }
+    return b.createdAt - a.createdAt || b.id - a.id;
+  });
 
   return <>
     <section ref={composerRef} className="recipe-composer-card" aria-label="새 레시피">
@@ -121,7 +137,7 @@ function RecipeLibrary({ recipes, setRecipes }: { recipes: SavedRecipe[]; setRec
     </section>
     {deletedRecipe && <div className="delete-notice" role="status"><span>레시피를 삭제했어요.</span><button type="button" onClick={undoRemove}>되돌리기</button></div>}
     <section className="recipe-library" aria-label="저장 레시피">
-      <div className="recipe-library-list-header"><strong>저장한 레시피</strong><span>{recipes.length}개</span></div>
+      <div className="recipe-library-list-header"><div className="recipe-library-heading"><strong>저장한 레시피</strong><span>{recipes.length}개</span></div><label className="recipe-sort-control" htmlFor="recipe-sort">정렬<select id="recipe-sort" className="inventory-sort recipe-sort-select" value={sort} onChange={event => setSort(event.target.value as typeof sort)}><option value="latest">최신순</option><option value="registered">등록순</option><option value="recentlyUsed">최근 사용한 순</option></select></label></div>
       <div className="recipe-library-list">
       {!sorted.length ? <div className="recipe-library-empty recipe-onboarding"><img className="onboarding-logo" src="/coffee-diary-logo-brown-96.png" width="38" height="38" alt="" /><h3>첫 레시피를 만들어보세요</h3><p>자주 쓰는 드립 방식을 저장해두면 브루잉 기록에 바로 적용할 수 있어요.</p><JourneySteps active="recipes" /><button type="button" className="primary-button" onClick={() => setOpen(true)}>첫 레시피 만들기</button></div> : sorted.map(recipe => {
         const { extraction: water, bypass } = recipeWater(recipe.steps);
