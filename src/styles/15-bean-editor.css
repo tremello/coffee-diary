@@ -118,6 +118,8 @@ button.be-row:hover { background: var(--bg-f7f1e9); }
 .be-pick-add input { flex: 1 1 auto; min-width: 0; height: 36px; padding: 0; border: 0; background: transparent; color: var(--fg-2a211a); font: inherit; font-size: 15px; outline: none; box-shadow: none; }
 .be-pick-add button { flex: 0 0 auto; min-height: 36px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--bg-7a5733); color: var(--fg-ffffff); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .be-pick-add button:disabled { opacity: .45; cursor: default; }
+/* iOS zooms into fields under 16px on focus, which throws the picker off screen. */
+@media (max-width: 759px) { .be-pick-search input, .be-pick-add input { font-size: 16px; } }
 
 @media (min-width: 760px) {
   .be-panel { inset: auto; left: 50%; top: 50%; width: min(760px, calc(100vw - 48px)); max-height: calc(100vh - 64px); transform: translate(-50%, -50%); border-radius: 20px; box-shadow: 0 24px 60px rgba(var(--sh-5c442a), calc(0.25 * var(--shadow-k))); animation: none; transition: none; }

@@ -27,7 +27,7 @@ function ListSheet({ title, items, empty, search, noMatch, onClose }: { title: s
     <div className="be-pick" ref={pick.sheetRef} style={pick.sheetStyle} role="dialog" aria-modal="true" aria-label={title}>
       <div className="be-pick-grab" {...pick.handleProps} aria-hidden="true" />
       <div className="be-pick-head" {...pick.handleProps}><h3>{title}</h3><div><button type="button" onClick={pick.close}>닫기</button></div></div>
-      {search && items.length > 0 && <label className="be-pick-search"><span className="sr-only">{title} 검색</span><input type="search" value={query} placeholder={search} autoFocus={window.matchMedia("(min-width: 760px)").matches} onFocus={pick.expand} onChange={event => setQuery(event.target.value)} /></label>}
+      {search && items.length > 0 && <label className="be-pick-search"><span className="sr-only">{title} 검색</span><input type="search" value={query} placeholder={search} autoFocus={window.matchMedia("(min-width: 760px)").matches} onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); event.currentTarget.blur(); } }} /></label>}
       <div className="be-pick-scroll" ref={pick.scrollRef}>
         {shown.length ? <div className="be-pick-list">{shown.map(item => <div className="be-pick-item" key={item.key} aria-current={item.current}>
           <button type="button" onClick={item.onPick}><span>{item.title}</span>{item.sub && <small>{item.sub}</small>}</button>

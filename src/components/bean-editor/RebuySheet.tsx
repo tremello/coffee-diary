@@ -25,7 +25,7 @@ export function RebuySheet({ beans, onPick, onClose }: { beans: Bean[]; onPick: 
     <div className="be-pick" ref={pick.sheetRef} style={pick.sheetStyle} role="dialog" aria-modal="true" aria-label="예전에 산 원두">
       <div className="be-pick-grab" {...pick.handleProps} aria-hidden="true" />
       <div className="be-pick-head" {...pick.handleProps}><h3>예전에 산 원두</h3><div><button type="button" onClick={pick.close}>닫기</button></div></div>
-      <label className="be-pick-search"><span className="sr-only">예전 원두 찾기</span><input type="search" value={query} placeholder="원두 이름, 로스터리로 찾기" onFocus={pick.expand} onChange={event => setQuery(event.target.value)} /></label>
+      <label className="be-pick-search"><span className="sr-only">예전 원두 찾기</span><input type="search" value={query} placeholder="원두 이름, 로스터리로 찾기" onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); event.currentTarget.blur(); } }} /></label>
       <div className="be-pick-scroll" ref={pick.scrollRef}>
         {shown.length > 0 ? <div className="be-pick-list">{shown.map(bean => <div className="be-pick-item" key={bean.id}>
           <button type="button" onClick={() => onPick(bean)}><span>{bean.name || bean.origin}</span><small>{[bean.roastery, bean.date && `마지막 구매 ${shortDate(bean.date)}`, `${bean.purchased}g`].filter(Boolean).join(" · ")}</small></button>
