@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { usePickDrag } from "./usePickDrag";
 
 export type PickOption = { value: string; count: number };
 
@@ -15,6 +16,9 @@ export function PickSheet({ title, value, options, layout, placeholder, onPick, 
   onClose: () => void;
 }) {
   const [query, setQuery] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState("");
+  const pick = usePickDrag(onClose);
   const typed = query.trim();
   const shown = layout === "list" && typed ? options.filter(option => option.value.toLowerCase().includes(typed.toLowerCase())) : options;
   const exact = options.some(option => option.value === typed);
@@ -23,17 +27,25 @@ export function PickSheet({ title, value, options, layout, placeholder, onPick, 
     return at < 0 ? text : <>{text.slice(0, at)}<b>{text.slice(at, at + typed.length)}</b>{text.slice(at + typed.length)}</>;
   };
   const submitTyped = () => { if (typed) onPick(typed); };
+  const submitNew = () => { if (newName.trim()) onPick(newName.trim()); };
   return <div className="be-pick-layer">
-    <div className="be-pick-backdrop" onClick={onClose} aria-hidden="true" />
-    <div className="be-pick" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="be-pick-grab" aria-hidden="true" />
-      <div className="be-pick-head"><h3>{title}</h3><div>{value && <button type="button" onClick={() => onPick("")}>지우기</button>}<button type="button" onClick={onClose}>닫기</button></div></div>
-      {layout === "list" && <label className="be-pick-search"><span className="sr-only">{title} 이름</span><input value={query} placeholder={placeholder} onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); submitTyped(); } }} /></label>}
-      <div className="be-pick-scroll">
+    <div className="be-pick-backdrop" style={pick.backdropStyle} onClick={pick.close} aria-hidden="true" />
+    <div className="be-pick" ref={pick.sheetRef} style={pick.sheetStyle} role="dialog" aria-modal="true" aria-label={title}>
+      <div className="be-pick-grab" {...pick.handleProps} aria-hidden="true" />
+      <div className="be-pick-head" {...pick.handleProps}><h3>{title}</h3><div>{value && <button type="button" onClick={() => onPick("")}>지우기</button>}<button type="button" onClick={pick.close}>닫기</button></div></div>
+      {layout === "list" && <label className="be-pick-search"><span className="sr-only">{title} 이름</span><input value={query} placeholder={placeholder} onFocus={pick.expand} onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); submitTyped(); } }} /></label>}
+      <div className="be-pick-scroll" ref={pick.scrollRef}>
         {layout === "grid" ? <>
           <p className="be-pick-label">자주 고른 순서</p>
           <div className="be-pick-grid">{options.map(option => <button type="button" key={option.value} aria-pressed={option.value === value} onClick={() => onPick(option.value)}>{option.value}</button>)}</div>
         </> : <>
+          {/* Adding a new one is its own first row, so it's there even before anything is typed. */}
+          <div className="be-pick-list">
+            {adding ? <div className="be-pick-item be-pick-add">
+              <input autoFocus value={newName} placeholder={`새 ${title} 이름`} aria-label={`새 ${title} 이름`} onFocus={pick.expand} onChange={event => setNewName(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); submitNew(); } }} />
+              <button type="button" disabled={!newName.trim()} onClick={submitNew}>추가</button>
+            </div> : <div className="be-pick-item be-pick-new"><button type="button" onClick={() => setAdding(true)}>+ 새 {title} 추가</button></div>}
+          </div>
           {shown.length > 0 && <p className="be-pick-label">{typed ? "예전에 쓴 것" : "자주 쓴 순서"}</p>}
           {(shown.length > 0 || (typed && !exact)) ? <div className="be-pick-list">
             {shown.map(option => <div className="be-pick-item" key={option.value} aria-current={option.value === value}>
@@ -41,7 +53,7 @@ export function PickSheet({ title, value, options, layout, placeholder, onPick, 
               {onHide && <button type="button" className="be-pick-hide" aria-label={`${option.value} 목록에서 숨기기`} onClick={() => onHide(option.value)}>×</button>}
             </div>)}
             {typed && !exact && <div className="be-pick-item be-pick-new"><button type="button" onClick={submitTyped}>+ ‘{typed}’ 새로 쓰기</button></div>}
-          </div> : <p className="be-pick-empty">아직 쓴 적이 없어요. 위에 이름을 적어주세요.</p>}
+          </div> : !typed && <p className="be-pick-empty">아직 등록한 것이 없어요. 위에서 추가해주세요.</p>}
         </>}
       </div>
       {layout === "grid" && <label className="be-pick-search"><span className="sr-only">새 {title}</span><input value={query} placeholder={placeholder} onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); submitTyped(); } }} /><button type="button" disabled={!typed} onClick={submitTyped}>추가</button></label>}

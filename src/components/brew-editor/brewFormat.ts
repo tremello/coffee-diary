@@ -17,7 +17,7 @@ export const brewTimeFromDigits = (value: string) => {
   return digits ? `${Number(digits.slice(0, -2) || "0")}:${digits.slice(-2).padStart(2, "0")}` : "";
 };
 
-export const brewConditions = (brew: Brew) => [brew.method, brew.grindSize && `분쇄 ${brew.grindSize}`, brew.waterTemp && `${fmt(brew.waterTemp)}℃`, brew.brewTime && `${brew.brewTime} 추출`].filter(Boolean).join(" · ");
+export const brewConditions = (brew: Brew) => [brew.method, brew.grindSize, brew.waterTemp && `${fmt(brew.waterTemp)}℃`, brew.brewTime && `${brew.brewTime} 추출 완료`].filter(Boolean).join(" · ");
 
 export const brewRatio = (amount: number, waterAmount?: number) => waterAmount && amount > 0 ? `1:${Number((waterAmount / amount).toFixed(1)).toLocaleString()}` : "";
 

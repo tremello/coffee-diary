@@ -109,6 +109,15 @@ button.be-row:hover { background: var(--bg-f7f1e9); }
 .be-pick-item b { color: var(--fg-7a5733); }
 .be-pick-note { margin: 0; padding: 0 4px; color: var(--fg-6b5d50); font-size: 12px; }
 .be-pick-empty { margin: 0; padding: 14px; color: var(--fg-6b5d50); font-size: 13px; }
+/* Pickers keep their height while the list is filtered: half the screen on phones (usePickDrag drags it up or away), fixed on wider screens. */
+.be-pick { height: min(50vh, calc(100% - 8px)); max-height: none; }
+.be-pick-grab, .be-pick-head { flex: 0 0 auto; }
+.be-pick-grab { box-sizing: content-box; padding: 6px 30px; margin-top: -6px; background-clip: content-box; }
+.be-pick-scroll { flex: 1 1 auto; }
+.be-pick-add { gap: 8px; padding: 6px 8px 6px 14px; }
+.be-pick-add input { flex: 1 1 auto; min-width: 0; height: 36px; padding: 0; border: 0; background: transparent; color: var(--fg-2a211a); font: inherit; font-size: 15px; outline: none; box-shadow: none; }
+.be-pick-add button { flex: 0 0 auto; min-height: 36px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--bg-7a5733); color: var(--fg-ffffff); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.be-pick-add button:disabled { opacity: .45; cursor: default; }
 
 @media (min-width: 760px) {
   .be-panel { inset: auto; left: 50%; top: 50%; width: min(760px, calc(100vw - 48px)); max-height: calc(100vh - 64px); transform: translate(-50%, -50%); border-radius: 20px; box-shadow: 0 24px 60px rgba(var(--sh-5c442a), calc(0.25 * var(--shadow-k))); animation: none; transition: none; }
@@ -117,7 +126,7 @@ button.be-row:hover { background: var(--bg-f7f1e9); }
   .be-head { padding-top: 8px; }
   .be-body-inner { min-height: 0; padding: 0 20px 20px; }
   .be-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
-  .be-pick { left: 50%; right: auto; bottom: auto; top: 50%; width: 420px; max-height: 80%; transform: translate(-50%, -50%); border-radius: 18px; padding-bottom: 18px; animation: none; }
+  .be-pick { left: 50%; right: auto; bottom: auto; top: 50%; width: 420px; height: min(560px, 80%); max-height: 80%; transform: translate(-50%, -50%); border-radius: 18px; padding-bottom: 18px; animation: none; }
   .be-pick-grab { display: none; }
 }
 /* Phones keep form fields at 16px (iOS zooms smaller ones), so every row's text is 16px to match. */

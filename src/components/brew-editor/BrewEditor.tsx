@@ -1,6 +1,7 @@
 import { useState, type Dispatch, type SetStateAction } from "react";
 import { StarRating } from "../ui";
 import { PickSheet, type PickOption } from "../bean-editor/PickSheet";
+import { usePickDrag } from "../bean-editor/usePickDrag";
 import { fmt } from "../../lib/format";
 import { recipeWater } from "../../lib/recipe";
 import { type Bean, type BrewForm, type SavedRecipe } from "../../types";
@@ -18,15 +19,16 @@ type ListItem = { key: string; title: string; sub?: string; keywords?: string; c
 // With `search`, a box on top filters the list: every typed word must appear in the title, sub line or keywords.
 function ListSheet({ title, items, empty, search, noMatch, onClose }: { title: string; items: ListItem[]; empty: string; search?: string; noMatch?: string; onClose: () => void }) {
   const [query, setQuery] = useState("");
+  const pick = usePickDrag(onClose);
   const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const shown = words.length ? items.filter(item => { const text = [item.title, item.sub, item.keywords].join(" ").toLowerCase(); return words.every(word => text.includes(word)); }) : items;
   return <div className="be-pick-layer">
-    <div className="be-pick-backdrop" onClick={onClose} aria-hidden="true" />
-    <div className="be-pick" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="be-pick-grab" aria-hidden="true" />
-      <div className="be-pick-head"><h3>{title}</h3><div><button type="button" onClick={onClose}>닫기</button></div></div>
-      {search && items.length > 0 && <label className="be-pick-search"><span className="sr-only">{title} 검색</span><input type="search" value={query} placeholder={search} autoFocus={window.matchMedia("(min-width: 760px)").matches} onChange={event => setQuery(event.target.value)} /></label>}
-      <div className="be-pick-scroll">
+    <div className="be-pick-backdrop" style={pick.backdropStyle} onClick={pick.close} aria-hidden="true" />
+    <div className="be-pick" ref={pick.sheetRef} style={pick.sheetStyle} role="dialog" aria-modal="true" aria-label={title}>
+      <div className="be-pick-grab" {...pick.handleProps} aria-hidden="true" />
+      <div className="be-pick-head" {...pick.handleProps}><h3>{title}</h3><div><button type="button" onClick={pick.close}>닫기</button></div></div>
+      {search && items.length > 0 && <label className="be-pick-search"><span className="sr-only">{title} 검색</span><input type="search" value={query} placeholder={search} autoFocus={window.matchMedia("(min-width: 760px)").matches} onFocus={pick.expand} onChange={event => setQuery(event.target.value)} /></label>}
+      <div className="be-pick-scroll" ref={pick.scrollRef}>
         {shown.length ? <div className="be-pick-list">{shown.map(item => <div className="be-pick-item" key={item.key} aria-current={item.current}>
           <button type="button" onClick={item.onPick}><span>{item.title}</span>{item.sub && <small>{item.sub}</small>}</button>
         </div>)}</div> : <p className="be-pick-empty">{items.length ? noMatch : empty}</p>}
