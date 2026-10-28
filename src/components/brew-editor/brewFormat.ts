@@ -24,6 +24,20 @@ export const brewRatio = (amount: number, waterAmount?: number) => waterAmount &
 // The parts of a brew worth repeating next time: dose, water, recipe and how it was brewed (not the date or the notes).
 export const brewConditionsForm = (brew: Brew): Omit<BrewForm, "beanId" | "date"> => ({ amount: String(brew.amount), waterAmount: brew.waterAmount ? String(brew.waterAmount) : "", method: brew.method, recipe: brew.recipe, grindSize: brew.grindSize ?? "", waterTemp: brew.waterTemp ? String(brew.waterTemp) : "", brewTime: brew.brewTime ?? "" });
 
+// 분쇄도 is stored as one string ("코만단테 25클릭"); the form splits it into a grinder and a click count. A registered
+// grinder name wins (longest first), then any text before the first number; text with no number stays as the count.
+export const parseGrind = (grindSize: string, grinders: string[]) => {
+  const text = grindSize.trim();
+  const known = [...grinders].sort((a, b) => b.length - a.length).find(name => name && text.startsWith(name));
+  const rest = known ? text.slice(known.length).trim() : text;
+  const match = rest.match(/\d+(?:\.\d+)?/);
+  if (known) return { grinder: known, clicks: match ? match[0] : rest };
+  if (!match || match.index === undefined) return { grinder: "", clicks: text };
+  return { grinder: text.slice(0, match.index).trim(), clicks: match[0] };
+};
+
+export const composeGrind = (grinder: string, clicks: string) => clicks.trim() ? `${grinder.trim() ? `${grinder.trim()} ` : ""}${clicks.trim()}클릭` : "";
+
 export const latestBrewOf = (brews: Brew[], beanId: number) => brews.filter(brew => brew.beanId === beanId).sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)[0];
 
 export const shortDate = (date: string) => { const day = parseLocalDate(date); return `${day.getMonth() + 1}/${day.getDate()}`; };

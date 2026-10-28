@@ -5,6 +5,7 @@ import { ChipList, SettingsDisclosure, SettingsGroup } from "./parts";
 // The pick-lists the bean and brew forms remember. The forms can add or hide items but never bring them back, so that happens here.
 export function ListsSection({ userId }: { userId: string | null }) {
   const [drippers, setDrippers] = useStorage<string[]>(STORAGE_KEYS.drippers, [], userId);
+  const [grinders, setGrinders] = useStorage<string[]>(STORAGE_KEYS.grinders, [], userId);
   const [origins, setOrigins] = useStorage<string[]>(LIST_KEYS.origins, [], userId);
   const [hiddenRoasteries, setHiddenRoasteries] = useStorage<string[]>(LIST_KEYS.hiddenRoasteries, [], userId);
   const [hiddenVarieties, setHiddenVarieties] = useStorage<string[]>(LIST_KEYS.hiddenVarieties, [], userId);
@@ -13,6 +14,9 @@ export function ListsSection({ userId }: { userId: string | null }) {
   return <SettingsGroup title="내 도구·목록">
     <SettingsDisclosure label="내 드리퍼" summary={`${drippers.length}개`}>
       <ChipList items={drippers} empty="등록한 드리퍼가 없어요. 브루잉을 기록할 때 추가할 수 있어요." actionLabel={item => `${item} 삭제`} onAction={item => setDrippers(without(drippers, item))} />
+    </SettingsDisclosure>
+    <SettingsDisclosure label="내 그라인더" summary={`${grinders.length}개`}>
+      <ChipList items={grinders} empty="등록한 그라인더가 없어요. 브루잉을 기록할 때 추가할 수 있어요." actionLabel={item => `${item} 삭제`} onAction={item => setGrinders(without(grinders, item))} />
     </SettingsDisclosure>
     <SettingsDisclosure label="숨긴 로스터리·품종" summary={`${hiddenCount}개`}>
       {hiddenCount === 0 ? <p className="settings-empty">숨긴 항목이 없어요.</p> : <>

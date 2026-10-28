@@ -3,7 +3,7 @@ import { type StorageSetter, useStorage } from "../data/sync";
 import { Empty, JourneySteps } from "../components/ui";
 import { BrewDetail } from "../components/brew-editor/BrewDetail";
 import { BrewEditor, type BrewNote } from "../components/brew-editor/BrewEditor";
-import { brewConditions, brewConditionsForm, brewRatio, dayHeading, emptyBrewForm, emptyNoteForm, latestBrewOf, normalizeBrewTime, noteMemo, shortDate, TASTE_ATTRIBUTES, tasteScore, tasteSummary } from "../components/brew-editor/brewFormat";
+import { brewConditions, brewConditionsForm, parseGrind, brewRatio, dayHeading, emptyBrewForm, emptyNoteForm, latestBrewOf, normalizeBrewTime, noteMemo, shortDate, TASTE_ATTRIBUTES, tasteScore, tasteSummary } from "../components/brew-editor/brewFormat";
 import { RatingStars } from "../components/brew-editor/RatingStars";
 import { STORAGE_KEYS } from "../data/keys";
 import { readLocal, writeLocal } from "../data/storage";
@@ -13,6 +13,7 @@ import { type Bean, type BeanStatus, type Brew, type BrewForm, type SavedRecipe,
 
 // Shown only until the user registers drippers of their own.
 const DRIPPER_SUGGESTIONS = ["하리오 V60", "오리가미", "칼리타"];
+const GRINDER_SUGGESTIONS = ["코만단테", "1Zpresso K-Ultra", "타임모어 C3"];
 
 // An unsaved new brew survives closing the sheet by accident; cf_ so it is cleared with the account's other local data.
 const DRAFT_KEY = "cf_brew_draft";
@@ -44,6 +45,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   const [note, setNote] = useState<BrewNote>(emptyNote);
   const [prefill, setPrefill] = useState<Prefill>(null);
   const [drippers, setDrippers] = useStorage<string[]>(STORAGE_KEYS.drippers, [], userId);
+  const [grinders, setGrinders] = useStorage<string[]>(STORAGE_KEYS.grinders, [], userId);
   const [query, setQuery] = useState("");
   const [brewSort, setBrewSort] = useState<"latest" | "oldest">("latest");
   const [selectedRecipeId, setSelectedRecipeId] = useState("");
@@ -56,7 +58,12 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   const editingBean = editingId !== null ? beans.find(b => String(b.id) === form.beanId && !activeBeans.includes(b)) : undefined;
   const beanChoices = editingBean ? [editingBean, ...activeBeans] : activeBeans;
   const noteOf = (brew: Brew) => notes.find(item => item.brewId === brew.id);
-  const recipeIdFor = (brew: Brew) => brew.recipeId !== undefined && recipes.some(recipe => recipe.id === brew.recipeId) ? String(brew.recipeId) : "";
+  // Older brews only kept the recipe name; link them to the one saved recipe of that name so it shows as picked.
+  const recipeIdFor = (brew: Brew) => {
+    if (brew.recipeId !== undefined && recipes.some(recipe => recipe.id === brew.recipeId)) return String(brew.recipeId);
+    const named = brew.recipe.trim() ? recipes.filter(recipe => recipe.name.trim() === brew.recipe.trim()) : [];
+    return named.length === 1 ? String(named[0].id) : "";
+  };
 
   // Keep the unsaved new brew while the sheet is open; saving or "비우기" removes it.
   const dirty = Boolean(form.beanId || form.amount || form.waterAmount || form.method || form.recipe || form.grindSize || form.waterTemp || form.brewTime || note.memo.trim() || note.rating || Object.values(note.taste).some(Boolean));
@@ -135,6 +142,8 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     const brew: Brew = { id: editingId ?? Date.now(), beanId: nextBeanId, amount: amt, waterAmount: water, method: form.method.trim(), date: form.date, recipe: form.recipe, ...(recipeId !== undefined ? { recipeId } : {}), grindSize: form.grindSize.trim() || undefined, waterTemp: temp, brewTime: brewTime || undefined };
     setBrews(editingId === null ? [...brews, brew] : brews.map(item => item.id === editingId ? brew : item));
     if (brew.method && !drippers.includes(brew.method)) setDrippers([...drippers, brew.method]);
+    const savedGrinder = brew.grindSize ? parseGrind(brew.grindSize, grinders).grinder : "";
+    if (savedGrinder && !grinders.includes(savedGrinder)) setGrinders([...grinders, savedGrinder]);
     setBeans(restoredBeans.map(item => item.id === nextBeanId ? { ...item, remaining: Math.round((item.remaining - amt) * 10) / 10, ...(startsConsuming ? { status: "소비 중" as BeanStatus } : {}) } : item));
     if (note.memo.trim() || note.rating > 0 || Object.values(note.taste).some(Boolean) || previousNote) {
       const base = previousNote ?? emptyNoteForm();
@@ -186,6 +195,14 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     if (dripper && !drippers.includes(dripper)) setDrippers([...drippers, dripper]);
     setForm(current => ({ ...current, method: dripper }));
   };
+  const pickGrinder = (grinder: string) => { if (grinder && !grinders.includes(grinder)) setGrinders([...grinders, grinder]); };
+  // A new brew starts with the grinder of that bean's last brew, else of the latest brew, else the first registered one.
+  const grinderOf = (brew?: Brew) => brew?.grindSize ? parseGrind(brew.grindSize, grinders).grinder : "";
+  const latestBrew = [...brews].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)[0];
+  const defaultGrinder = (form.beanId ? grinderOf(latestBrewOf(brews, Number(form.beanId))) : "") || grinderOf(latestBrew) || grinders[0] || "";
+  const grinderNames = grinders.length ? grinders : GRINDER_SUGGESTIONS;
+  const currentGrinder = parseGrind(form.grindSize, grinderNames).grinder;
+  const grinderOptions = (currentGrinder && !grinderNames.includes(currentGrinder) ? [currentGrinder, ...grinderNames] : grinderNames).map(value => ({ value, count: 0 }));
   // An edited brew may use a dripper since removed from the list; keep it pickable.
   const dripperNames = drippers.length ? drippers : DRIPPER_SUGGESTIONS;
   const dripperOptions = (form.method && !dripperNames.includes(form.method) ? [form.method, ...dripperNames] : dripperNames).map(value => ({ value, count: 0 }));
@@ -248,10 +265,11 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
       </Fragment>)}
       {!show && <button type="button" className="bean-fab brew-fab" onClick={openNew}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>브루잉 추가</button>}
 
-      {show && <BrewEditor editing={editingId !== null} form={form} setForm={setForm} beans={beanChoices} recipes={recipes} selectedRecipeId={selectedRecipeId} drippers={dripperOptions} note={note} setNote={setNote}
+      {show && <BrewEditor editing={editingId !== null} form={form} setForm={setForm} beans={beanChoices} recipes={recipes} selectedRecipeId={selectedRecipeId} drippers={dripperOptions} grinders={grinderOptions} defaultGrinder={defaultGrinder} note={note} setNote={setNote}
         notice={prefill && editingId === null ? { text: prefill.text, onClear: clearPrefill } : null} error={brewError}
         onPickBean={beanId => editingId === null ? startWithBean(beanId) : setForm(current => ({ ...current, beanId }))} onPickRecipe={pickRecipe} onPickDripper={pickDripper}
         onHideDripper={dripper => { setDrippers(drippers.filter(item => item !== dripper)); if (form.method === dripper) setForm(current => ({ ...current, method: "" })); }}
+        onPickGrinder={pickGrinder} onHideGrinder={grinder => setGrinders(grinders.filter(item => item !== grinder))}
         onSave={add} onClose={() => { setShow(false); if (editingId !== null) resetForm(); }} />}
       {detailBrew && <BrewDetail brew={detailBrew} beans={beans} brews={brews} notes={notes} onSelect={brew => setDetailId(brew.id)} onAgain={again} onEdit={edit} onClose={() => setDetailId(null)} />}
     </div>

@@ -4,10 +4,10 @@ import { PickSheet, type PickOption } from "../bean-editor/PickSheet";
 import { fmt } from "../../lib/format";
 import { recipeWater } from "../../lib/recipe";
 import { type Bean, type BrewForm, type SavedRecipe } from "../../types";
-import { brewRatio, brewTimeFromDigits, TASTE_ATTRIBUTES, type TasteScores } from "./brewFormat";
+import { brewRatio, brewTimeFromDigits, composeGrind, parseGrind, TASTE_ATTRIBUTES, type TasteScores } from "./brewFormat";
 import { useSheet } from "./useSheet";
 
-type Picker = "bean" | "recipe" | "dripper" | null;
+type Picker = "bean" | "recipe" | "dripper" | "grinder" | null;
 
 export type BrewNote = { memo: string; rating: number; taste: TasteScores };
 
@@ -31,7 +31,7 @@ function ListSheet({ title, items, empty, onClose }: { title: string; items: Lis
 
 // The brew form as "name · value" rows in a sheet over the list (a dialog on wider screens). BrewLog keeps the state and
 // saving; this lays the fields out and opens the pickers.
-export function BrewEditor({ editing, form, setForm, beans, recipes, selectedRecipeId, drippers, note, setNote, notice, error, onPickBean, onPickRecipe, onPickDripper, onHideDripper, onSave, onClose }: {
+export function BrewEditor({ editing, form, setForm, beans, recipes, selectedRecipeId, drippers, grinders, defaultGrinder, note, setNote, notice, error, onPickBean, onPickRecipe, onPickDripper, onHideDripper, onPickGrinder, onHideGrinder, onSave, onClose }: {
   editing: boolean;
   form: BrewForm;
   setForm: Dispatch<SetStateAction<BrewForm>>;
@@ -39,6 +39,8 @@ export function BrewEditor({ editing, form, setForm, beans, recipes, selectedRec
   recipes: SavedRecipe[];
   selectedRecipeId: string;
   drippers: PickOption[];
+  grinders: PickOption[];
+  defaultGrinder: string;
   note: BrewNote;
   setNote: Dispatch<SetStateAction<BrewNote>>;
   notice: { text: string; onClear: () => void } | null;
@@ -47,11 +49,19 @@ export function BrewEditor({ editing, form, setForm, beans, recipes, selectedRec
   onPickRecipe: (recipeId: string) => void;
   onPickDripper: (dripper: string) => void;
   onHideDripper: (dripper: string) => void;
+  onPickGrinder: (grinder: string) => void;
+  onHideGrinder: (grinder: string) => void;
   onSave: () => void;
   onClose: () => void;
 }) {
   const [picker, setPicker] = useState<Picker>(null);
   const [tasteOpen, setTasteOpen] = useState(() => Object.values(note.taste).some(Boolean));
+  // With no 분쇄도 yet, the grinder shown is the one last picked here, else the default (that bean's or the latest brew's).
+  const [pickedGrinder, setPickedGrinder] = useState<string | null>(null);
+  const grind = parseGrind(form.grindSize, grinders.map(option => option.value));
+  const grinder = form.grindSize.trim() ? grind.grinder : pickedGrinder ?? defaultGrinder;
+  const setGrind = (nextGrinder: string, clicks: string) => { setPickedGrinder(nextGrinder); setForm(current => ({ ...current, grindSize: composeGrind(nextGrinder, clicks) })); };
+  const stepClicks = (by: number) => setGrind(grinder, String(Math.max(0, Math.round(((parseFloat(grind.clicks) || 0) + by) * 10) / 10)));
   const sheet = useSheet(onClose, () => { if (!picker) return false; setPicker(null); return true; });
   const set = <K extends keyof BrewForm>(key: K, value: BrewForm[K]) => setForm(current => ({ ...current, [key]: value }));
   const bean = beans.find(item => String(item.id) === form.beanId);
@@ -82,9 +92,9 @@ export function BrewEditor({ editing, form, setForm, beans, recipes, selectedRec
         <section className="be-group" aria-labelledby="bw-what">
           <h3 className="be-group-label" id="bw-what">무엇을{ratio && <span className="bw-ratio">비율 {ratio}</span>}</h3>
           <div className="be-card">
-            <button type="button" className={`be-row${missingBean ? " bad" : ""}`} onClick={() => setPicker("bean")}>
+            <button type="button" className={`be-row bw-bean-row${missingBean ? " bad" : ""}`} onClick={() => setPicker("bean")}>
               <span className="be-row-name">원두<span className="be-req"> *</span></span>
-              {valueSpan(bean ? `${[bean.roastery, bean.name].filter(Boolean).join(" · ")} (${fmt(bean.remaining)}g)` : "", missingBean ? "골라주세요" : "선택")}
+              {bean ? <span className="be-value bw-bean-value"><span>{bean.roastery && <small>{bean.roastery}</small>}{bean.name}</span><span className="be-chev" aria-hidden="true">›</span></span> : valueSpan("", missingBean ? "골라주세요" : "선택")}
             </button>
             <button type="button" className="be-row" onClick={() => setPicker("recipe")}>
               <span className="be-row-name">레시피</span>
@@ -103,7 +113,16 @@ export function BrewEditor({ editing, form, setForm, beans, recipes, selectedRec
           <h3 className="be-group-label" id="bw-how">어떻게</h3>
           <div className="be-card">
             <button type="button" className="be-row" onClick={() => setPicker("dripper")}><span className="be-row-name">드리퍼</span>{valueSpan(form.method, "선택")}</button>
-            <label className="be-row"><span className="be-row-name">분쇄도</span><input value={form.grindSize} placeholder="예: 코만단테 24클릭" onChange={event => set("grindSize", event.target.value)} /></label>
+            <div className="be-row bw-grind-row">
+              <span className="be-row-name">분쇄도</span>
+              <button type="button" className={`bw-grinder${grinder ? "" : " empty"}`} onClick={() => setPicker("grinder")}>{grinder || "그라인더"}<span className="be-chev" aria-hidden="true">›</span></button>
+              <span className="bw-stepper">
+                <button type="button" aria-label="분쇄도 1 낮추기" onClick={() => stepClicks(-1)}>−</button>
+                <input inputMode="decimal" aria-label="분쇄도 클릭 수" value={grind.clicks} placeholder="24" onChange={event => setGrind(grinder, event.target.value)} />
+                <button type="button" aria-label="분쇄도 1 높이기" onClick={() => stepClicks(1)}>+</button>
+                <span className="be-unit">클릭</span>
+              </span>
+            </div>
             <div className="be-row bw-pair">
               <label className="bw-half"><span className="be-row-name">물 온도</span><input type="number" inputMode="decimal" min="1" max="100" step="0.5" value={form.waterTemp} placeholder="92" onChange={event => set("waterTemp", event.target.value)} /><span className="be-unit">℃</span></label>
               <label className="bw-half"><span className="be-row-name">추출 시간</span><input inputMode="numeric" aria-label="추출 시간 (숫자만 눌러도 돼요: 245 → 2:45)" value={form.brewTime} placeholder="2:45" onFocus={event => event.target.select()} onChange={event => set("brewTime", brewTimeFromDigits(event.target.value))} /></label>
@@ -115,12 +134,12 @@ export function BrewEditor({ editing, form, setForm, beans, recipes, selectedRec
           <h3 className="be-group-label" id="bw-taste">맛은 어땠나요{tasteOpen && <button type="button" onClick={() => setTasteOpen(false)}>세부 평가 접기</button>}</h3>
           <div className="be-card">
             <div className="be-row bw-rating-row"><span className="be-row-name">별점</span><StarRating value={note.rating} onChange={rating => setNote(current => ({ ...current, rating: current.rating === rating ? 0 : rating }))} /></div>
-            <label className="be-row full bw-memo"><span className="sr-only">컵 노트 / 느낀 점</span><textarea rows={1} value={note.memo} placeholder="컵 노트 / 느낀 점을 자유롭게 적어보세요" onChange={event => setNote(current => ({ ...current, memo: event.target.value }))} /></label>
+            <label className="be-row full bw-memo"><span className="be-row-name bw-memo-label">컵 노트</span><textarea rows={1} value={note.memo} placeholder="오늘의 맛과 느낌을 적어보세요" onChange={event => setNote(current => ({ ...current, memo: event.target.value }))} /></label>
             {tasteOpen ? TASTE_ATTRIBUTES.map(({ key, label }) => { const value = note.taste[key] ?? 0; return <div className="be-row bw-taste-row" role="group" aria-label={label} key={key}>
               <span className="be-row-name">{label}</span>
               <span className="brew-taste-scale">{[1, 2, 3, 4, 5].map(step => <button type="button" key={step} aria-pressed={value >= step} aria-label={`${label} ${step}단계`} onClick={() => setNote(current => ({ ...current, taste: { ...current.taste, [key]: value === step ? 0 : step } }))} />)}</span>
               <em>{value || "–"}</em>
-            </div>; }) : <button type="button" className="be-row" onClick={() => setTasteOpen(true)}><span className="be-row-name">맛 세부 평가 <small className="bw-optional">향 · 산미 · 단맛 · 바디감…</small></span><span className="be-value"><span>{tasted ? `${tasted}개 평가함` : "펼치기"}</span><span className="be-chev" aria-hidden="true">›</span></span></button>}
+            </div>; }) : <button type="button" className="be-row" onClick={() => setTasteOpen(true)}><span className="be-row-name">맛 세부 평가 <small className="bw-optional">향 · 산미 · 단맛 · 바디감…</small></span><span className={`be-value${tasted ? "" : " empty"}`}><span>{tasted ? `${tasted}개 평가함` : "펼치기"}</span><span className="be-chev" aria-hidden="true">›</span></span></button>}
           </div>
         </section>
       </div></div>
@@ -131,6 +150,7 @@ export function BrewEditor({ editing, form, setForm, beans, recipes, selectedRec
         { key: "custom", title: "직접 입력", sub: "원두 양과 물 양을 직접 적어요", current: !recipe, onPick: () => { onPickRecipe(""); setPicker(null); } },
         ...recipes.map(item => ({ key: String(item.id), title: item.name, sub: `원두 ${fmt(item.coffee)}g · 물 ${fmt(recipeWater(item.steps).extraction)}g`, current: String(item.id) === selectedRecipeId, onPick: () => { onPickRecipe(String(item.id)); setPicker(null); } }))
       ]} />}
+      {picker === "grinder" && <PickSheet title="그라인더" layout="list" value={grinder} options={grinders} placeholder="그라인더 이름 (예: 코만단테)" onPick={next => { onPickGrinder(next); setGrind(next, grind.clicks); setPicker(null); }} onHide={onHideGrinder} onClose={() => setPicker(null)} />}
       {picker === "dripper" && <PickSheet title="드리퍼" layout="list" value={form.method} options={drippers} placeholder="드리퍼 이름 (예: 하리오 스위치)" onPick={dripper => { onPickDripper(dripper); setPicker(null); }} onHide={onHideDripper} onClose={() => setPicker(null)} />}
     </form>
   </div>;
