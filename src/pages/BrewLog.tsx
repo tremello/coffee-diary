@@ -3,7 +3,7 @@ import { type StorageSetter, useStorage } from "../data/sync";
 import { Empty, JourneySteps } from "../components/ui";
 import { BrewDetail } from "../components/brew-editor/BrewDetail";
 import { BrewEditor, type BrewNote } from "../components/brew-editor/BrewEditor";
-import { brewConditions, brewConditionsForm, parseGrind, brewRatio, dayHeading, emptyBrewForm, emptyNoteForm, latestBrewOf, normalizeBrewTime, noteMemo, shortDate, TASTE_ATTRIBUTES, tasteScore, tasteSummary } from "../components/brew-editor/brewFormat";
+import { brewConditions, brewConditionsForm, composeGrind, parseGrind, brewRatio, dayHeading, emptyBrewForm, emptyNoteForm, latestBrewOf, normalizeBrewTime, noteMemo, shortDate, TASTE_ATTRIBUTES, tasteScore, tasteSummary } from "../components/brew-editor/brewFormat";
 import { RatingStars } from "../components/brew-editor/RatingStars";
 import { STORAGE_KEYS } from "../data/keys";
 import { readLocal, writeLocal } from "../data/storage";
@@ -65,21 +65,39 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     return named.length === 1 ? String(named[0].id) : "";
   };
 
+  // Grinders keep their usual setting: the click count of the newest brew made with that grinder, whatever the recipe or bean.
+  const byNewest = [...brews].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+  const grinderOf = (brew?: Brew) => brew?.grindSize ? parseGrind(brew.grindSize, grinders).grinder : "";
+  const lastClicks = (grinder: string) => {
+    for (const brew of byNewest) { const grind = parseGrind(brew.grindSize ?? "", grinders); if (grinder && grind.grinder === grinder && /^\d/.test(grind.clicks)) return grind.clicks; }
+    return "";
+  };
+  // A new brew starts with the grinder of that bean's last brew, else of the latest brew, else the first registered one.
+  const defaultGrinderFor = (beanId: string) => (beanId ? grinderOf(latestBrewOf(brews, Number(beanId))) : "") || grinderOf(byNewest[0]) || grinders[0] || "";
+  const autoGrind = (beanId: string) => { const grinder = defaultGrinderFor(beanId); return composeGrind(grinder, lastClicks(grinder)); };
+  const withLastClicks = (grindSize: string) => { const { grinder } = parseGrind(grindSize, grinders); const clicks = grinder ? lastClicks(grinder) : ""; return clicks ? composeGrind(grinder, clicks) : grindSize; };
+  const grindTouched = form.grindSize !== "" && form.grindSize !== autoGrind(form.beanId);
+
   // Keep the unsaved new brew while the sheet is open; saving or "비우기" removes it.
-  const dirty = Boolean(form.beanId || form.amount || form.waterAmount || form.method || form.recipe || form.grindSize || form.waterTemp || form.brewTime || note.memo.trim() || note.rating || Object.values(note.taste).some(Boolean));
+  const dirty = Boolean(form.beanId || form.amount || form.waterAmount || form.method || form.recipe || grindTouched || form.waterTemp || form.brewTime || note.memo.trim() || note.rating || Object.values(note.taste).some(Boolean));
   useEffect(() => {
     if (show && editingId === null && dirty) writeLocal(DRAFT_KEY, { form, recipeId: selectedRecipeId, note } satisfies BrewDraft);
   }, [show, editingId, dirty, form, selectedRecipeId, note]);
   const dropDraft = () => { try { localStorage.removeItem(DRAFT_KEY); } catch {} };
 
   const resetForm = () => { setForm(emptyBrewForm()); setNote(emptyNote()); setSelectedRecipeId(""); setEditingId(null); setPrefill(null); setBrewError(""); };
-  const fillFrom = (brew: Brew, beanId: string) => { setForm({ ...brewConditionsForm(brew), beanId, date: localDate() }); setSelectedRecipeId(recipeIdFor(brew)); };
+  // "이대로 다시 내리기" keeps the brew's own click; a bean's last-conditions prefill takes the grinder's latest one.
+  const fillFrom = (brew: Brew, beanId: string, exact = false) => {
+    const conditions = brewConditionsForm(brew);
+    setForm({ ...conditions, grindSize: exact ? conditions.grindSize : withLastClicks(conditions.grindSize), beanId, date: localDate() });
+    setSelectedRecipeId(recipeIdFor(brew));
+  };
   // A newly picked bean starts from the conditions of its latest brew, unless the user already typed conditions of their own.
   const startWithBean = (beanId: string) => {
     const last = latestBrewOf(brews, Number(beanId));
-    const untouched = prefill?.kind === "bean" || !(form.amount || form.waterAmount || form.method || form.grindSize || form.waterTemp || form.brewTime);
+    const untouched = prefill?.kind === "bean" || !(form.amount || form.waterAmount || form.method || grindTouched || form.waterTemp || form.brewTime);
     if (last && untouched) { fillFrom(last, beanId); setPrefill({ kind: "bean", text: `지난번(${shortDate(last.date)}) 이 원두로 내린 조건을 채웠어요` }); }
-    else if (prefill?.kind === "bean") { setForm(current => ({ ...emptyBrewForm(), beanId, date: current.date })); setSelectedRecipeId(""); setPrefill(null); }
+    else if (prefill?.kind === "bean") { setForm(current => ({ ...emptyBrewForm(), beanId, date: current.date, grindSize: autoGrind(beanId) })); setSelectedRecipeId(""); setPrefill(null); }
     else setForm(current => ({ ...current, beanId }));
     setBrewError("");
   };
@@ -89,7 +107,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     if (draft?.form) {
       setForm(draft.form); setSelectedRecipeId(draft.recipeId ?? ""); setNote({ ...emptyNote(), ...draft.note });
       setPrefill({ kind: "draft", text: "적던 기록을 이어서 채웠어요" });
-    }
+    } else setForm({ ...emptyBrewForm(), grindSize: autoGrind("") });
     setDetailId(null);
     setShow(true);
   };
@@ -97,19 +115,19 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     resetForm();
     const last = latestBrewOf(brews, beanId);
     if (last) { fillFrom(last, String(beanId)); setPrefill({ kind: "bean", text: `지난번(${shortDate(last.date)}) 이 원두로 내린 조건을 채웠어요` }); }
-    else setForm({ ...emptyBrewForm(), beanId: String(beanId) });
+    else setForm({ ...emptyBrewForm(), beanId: String(beanId), grindSize: autoGrind(String(beanId)) });
     setShow(true);
   };
   const again = (brew: Brew) => {
     resetForm();
-    fillFrom(brew, activeBeans.some(bean => bean.id === brew.beanId) ? String(brew.beanId) : "");
+    fillFrom(brew, activeBeans.some(bean => bean.id === brew.beanId) ? String(brew.beanId) : "", true);
     setPrefill({ kind: "again", text: `${shortDate(brew.date)} 기록을 그대로 채웠어요` });
     setDetailId(null);
     setShow(true);
   };
   const clearPrefill = () => {
-    if (prefill?.kind === "draft") { dropDraft(); resetForm(); return; }
-    setForm(current => ({ ...emptyBrewForm(), beanId: current.beanId, date: current.date }));
+    if (prefill?.kind === "draft") { dropDraft(); resetForm(); setForm({ ...emptyBrewForm(), grindSize: autoGrind("") }); return; }
+    setForm(current => ({ ...emptyBrewForm(), beanId: current.beanId, date: current.date, grindSize: autoGrind(current.beanId) }));
     setSelectedRecipeId(""); setPrefill(null);
   };
   useEffect(() => {
@@ -196,10 +214,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     setForm(current => ({ ...current, method: dripper }));
   };
   const pickGrinder = (grinder: string) => { if (grinder && !grinders.includes(grinder)) setGrinders([...grinders, grinder]); };
-  // A new brew starts with the grinder of that bean's last brew, else of the latest brew, else the first registered one.
-  const grinderOf = (brew?: Brew) => brew?.grindSize ? parseGrind(brew.grindSize, grinders).grinder : "";
-  const latestBrew = [...brews].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)[0];
-  const defaultGrinder = (form.beanId ? grinderOf(latestBrewOf(brews, Number(form.beanId))) : "") || grinderOf(latestBrew) || grinders[0] || "";
+  const defaultGrinder = defaultGrinderFor(form.beanId);
   const grinderNames = grinders.length ? grinders : GRINDER_SUGGESTIONS;
   const currentGrinder = parseGrind(form.grindSize, grinderNames).grinder;
   const grinderOptions = (currentGrinder && !grinderNames.includes(currentGrinder) ? [currentGrinder, ...grinderNames] : grinderNames).map(value => ({ value, count: 0 }));
@@ -265,7 +280,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
       </Fragment>)}
       {!show && <button type="button" className="bean-fab brew-fab" onClick={openNew}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>브루잉 추가</button>}
 
-      {show && <BrewEditor editing={editingId !== null} form={form} setForm={setForm} beans={beanChoices} recipes={recipes} selectedRecipeId={selectedRecipeId} drippers={dripperOptions} grinders={grinderOptions} defaultGrinder={defaultGrinder} note={note} setNote={setNote}
+      {show && <BrewEditor editing={editingId !== null} form={form} setForm={setForm} beans={beanChoices} recipes={recipes} selectedRecipeId={selectedRecipeId} drippers={dripperOptions} grinders={grinderOptions} defaultGrinder={defaultGrinder} lastClicks={lastClicks} note={note} setNote={setNote}
         notice={prefill && editingId === null ? { text: prefill.text, onClear: clearPrefill } : null} error={brewError}
         onPickBean={beanId => editingId === null ? startWithBean(beanId) : setForm(current => ({ ...current, beanId }))} onPickRecipe={pickRecipe} onPickDripper={pickDripper}
         onHideDripper={dripper => { setDrippers(drippers.filter(item => item !== dripper)); if (form.method === dripper) setForm(current => ({ ...current, method: "" })); }}
