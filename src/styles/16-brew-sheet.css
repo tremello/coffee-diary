@@ -1,0 +1,60 @@
+/* Brew log v1.11: list grouped by day, tappable cards with stars and "다시 내리기", and the brew form / brew detail as
+   sheets that reuse the bean editor's be-* layout (15-bean-editor.css). */
+.bw-day { margin: 18px 4px 8px; color: var(--fg-6b5d50); font-size: 12px; font-weight: 600; }
+.brew-log-tools + .bw-day { margin-top: 4px; }
+.bw-card { padding: 0; overflow: hidden; }
+.bw-card-open { display: block; width: 100%; padding: 16px 16px 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.bw-line { display: block; }
+.bw-card-title { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.bw-card-title > span:first-child { min-width: 0; }
+.bw-card-name { margin: 0 0 2px; font-size: 15px; font-weight: 500; }
+.bw-card .brew-recipe-block > .bw-line { margin: 0; font-size: 15px; line-height: 1.5; font-style: italic; }
+.bw-card .brew-recipe-block > .brew-metrics { margin-bottom: 4px; color: var(--fg-6f5a43); font-size: 13px; font-style: normal; font-weight: 600; }
+.bw-card .brew-recipe-block > .brew-conditions-line { margin-bottom: 4px; color: var(--fg-806d58); font-size: 12px; font-style: normal; }
+.bw-card-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 16px 14px; }
+.bw-card-foot .brew-card-actions { align-items: center; gap: 14px; }
+.bw-card-foot .brew-card-actions button { min-height: 32px; }
+.bw-again { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 0 11px; border: 1px solid var(--bd-cdbda9); border-radius: 16px; background: var(--bg-ffffff); color: var(--fg-7a5733); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+.bw-again:hover { background: var(--bg-f7f1e9); }
+@media (max-width: 720px) { .bw-card-open { padding: 14px 14px 0; } .bw-card-foot { padding: 10px 14px 12px; } }
+
+.bw-stars { display: inline-flex; flex: 0 0 auto; gap: 1px; color: var(--fg-d7c8b5); font-size: 13px; line-height: 1; }
+.bw-stars .full { color: var(--fg-7a5733); }
+.bw-stars .half { background: linear-gradient(90deg, var(--bg-7a5733) 50%, var(--bg-d7c8b5) 50%); background-clip: text; -webkit-background-clip: text; color: transparent; }
+
+/* The sheets: a save bar pinned under the scrolling rows. */
+.bw-footer { flex: 0 0 auto; padding: 10px 16px calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid var(--bd-f0e7dc); background: var(--bg-fbf7f1); }
+.bw-save { width: 100%; min-height: 50px; border: 0; border-radius: 12px; background: var(--bg-7a5733); color: var(--fg-ffffff); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+.bw-save:active { background: var(--bg-5a3f22); }
+.bw-panel .be-body-inner { padding-top: 4px; padding-bottom: 20px; }
+.bw-notice { display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--bg-e3eedf); color: var(--fg-487457); font-size: 13px; }
+.bw-notice span:nth-child(2) { flex: 1 1 auto; }
+.bw-notice button { flex: 0 0 auto; min-height: 32px; padding: 0 4px; border: 0; background: transparent; color: var(--fg-487457); font: inherit; font-size: 13px; text-decoration: underline; cursor: pointer; }
+.bw-optional { margin-left: 4px; color: var(--fg-6b5d50); font-size: 11px; font-weight: 400; }
+.be-row-name .bw-optional { display: inline; }
+.bw-ratio { color: var(--fg-6b5d50); font-size: 12px; }
+.bw-rating-row { padding-right: 12px; }
+.bw-panel .be-unit { white-space: nowrap; }
+.bw-memo { align-items: stretch; }
+.bw-memo textarea { flex: 1 1 auto; min-width: 0; min-height: 64px; padding: 12px 0; border: 0; background: transparent; color: var(--fg-2a211a); font: inherit; font-size: inherit; line-height: 1.5; resize: vertical; outline: none; box-shadow: none; }
+.bw-memo textarea::placeholder { color: var(--fg-8a7967); }
+.bw-taste-row { padding-right: 12px; }
+.bw-taste-row .be-row-name { flex: 1 1 auto; }
+.bw-taste-row .brew-taste-scale button { width: 30px; height: 40px; }
+.bw-taste-row .brew-taste-scale button::before { width: 12px; height: 12px; }
+.bw-taste-row em { flex: 0 0 14px; color: var(--fg-6b5d50); font-size: 13px; font-style: normal; text-align: right; }
+
+/* Brew detail. */
+.bw-detail-date { color: var(--fg-6b5d50); font-size: 14px; text-align: center; }
+.bw-detail-title { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
+.bw-detail-title h2 { margin: 0; font-size: 19px; font-weight: 600; overflow-wrap: anywhere; }
+.bw-detail-title .bw-stars { font-size: 17px; padding-bottom: 3px; }
+.bw-detail-memo { margin: -4px 0 0; color: var(--fg-2a211a); font-size: 14px; line-height: 1.55; white-space: pre-line; }
+.bw-kv > span:last-child { min-width: 0; color: var(--fg-6b5d50); text-align: right; overflow-wrap: anywhere; }
+.bw-kv { padding-top: 10px; padding-bottom: 10px; }
+.bw-history-sum { color: var(--fg-6b5d50); font-weight: 400; }
+.bw-history-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; font-size: 13px; }
+.bw-history-row[aria-current="true"] { background: var(--bg-f7f1e9); font-weight: 600; }
+.bw-history-date { color: var(--fg-6b5d50); }
+.bw-history-cond { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 720px) { .bw-history-row, .bw-kv { font-size: 14px; } .bw-detail-memo { font-size: 15px; } }
