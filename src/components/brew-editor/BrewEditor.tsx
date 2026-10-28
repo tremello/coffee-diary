@@ -1,6 +1,7 @@
 import { useState, type Dispatch, type SetStateAction } from "react";
 import { StarRating } from "../ui";
 import { PickSheet, type PickOption } from "../bean-editor/PickSheet";
+import { useKeyboardInset } from "../bean-editor/useKeyboardInset";
 import { usePickDrag } from "../bean-editor/usePickDrag";
 import { fmt } from "../../lib/format";
 import { recipeWater } from "../../lib/recipe";
@@ -63,6 +64,7 @@ export function BrewEditor({ editing, form, setForm, beans, recipes, selectedRec
   onSave: () => void;
   onClose: () => void;
 }) {
+  useKeyboardInset();
   const [picker, setPicker] = useState<Picker>(null);
   const [tasteOpen, setTasteOpen] = useState(() => Object.values(note.taste).some(Boolean));
   // With no 분쇄도 yet, the grinder shown is the one last picked here, else the default (that bean's or the latest brew's).

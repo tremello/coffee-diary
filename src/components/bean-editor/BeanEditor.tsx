@@ -3,6 +3,7 @@ import { beanName, handleNumericInput, withCommas } from "../../lib/format";
 import { type Bean, BEAN_QUALITIES, BEAN_STATUSES, type BeanForm } from "../../types";
 import { type PickOption, PickSheet } from "./PickSheet";
 import { RebuySheet } from "./RebuySheet";
+import { useKeyboardInset } from "./useKeyboardInset";
 
 export type BeanPhoto = {
   preview: string;
@@ -46,6 +47,7 @@ export function BeanEditor({ editing, form, setForm, processes, origins, roaster
   onCancel: () => void;
   onDelete?: () => void;
 }) {
+  useKeyboardInset();
   const [picker, setPicker] = useState<Picker>(null);
   const [closing, setClosing] = useState(false);
   const panelRef = useRef<HTMLFormElement>(null);

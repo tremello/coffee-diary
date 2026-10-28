@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
+import { useKeyboardInset } from "./useKeyboardInset";
 
 // Picker sheets on phones open at half the screen and keep that height whatever the list holds (filtering never shrinks
 // them). Dragging the handle or title row up fills the form; pulling down closes. The list drags only from its top
 // (pulling down) or while half open (pushing up), and scrolls normally otherwise. Wider screens keep the centred dialog.
-// While the iPhone keyboard is up, the sheet sits on top of it inside the visible area, so its title and search box stay
-// in view (iOS doesn't shrink the page for the keyboard; it scrolls it instead).
+// While the iPhone keyboard is up the sheet stays anchored to the bottom (its background runs on behind the keyboard) and
+// grows by the keyboard's height, so the part above the keyboard keeps the same size; see useKeyboardInset.
 type Snap = "half" | "full";
 
 const CLOSE_MS = 240;
@@ -21,25 +22,13 @@ export function usePickDrag(onClose: () => void) {
   const [snap, setSnap] = useState<Snap>("half");
   const [dragHeight, setDragHeight] = useState<number | null>(null);
   const [closing, setClosing] = useState(false);
-  const [keyboard, setKeyboard] = useState<{ inset: number; room: number } | null>(null);
+  const keyboard = useKeyboardInset();
   const drag = useRef<Drag | null>(null);
 
   useEffect(() => {
     const update = () => setPhone(isPhone());
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
-  }, []);
-  useEffect(() => {
-    const viewport = window.visualViewport;
-    if (!viewport) return;
-    const update = () => {
-      if (window.scrollY) window.scrollTo(0, 0);
-      const inset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
-      setKeyboard(window.innerHeight - viewport.height > 80 ? { inset, room: viewport.height } : null);
-    };
-    viewport.addEventListener("resize", update);
-    viewport.addEventListener("scroll", update);
-    return () => { viewport.removeEventListener("resize", update); viewport.removeEventListener("scroll", update); };
   }, []);
 
   const heights = () => {
@@ -113,10 +102,9 @@ export function usePickDrag(onClose: () => void) {
     onPointerCancel: end,
   } : {};
 
-  const restHeight = keyboard ? Math.min(snap === "full" ? keyboard.room : window.innerHeight / 2, keyboard.room - FULL_GAP) : snap === "full" ? `calc(100% - ${FULL_GAP}px)` : `min(50vh, calc(100% - ${FULL_GAP}px))`;
+  const restHeight = keyboard ? (snap === "full" ? heights().full : Math.min(window.innerHeight / 2 + keyboard.inset, heights().full)) : snap === "full" ? `calc(100% - ${FULL_GAP}px)` : `min(50vh, calc(100% - ${FULL_GAP}px))`;
   const sheetStyle: CSSProperties | undefined = phone ? {
     height: dragHeight ?? restHeight,
-    bottom: keyboard ? keyboard.inset : undefined,
     transform: closing ? "translateY(100%)" : undefined,
     transition: dragHeight !== null || reducedMotion() ? "none" : `height ${CLOSE_MS}ms cubic-bezier(.2, .8, .2, 1), transform ${CLOSE_MS}ms cubic-bezier(.4, 0, 1, 1)`,
   } : undefined;
