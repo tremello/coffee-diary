@@ -2,11 +2,11 @@ import { fmt } from "./format";
 import { normalizedRecipeAction, recipeTimeToSeconds, recipeWater } from "./recipe";
 import { type SavedRecipe } from "../types";
 
-// Draws a saved recipe as the shareable image card: a 4:5 portrait (1080×1350) in the app's light palette,
-// taller only when the steps and memo don't fit. Laid out in 400px-wide points and drawn at 2.7× for 1080px.
+// Draws a saved recipe as the shareable image card in the app's light palette: square (1080×1080) when it fits,
+// otherwise a 4:5 portrait (1080×1350), taller only when even that is too short. Laid out in 400px-wide points, drawn at 2.7×.
 const SCALE = 2.7;
 const WIDTH = 400;
-const MIN_HEIGHT = 500;
+const HEIGHTS = [400, 500];
 const FONT = '"IBM Plex Sans KR", "Apple SD Gothic Neo", sans-serif';
 const C = {
   cream: "#fbf7f1", paper: "#ffffff", line: "#ede3d6", ink: "#34291f", mid: "#6b5d50", warm: "#967b5a", brown: "#7a5733",
@@ -119,10 +119,15 @@ export async function drawRecipeCard(recipe: SavedRecipe, footer: { by?: string;
   const fixedTop = pad + 18 + 12 + 8 + nameH + 12 + 50 + 6 + 21;
   const memoH = memoLines.length ? 8 + 16 + memoLines.length * 16.5 : 0;
   const fixedBottom = 14 + pad + 28;
-  const minRow = 28, maxRow = 46;
-  const roomForRows = MIN_HEIGHT - fixedTop - memoH - fixedBottom - 8;
-  const rowH = Math.max(minRow, Math.min(maxRow, roomForRows / Math.max(1, rows.length)));
-  const height = Math.max(MIN_HEIGHT, Math.ceil(fixedTop + rows.length * rowH + 8 + memoH + fixedBottom));
+  const minRow = 28, maxRow = 52;
+  const roomForRows = (height: number) => height - fixedTop - memoH - fixedBottom - 8;
+  const count = Math.max(1, rows.length);
+  // The first shape whose timeline fits at the compact row height; rows then spread to fill it.
+  const fitted = HEIGHTS.find(candidate => roomForRows(candidate) >= count * minRow);
+  const rowH = fitted ? Math.min(maxRow, roomForRows(fitted) / count) : minRow;
+  const height = fitted ?? Math.ceil(fixedTop + count * minRow + 8 + memoH + fixedBottom);
+  // Height the rows can't use even at their tallest is split above and below the timeline instead of pooling at the bottom.
+  const slack = fitted ? Math.max(0, roomForRows(fitted) - count * rowH) : 0;
 
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(WIDTH * SCALE);
@@ -195,6 +200,7 @@ export async function drawRecipeCard(recipe: SavedRecipe, footer: { by?: string;
   y += statH + 6;
 
   // Timeline: time | dot | step … pour | running total.
+  y += slack / 2;
   const timeRight = left + 36, dotX = left + 52.5, titleX = left + 68, pourRight = right - 54;
   ctx.font = font(400, 9);
   ctx.fillStyle = C.mid;
