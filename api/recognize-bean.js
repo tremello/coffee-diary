@@ -2,6 +2,9 @@
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 const SUPPORTED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+// Reading a label needs almost no reasoning, and thinking tokens were most of the wait.
+// Falls back to "low" if the model refuses "minimal".
+let thinkingLevel = process.env.GEMINI_THINKING_LEVEL || "minimal";
 // Same publishable project credentials as src/supabase.ts; only used to verify the caller's login.
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://ghpiixyzxeqvdkwostcb.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || "sb_publishable_dbXp4bFaIdFgjjKP6vUsOg_kd9Ss5g3";
@@ -13,7 +16,7 @@ const beanSchema = {
   properties: {
     // Listed first so Gemini copies the label before filling fields; the server also reads
     // "VARIETY: GEISHA"-style rows from it directly.
-    labelLines: { type: "array", items: { type: "string" }, description: "라벨 글자를 보이는 그대로 한 줄씩 옮겨 적은 것(최대 30줄)" },
+    labelLines: { type: "array", items: { type: "string" }, description: "라벨 제목과 '항목명: 값' 줄을 보이는 그대로 옮겨 적은 것(최대 15줄)" },
     origin: { type: "string", description: "원산지 국가 이름(한국어)만. 예: 콜롬비아" },
     farm: { type: "string", description: "농장·프로젝트·생산자, 그다음 지역(한국어 표기). 쉼표로 구분. 예: 암베라 랩스, 우일라" },
     variety: { type: "string", description: "품종 이름만 한국어 발음 표기로. 코드형 품종은 원문 그대로. 예: 핑크 버번, SL28" },
@@ -31,11 +34,10 @@ beanSchema.properties.notOnLabel = {
   items: { type: "string", enum: BEAN_FIELDS },
   description: "라벨 전체를 확인했지만 적혀 있지 않은 항목 이름"
 };
-// Gemini sometimes skips fields it read fine on another run, so read again when this many are
-// missing without Gemini saying the label doesn't show them. Some labels just lack the info,
-// so the number of extra reads is capped.
+// Gemini sometimes skips fields it read fine on another run, so a second read runs alongside the
+// first and is used when this many fields are missing without Gemini saying the label doesn't
+// show them. Running both at once means a patchy read no longer doubles the wait.
 const RETRY_WHEN_UNEXPLAINED = 2;
-const MAX_RETRIES = 1;
 // A normal answer is a few hundred tokens; the cap stops a runaway answer (e.g. endless
 // footnote markers) from keeping the user waiting. Reading a label needs little reasoning,
 // and low thinking keeps thinking tokens well under the cap.
@@ -52,7 +54,7 @@ const PROMPT = `# 원두 봉투 라벨 읽기 가이드
 
 ## 기본 규칙
 1. 사진 전체를 봅니다. 제목(상품명), 표 형태의 "항목명: 값" 줄, 로고, 작은 글씨, 스티커, 손글씨, 도장까지 모두 확인합니다.
-2. 먼저 labelLines에 라벨 글자를 보이는 그대로 한 줄씩 옮겨 적습니다(예: "FARM: EL PALOMAR ESTATE"). 긴 설명 문단은 첫 줄만 적습니다. 그다음 이 내용을 보고 각 칸을 채웁니다.
+2. 먼저 labelLines에 라벨 제목과 "항목명: 값" 형태의 줄만 보이는 그대로 한 줄씩 옮겨 적습니다(예: "FARM: EL PALOMAR ESTATE"). 설명 문단, 주소, 보관 방법 같은 글은 옮기지 않습니다. 그다음 이 내용을 보고 각 칸을 채웁니다.
 3. 각 칸에는 그 항목의 값만 짧게 씁니다. 설명, 괄호 속 번역, 다른 항목의 내용, 각주·출처 표시([^1] 같은 것)를 덧붙이지 않습니다.
 4. 라벨에 실제로 적힌 내용만 씁니다. 다만 아래에서 "해도 된다"고 한 변환(국가 이름 추론, 한국어 표기)은 합니다.
 5. 사진 전체를 확인했는데 라벨에 없는 항목은 비워두고 notOnLabel에 항목 이름을 넣습니다. 글씨가 가려지거나 잘려서 확인할 수 없는 항목은 notOnLabel에 넣지 않습니다.
@@ -280,7 +282,8 @@ function parseBean(text) {
   }
 }
 
-async function readLabel(base64, mimeType) {
+async function readLabel(base64, mimeType, signal) {
+  const level = thinkingLevel;
   const geminiResponse = await fetch(
     "https://generativelanguage.googleapis.com/v1beta/interactions",
     {
@@ -289,6 +292,7 @@ async function readLabel(base64, mimeType) {
         "Content-Type": "application/json",
         "x-goog-api-key": process.env.GEMINI_API_KEY
       },
+      signal,
       body: JSON.stringify({
         model: GEMINI_MODEL,
         input: [
@@ -297,14 +301,48 @@ async function readLabel(base64, mimeType) {
           { type: "text", text: PROMPT }
         ],
         response_format: { type: "text", mime_type: "application/json", schema: beanSchema },
-        generation_config: { thinking_level: "low", max_output_tokens: MAX_OUTPUT_TOKENS },
+        generation_config: { thinking_level: level, max_output_tokens: MAX_OUTPUT_TOKENS },
         store: false
       })
     }
   );
   const payload = await geminiResponse.json();
+  if (geminiResponse.status === 400 && level !== "low" && /thinking/i.test(errorMessage(payload))) {
+    thinkingLevel = "low";
+    return readLabel(base64, mimeType, signal);
+  }
   if (!geminiResponse.ok) return { status: geminiResponse.status, error: errorMessage(payload) };
   return { bean: parseBean(interactionText(payload)) };
+}
+
+// Starts two reads at once and answers from whichever finishes first, waiting for the other
+// only when the first left too many fields unexplained or failed.
+async function readLabelTwice(base64, mimeType) {
+  const controller = new AbortController();
+  const settle = read => read.then(result => ({ result }), error => ({ error }));
+  const reads = [0, 1].map(() => settle(readLabel(base64, mimeType, controller.signal)));
+  const tagged = reads.map((read, index) => read.then(outcome => ({ ...outcome, index })));
+  const first = await Promise.race(tagged);
+  const firstFields = first.result?.bean ? labelFields(first.result.bean) : null;
+  if (firstFields && unexplainedMissing(firstFields.fields, firstFields.notOnLabel).length < RETRY_WHEN_UNEXPLAINED) {
+    controller.abort();
+    return { ...firstFields, reads: 1 };
+  }
+  const second = await reads[1 - first.index];
+  const secondFields = second.result?.bean ? labelFields(second.result.bean) : null;
+  if (firstFields && secondFields) {
+    return {
+      fields: mergeBeans(firstFields.fields, secondFields.fields),
+      // A field counts as absent only if both reads agreed it isn't on the label.
+      notOnLabel: firstFields.notOnLabel.filter(field => secondFields.notOnLabel.includes(field)),
+      reads: 2
+    };
+  }
+  if (firstFields || secondFields) return { ...(firstFields ?? secondFields), reads: 2 };
+  const failed = [first, second].find(outcome => outcome.result?.error);
+  if (failed) return { status: failed.result.status, error: failed.result.error };
+  if (first.result || second.result) return { fields: {}, notOnLabel: [], reads: 2 };
+  throw first.error ?? second.error;
 }
 
 function interactionText(payload) {
@@ -352,22 +390,14 @@ export default async function handler(request, response) {
       return response.status(413).json({ error: "사진은 3MB 이하로 줄여서 보내주세요." });
     }
 
-    const first = await readLabel(base64, mimeType);
-    if (first.error) return response.status(first.status).json({ error: first.error });
+    const started = Date.now();
+    const read = await readLabelTwice(base64, mimeType);
+    const elapsed = Date.now() - started;
+    console.log(`Bean photo read in ${elapsed}ms (${read.reads ?? 0} read(s), thinking ${thinkingLevel}, ${Math.round(base64.length / 1024)}KB)`);
+    response.setHeader("Server-Timing", `gemini;dur=${elapsed}`);
+    if (read.error) return response.status(read.status).json({ error: read.error });
 
-    let { fields: bean, notOnLabel } = labelFields(first.bean ?? {});
-    for (let retry = 0; retry < MAX_RETRIES && unexplainedMissing(bean, notOnLabel).length >= RETRY_WHEN_UNEXPLAINED; retry++) {
-      try {
-        const next = await readLabel(base64, mimeType);
-        if (!next.bean) continue;
-        const again = labelFields(next.bean);
-        bean = mergeBeans(bean, again.fields);
-        // A field counts as absent only if every read agreed it isn't on the label.
-        notOnLabel = notOnLabel.filter(field => again.notOnLabel.includes(field));
-      } catch (error) {
-        console.error("Bean photo retry failed", error instanceof Error ? error.message : "unknown error");
-      }
-    }
+    const bean = read.fields;
 
     if (missingFields(bean).length === BEAN_FIELDS.length) return response.status(422).json({ error: "사진에서 원두 정보를 찾지 못했어요." });
     return response.status(200).json({ bean });
