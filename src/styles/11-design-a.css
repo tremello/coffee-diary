@@ -36,7 +36,7 @@
 .bean-search { display: flex; align-items: center; gap: 8px; height: 44px; margin-bottom: 12px; padding: 0 14px; border: 1px solid var(--c-line); border-radius: var(--r-sm); background: var(--c-surface); color: var(--c-ink-2); }
 .bean-search:focus-within { border-color: var(--bd-7a5733); }
 .bean-search input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: transparent; color: var(--c-ink); font: inherit; font-size: 14px; outline: none; }
-.bean-search input::placeholder { color: var(--c-ink-2); }
+.bean-search input::placeholder { color: var(--c-ink-2); font-size: 14px; }
 .bean-search:has(input:focus-visible) { outline: 2px solid var(--bd-7a5733); outline-offset: 2px; }
 .bean-search input:focus-visible { outline: none; }
 /* The native clear button is a fixed blue; draw it in the theme's muted text color instead. */
@@ -48,12 +48,10 @@
 /* Brew log search reuses the bean search look; its sort select keeps the dropdown arrow. */
 .brew-log-tools .brew-search.bean-search { min-width: 0; margin: 0; }
 .brew-log-tools .brew-search.bean-search input { min-height: 0; border: 0; background: transparent; }
-/* Narrow phones: the input stays 16px (no iOS zoom), only the placeholder shrinks so the whole hint fits. */
-@media (max-width: 400px) {
-  .brew-log-tools .brew-search.bean-search { gap: 6px; padding: 0 10px; }
-  .brew-log-tools .brew-search.bean-search input::placeholder { font-size: clamp(11px, calc((100vw - 182px) * 0.083), 16px); letter-spacing: -0.02em; }
-}
-.brew-log-tools select.inventory-sort { padding: 0 26px 0 10px; background: var(--c-surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2375634d' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 10px center / 10px 6px; }
+/* Brew search matches the bean search exactly (same hint size), and the sort box beside it has the same height and border. */
+.brew-log-tools .brew-search.bean-search input::placeholder { font-size: 14px; letter-spacing: normal; }
+.brew-log-tools select.inventory-sort { box-sizing: border-box; flex: 0 0 84px; height: 44px; min-height: 44px; border-color: var(--c-line); font-size: 13px !important; }
+.brew-log-tools select.inventory-sort { padding: 0 26px 0 12px; background: var(--c-surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2375634d' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 10px center / 10px 6px; }
 .bean-fab { display: none; }
 @media (max-width: 540px) {
   .inventory > .inventory-intro .intro-actions, .brew-log-heading-actions { display: none; }
@@ -68,7 +66,9 @@
 .inventory-summary-cards > div { padding: 12px 14px; }
 .inventory-summary-cards span { margin-bottom: 4px; }
 .inventory-summary-cards strong { font-size: 22px; }
-.inventory-summary-cards em { display: inline; margin: 0 0 0 8px; color: inherit; font-size: 22px; font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; }
+/* Kinds and total grams sit on one line at the same size; doubled class beats the stats-page em rule loaded later. */
+.stats-cards.inventory-summary-cards em { display: inline; margin: 0 0 0 8px; color: var(--c-ink); font-size: 22px; font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.stats-cards.inventory-summary-cards em::before { margin-right: 8px; color: var(--c-ink-3); font-weight: 400; content: "·"; }
 .inventory-summary-cards em small { margin-left: 2px; font-size: 12px; font-weight: 400; }
 .roastery { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
 .roast-age { padding: 5px 10px; border-radius: var(--r-pill); background: var(--c-soft-2); color: var(--c-ink-strong); font-size: 12px; font-weight: 600; letter-spacing: 0; line-height: 1.2; white-space: nowrap; }
@@ -82,7 +82,8 @@
   .page-intro, .inventory-intro, .stats-header, .recipe-intro, .brew-log-heading { margin-top: 4px; margin-bottom: 12px; }
   .inventory-summary-cards > div { padding: 10px 12px; }
   .inventory-summary-cards strong { font-size: 20px; }
-  .inventory-summary-cards em { margin-left: 6px; font-size: 20px; }
+  .stats-cards.inventory-summary-cards em { margin-left: 5px; font-size: 20px; }
+  .stats-cards.inventory-summary-cards em::before { margin-right: 5px; }
   .bean-list.density-detail .bean-info h3 { margin-bottom: 8px; }
   .bean-list.density-detail .title-dates { margin-bottom: 6px; }
   .bean-list.density-detail .roastery { gap: 2px 8px; padding-right: 160px; }
