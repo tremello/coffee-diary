@@ -21,20 +21,16 @@
 .rc-panel .recipe-timeline-error { margin: 0; padding: 0 6px; }
 .rc-panel .bw-memo { padding-top: 0; }
 .rc-panel .bw-memo textarea { padding-top: 12px; }
-/* iOS zooms into fields under 16px on focus, which shifts the sheet. */
-@media (max-width: 759px) {
-  .rc-steps .recipe-step-row select, .rc-steps .recipe-amount-input input, .rc-steps .recipe-time-input { font-size: 16px; }
-}
-/* Wider screens: the action takes the spare width, amounts stay narrow. The dialog is narrower than the bean editor's. */
-.rc-steps { --rc-time: 60px; --rc-pad: 10px; }
-.rc-steps .recipe-step-head, .rc-steps .recipe-step-row { grid-template-columns: var(--rc-time) minmax(0, 1fr) 96px 56px 22px; padding-left: 10px; padding-right: 10px; }
-.rc-steps.is-immersion .recipe-step-head, .rc-steps.is-immersion .recipe-step-row { grid-template-columns: var(--rc-time) 64px minmax(0, 1fr) 90px 52px 22px; }
+/* Each box is only as wide as what it holds, with an even gap between boxes; the total takes the rest and sits at the
+   right, next to the ×. */
+.rc-steps { --rc-time: 50px; --rc-pad: 10px; }
+.rc-steps .recipe-step-head, .rc-steps .recipe-step-row { grid-template-columns: var(--rc-time) 90px 64px minmax(40px, 1fr) 22px; column-gap: 14px; padding-left: var(--rc-pad); padding-right: 8px; }
+.rc-steps.is-immersion .recipe-step-head, .rc-steps.is-immersion .recipe-step-row { grid-template-columns: var(--rc-time) 48px 90px 64px minmax(40px, 1fr) 22px; }
 @media (min-width: 760px) { .be-panel.rc-panel { width: min(620px, calc(100vw - 48px)); } }
-@media (max-width: 540px) {
-  .rc-steps { --rc-time: 50px; --rc-pad: 7px; }
-  .rc-steps.is-immersion { --rc-time: 44px; --rc-pad: 6px; }
-  .rc-steps .recipe-step-head, .rc-steps .recipe-step-row { grid-template-columns: var(--rc-time) minmax(0, 1fr) 76px 44px 18px; padding-left: 7px; padding-right: 7px; }
-  .rc-steps.is-immersion .recipe-step-head, .rc-steps.is-immersion .recipe-step-row { grid-template-columns: var(--rc-time) 44px minmax(0, 1fr) 70px 38px 14px; padding-left: 6px; padding-right: 6px; }
+@media (max-width: 720px) {
+  .rc-steps { --rc-time: 46px; --rc-pad: 8px; }
+  .rc-steps .recipe-step-head, .rc-steps .recipe-step-row { grid-template-columns: var(--rc-time) 82px 62px minmax(36px, 1fr) 18px; column-gap: 10px; }
+  .rc-steps.is-immersion .recipe-step-head, .rc-steps.is-immersion .recipe-step-row { grid-template-columns: var(--rc-time) 44px 82px 62px minmax(36px, 1fr) 16px; column-gap: 7px; }
 }
 /* The time chips sit on one thin line; while the switch is closed a thick line joins the closing and opening times. */
 .rc-steps .recipe-step-row::before, .rc-steps .recipe-step-row::after { left: calc(var(--rc-pad) + var(--rc-time) / 2); }
@@ -45,3 +41,18 @@
 .saved-recipe-step.is-closed:not(:last-child) > i::after { left: 6px; width: 4px; opacity: 1; }
 .rc-steps .recipe-step-row.closed-top::after { top: -1px; border-top-left-radius: 0; border-top-right-radius: 0; }
 .rc-steps .recipe-step-row.closed-bottom::after { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+/* Saved cards: centre the timeline line on the dots (dot box: left 3px + 6px + 2×2px border = centre 8px). */
+.saved-recipe-step:not(:last-child) > i::after { left: 7.5px; }
+.saved-recipe-step.is-closed:not(:last-child) > i::after { left: 6px; }
+/* Header labels are left-aligned at the same inset as the text in the box below them (not at the box edge). */
+.rc-steps .recipe-step-head > span { text-align: left; }
+.rc-steps .recipe-fixed-time, .rc-steps .recipe-time-input { padding: 0 0 0 10px; text-align: left; place-items: center start; }
+.rc-steps .recipe-step-head > span:first-child { padding-left: 10px; }
+.rc-steps .recipe-step-row select, .rc-steps.is-immersion .recipe-step-row select { padding-left: 8px; padding-right: 20px; }
+.rc-steps .recipe-switch-toggle { padding: 0 0 0 8px; text-align: left; }
+.rc-steps.is-immersion .recipe-step-head > span:nth-child(2), .rc-steps .recipe-step-head > span:nth-last-child(4), .rc-steps .recipe-step-head > span:nth-last-child(3) { padding-left: 9px; }
+.rc-steps .recipe-amount-input input { padding-left: 8px; padding-right: 16px; text-align: left; }
+.rc-steps .recipe-no-amount { justify-items: start; padding-left: 9px; }
+.rc-steps .recipe-cumulative, .rc-steps .recipe-step-head > span:nth-last-child(2) { text-align: right; padding-left: 0; }
+.rc-steps .recipe-amount-input input { -moz-appearance: textfield; }
+.rc-steps .recipe-amount-input input::-webkit-inner-spin-button, .rc-steps .recipe-amount-input input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
