@@ -64,7 +64,7 @@ export default function App() {
       {!settingsOpen && <div className="page-transition" key={page}>
         {page === "Beans" && <BeansPage beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} userId={user?.id ?? null} onBrew={beanId => { setBrewBeanId(beanId ?? null); setOpenBrewForm(true); navigate("Brew Log"); }} />}
         {page === "Brew Log" && <BrewLog beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} recipes={recipes} userId={user?.id ?? null} openInitially={openBrewForm} initialBeanId={brewBeanId} onOpened={() => { setOpenBrewForm(false); setBrewBeanId(null); }} />}
-        {page === "Recipes" && <RecipePage recipes={recipes} setRecipes={setRecipes} brews={brews} setBrews={setBrews} />}
+        {page === "Recipes" && <RecipePage recipes={recipes} setRecipes={setRecipes} brews={brews} setBrews={setBrews} userId={user?.id ?? null} />}
         {page === "Brew Stats" && <BrewStats beans={beans} brews={brews} />}
       </div>}
     </div>

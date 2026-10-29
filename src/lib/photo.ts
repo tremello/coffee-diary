@@ -9,6 +9,20 @@ export const PHOTO_PROCESS_LABELS: Record<string, string> = {
   "anaerobic fermentation washed": "무산소 워시드"
 };
 
+export const PHOTO_ACCEPT = "image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif";
+
+const PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
+
+// Some browsers leave HEIC files without a type, so fall back to the file name.
+export const photoMimeType = (file: File) => {
+  if (file.type) return file.type.toLowerCase();
+  const extension = file.name.split(".").pop()?.toLowerCase();
+  return extension === "heic" ? "image/heic" : extension === "heif" ? "image/heif" : "";
+};
+
+// The error to show for a photo that can't be sent, or "" when it can.
+export const photoProblem = (file: File) => !PHOTO_TYPES.has(photoMimeType(file)) ? "JPG, PNG, WebP, HEIC 사진만 선택할 수 있어요." : file.size > MAX_PHOTO_SELECT_BYTES ? "사진은 25MB 이하로 선택해주세요." : "";
+
 // Vercel rejects request bodies over 4.5MB, so photos are shrunk to a JPEG well under that before upload.
 export const MAX_PHOTO_SELECT_BYTES = 25 * 1024 * 1024;
 

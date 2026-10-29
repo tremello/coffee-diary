@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type Dispatch, type FormEvent, type PointerEvent, type SetStateAction } from "react";
 import { beanName, handleNumericInput, withCommas } from "../../lib/format";
+import { PHOTO_ACCEPT } from "../../lib/photo";
 import { type Bean, BEAN_QUALITIES, BEAN_STATUSES, type BeanForm } from "../../types";
 import { type PickOption, PickSheet } from "./PickSheet";
 import { RebuySheet } from "./RebuySheet";
@@ -18,9 +19,7 @@ export type BeanPhoto = {
 
 type Picker = "origin" | "variety" | "roastery" | "rebuy" | null;
 
-const PHOTO_ACCEPT = "image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif";
-
-const CameraIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>;
+export const CameraIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>;
 const RepeatIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3" /><path d="M18 3v4h-4M6 21v-4h4" /></svg>;
 
 // The bean form as "name · value" rows: full screen on phones, a dialog on wider screens. BeansPage keeps the form

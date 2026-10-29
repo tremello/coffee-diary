@@ -56,3 +56,7 @@
 .rc-steps .recipe-cumulative, .rc-steps .recipe-step-head > span:nth-last-child(2) { text-align: right; padding-left: 0; }
 .rc-steps .recipe-amount-input input { -moz-appearance: textfield; }
 .rc-steps .recipe-amount-input input::-webkit-inner-spin-button, .rc-steps .recipe-amount-input input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+/* Recipe photo: fields filled from the photo get the bean editor's green dot and tint. */
+.rc-steps-title { display: inline-flex; align-items: center; gap: 6px; }
+.rc-steps.is-read { background: color-mix(in srgb, var(--bg-e3eedf) 35%, var(--bg-ffffff)); }

@@ -1,15 +1,24 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { supabase } from "../../supabase";
+import { CameraIcon } from "../bean-editor/BeanEditor";
 import { useKeyboardInset } from "../bean-editor/useKeyboardInset";
 import { useSheet } from "../brew-editor/useSheet";
 import { fmt } from "../../lib/format";
+import { PHOTO_ACCEPT, photoMimeType, photoProblem, preparePhoto } from "../../lib/photo";
 import { basicRecipeSteps, defaultRecipeSteps, extractionCumulative, immersionActions, immersionSeconds, isAmountlessStep, isBypassStep, normalizedRecipeAction, recipeActions, recipeTime, recipeTimeFromDigits, recipeTimeToSeconds, recipeWater } from "../../lib/recipe";
 import { type RecipeStep, type SavedRecipe } from "../../types";
 
 export type RecipeDraft = Pick<SavedRecipe, "name" | "coffee" | "memo" | "steps" | "immersion">;
 
+type ReadField = "name" | "coffee" | "immersion" | "steps" | "memo";
+type RecognizedRecipe = { name?: string; coffee?: number; immersion?: boolean; steps?: RecipeStep[]; memo?: string; trimmed?: boolean };
+type RecipePhoto = { preview: string; busy: boolean; error: string; done: boolean; trimmed: boolean };
+const noPhoto: RecipePhoto = { preview: "", busy: false, error: "", done: false, trimmed: false };
+
 // The recipe form as a sheet over the list (a dialog on wider screens), in the bean and brew editors' be-* layout.
 // `recipe` is the one being edited, or null for a new recipe.
-export function RecipeEditor({ recipe, onSave, onClose }: { recipe: SavedRecipe | null; onSave: (draft: RecipeDraft) => void; onClose: () => void }) {
+// A new recipe can be filled from a photo of a recipe card, screenshot or note, like a bean from its label.
+export function RecipeEditor({ recipe, canReadPhoto, onSave, onClose }: { recipe: SavedRecipe | null; canReadPhoto: boolean; onSave: (draft: RecipeDraft) => void; onClose: () => void }) {
   const editing = recipe !== null;
   useKeyboardInset();
   const sheet = useSheet(onClose);
@@ -19,6 +28,56 @@ export function RecipeEditor({ recipe, onSave, onClose }: { recipe: SavedRecipe 
   const [immersion, setImmersion] = useState(Boolean(recipe?.immersion));
   const [steps, setSteps] = useState<RecipeStep[]>(() => recipe && recipe.steps.length >= 2 ? recipe.steps.map(step => ({ ...step, action: normalizedRecipeAction(step.action) })) : defaultRecipeSteps());
   const [showErrors, setShowErrors] = useState(false);
+  const [photo, setPhoto] = useState<RecipePhoto>(noPhoto);
+  const [readFields, setReadFields] = useState<ReadonlySet<ReadField>>(new Set());
+  const photoFile = useRef<File | null>(null);
+  // Only the latest photo's answer fills the form, if an earlier read finishes after it.
+  const photoRun = useRef(0);
+  useEffect(() => () => { if (photo.preview) URL.revokeObjectURL(photo.preview); }, [photo.preview]);
+
+  const clearPhoto = () => { photoRun.current += 1; photoFile.current = null; setPhoto(noPhoto); setReadFields(new Set()); };
+  const readPhoto = async (file = photoFile.current) => {
+    if (!file) return;
+    const run = ++photoRun.current;
+    setPhoto(current => ({ ...current, busy: true, error: "", done: false, trimmed: false }));
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("사진 인식은 Google 로그인 후 사용할 수 있어요.");
+      const body = await preparePhoto(file, photoMimeType(file));
+      const response = await fetch("/api/recognize-recipe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify(body)
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "사진에서 레시피를 읽지 못했어요.");
+      if (run !== photoRun.current) return;
+      const read = (payload.recipe ?? {}) as RecognizedRecipe;
+      const readSteps = Array.isArray(read.steps) && read.steps.length >= 2 ? read.steps.map(step => ({ ...step, action: normalizedRecipeAction(step.action) })) : null;
+      const fields = new Set<ReadField>();
+      if (read.name?.trim()) { setName(read.name.trim()); fields.add("name"); }
+      if (Number(read.coffee) > 0) { setCoffee(String(read.coffee)); fields.add("coffee"); }
+      if (readSteps) { setSteps(readSteps); setImmersion(Boolean(read.immersion)); fields.add("steps"); if (read.immersion) fields.add("immersion"); explicitTimeRows.current.clear(); }
+      if (read.memo?.trim()) { setMemo(read.memo.trim()); fields.add("memo"); }
+      setReadFields(fields);
+      setPhoto(current => ({ ...current, busy: false, done: true, trimmed: Boolean(read.trimmed) }));
+    } catch (photoError) {
+      if (run !== photoRun.current) return;
+      setPhoto(current => ({ ...current, busy: false, error: photoError instanceof Error ? photoError.message : "사진에서 레시피를 읽지 못했어요." }));
+    }
+  };
+  const selectPhoto = (file?: File) => {
+    clearPhoto();
+    if (!file) return;
+    const problem = photoProblem(file);
+    if (problem) { setPhoto({ ...noPhoto, error: problem }); return; }
+    photoFile.current = file;
+    setPhoto({ ...noPhoto, preview: URL.createObjectURL(file) });
+    // Read right away, like the bean label; 다시 읽기 stays for retrying.
+    if (canReadPhoto) void readPhoto(file);
+  };
+  const readRow = (field: ReadField, bad = false) => `be-row${bad ? " bad" : readFields.has(field) ? " read" : ""}`;
+  const readDot = (field: ReadField) => readFields.has(field) && <span className="be-dot" aria-hidden="true" />;
 
   const { extraction: totalWater, bypass: bypassWater } = recipeWater(steps);
   const maxSteps = immersion ? 9 : 7;
@@ -68,13 +127,34 @@ export function RecipeEditor({ recipe, onSave, onClose }: { recipe: SavedRecipe 
       <div className="be-body"><div className="be-body-inner">
         {showErrors && (missingName || missingCoffee || missingWater) && <p className="be-alert" role="alert">{[missingName && "이름", missingCoffee && "원두 양", missingWater && "붓는 양"].filter(Boolean).join(", ")}을 채워주세요.</p>}
 
+        {!editing && <div className="be-card be-quick">
+          {photo.preview ? <div className="be-photo">
+            <img src={photo.preview} alt="고른 레시피 사진" />
+            <div className="be-photo-text" role="status">
+              {photo.busy ? <strong>레시피를 읽는 중…</strong>
+                : photo.error ? <><strong className="bad">{photo.error}</strong><span>다시 읽거나 직접 입력해주세요</span></>
+                : photo.done ? <><strong className="ok">레시피를 읽었어요</strong><span>{photo.trimmed ? "단계가 많아 앞부분만 넣었어요. " : ""}초록 점 칸만 한 번 확인해주세요</span></>
+                : <><strong>사진을 골랐어요</strong><span>{canReadPhoto ? "사진은 읽는 동안에만 쓰고 저장하지 않아요" : "사진 인식은 Google 로그인 후 쓸 수 있어요"}</span></>}
+            </div>
+            {!photo.busy && canReadPhoto && <button type="button" className="be-pill" onClick={() => void readPhoto()}>다시 읽기</button>}
+            <button type="button" className="be-photo-remove" onClick={clearPhoto} aria-label="고른 사진 지우기">×</button>
+          </div> : <div className="be-row be-quick-row">
+            <span className="be-row-name"><CameraIcon />레시피 사진으로 채우기</span>
+            <span className="be-quick-actions">
+              <label className="be-pill"><input type="file" accept={PHOTO_ACCEPT} capture="environment" onChange={event => { selectPhoto(event.target.files?.[0]); event.target.value = ""; }} />찍기</label>
+              <label className="be-pill"><input type="file" accept={PHOTO_ACCEPT} onChange={event => { selectPhoto(event.target.files?.[0]); event.target.value = ""; }} />앨범</label>
+            </span>
+          </div>}
+          {photo.error && !photo.preview && <p className="be-photo-note" role="alert">{photo.error}</p>}
+        </div>}
+
         <section className="be-group" aria-labelledby="rc-basic">
           <h3 className="be-group-label" id="rc-basic">기본</h3>
           <div className="be-card">
-            <label className={`be-row${missingName ? " bad" : ""}`}><span className="be-row-name">이름<span className="be-req"> *</span></span><input value={name} maxLength={40} placeholder="예: 4:6 레시피" onChange={event => setName(event.target.value)} enterKeyHint="next" /></label>
-            <label className={`be-row${missingCoffee ? " bad" : ""}`}><span className="be-row-name">원두 양<span className="be-req"> *</span></span><input type="number" inputMode="decimal" min="0.1" step="0.1" value={coffee} placeholder="15" onChange={event => setCoffee(event.target.value)} /><span className="be-unit">g</span></label>
-            <div className="be-row seg-row">
-              <span className="be-row-name">방식</span>
+            <label className={readRow("name", missingName)}><span className="be-row-name">{readDot("name")}이름<span className="be-req"> *</span></span><input value={name} maxLength={40} placeholder="예: 4:6 레시피" onChange={event => setName(event.target.value)} enterKeyHint="next" /></label>
+            <label className={readRow("coffee", missingCoffee)}><span className="be-row-name">{readDot("coffee")}원두 양<span className="be-req"> *</span></span><input type="number" inputMode="decimal" min="0.1" step="0.1" value={coffee} placeholder="15" onChange={event => setCoffee(event.target.value)} /><span className="be-unit">g</span></label>
+            <div className={`${readRow("immersion")} seg-row`}>
+              <span className="be-row-name">{readDot("immersion")}방식</span>
               <div className="be-seg" role="group" aria-label="레시피 방식">
                 <button type="button" aria-pressed={!immersion} onClick={() => setImmersion(false)}>기본형</button>
                 <button type="button" aria-pressed={immersion} onClick={() => setImmersion(true)}>침출형 (스위치)</button>
@@ -84,8 +164,8 @@ export function RecipeEditor({ recipe, onSave, onClose }: { recipe: SavedRecipe 
         </section>
 
         <section className="be-group" aria-labelledby="rc-steps">
-          <h3 className="be-group-label" id="rc-steps">{immersion ? "단계" : "푸어 타임라인"}<span className="rc-hint">시간은 숫자만: 130 → 1:30</span></h3>
-          <div className={`be-card recipe-step-editor rc-steps ${immersion ? "is-immersion" : ""} ${missingWater ? "has-error" : ""}`}>
+          <h3 className="be-group-label" id="rc-steps"><span className="rc-steps-title">{readFields.has("steps") && <span className="be-dot" aria-hidden="true" />}{immersion ? "단계" : "푸어 타임라인"}</span><span className="rc-hint">시간은 숫자만: 130 → 1:30</span></h3>
+          <div className={`be-card recipe-step-editor rc-steps ${immersion ? "is-immersion" : ""} ${missingWater ? "has-error" : readFields.has("steps") ? "is-read" : ""}`}>
             <div className="recipe-step-head"><span>시간</span>{immersion && <span>스위치</span>}<span>동작</span><span>붓는 양</span><span>누적</span><span /></div>
             {(() => { let closedBefore = false; return steps.map((step, index) => {
               const cumulative = extractionCumulative(steps, index);
@@ -113,7 +193,7 @@ export function RecipeEditor({ recipe, onSave, onClose }: { recipe: SavedRecipe 
         <section className="be-group" aria-labelledby="rc-memo">
           <h3 className="be-group-label" id="rc-memo">메모</h3>
           <div className="be-card">
-            <label className="be-row full bw-memo"><span className="sr-only">추출 메모</span><textarea rows={1} value={memo} placeholder="예: 앞 두 번으로 단맛, 뒤 세 번으로 농도" onChange={event => setMemo(event.target.value)} /></label>
+            <label className={`${readRow("memo")} full bw-memo`}>{readDot("memo")}<span className="sr-only">추출 메모</span><textarea rows={1} value={memo} placeholder="예: 앞 두 번으로 단맛, 뒤 세 번으로 농도" onChange={event => setMemo(event.target.value)} /></label>
           </div>
         </section>
       </div></div>

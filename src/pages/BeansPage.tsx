@@ -5,7 +5,7 @@ import { SwipeToBrew } from "../components/SwipeToBrew";
 import { JourneySteps } from "../components/ui";
 import { BeanEditor } from "../components/bean-editor/BeanEditor";
 import { beanName, fmt, handleNumericInput, localDate, splitCupNotes, withCommas } from "../lib/format";
-import { localizedPhotoField, MAX_PHOTO_SELECT_BYTES, PHOTO_ORIGIN_LABELS, PHOTO_PROCESS_LABELS, preparePhoto } from "../lib/photo";
+import { localizedPhotoField, PHOTO_ORIGIN_LABELS, PHOTO_PROCESS_LABELS, photoMimeType, photoProblem, preparePhoto } from "../lib/photo";
 import { type Bean, BEAN_QUALITIES, BEAN_STATUSES, type BeanForm, type BeanQuality, type BeanStatus, type Brew, type RecognizedBeanFields, type TastingNote } from "../types";
 import { LIST_KEYS } from "../data/keys";
 import { DEVICE_KEYS } from "../data/settings";
@@ -195,17 +195,11 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
     if (photoPreview) URL.revokeObjectURL(photoPreview);
     setPhotoFile(null); setPhotoPreview(""); setPhotoBusy(false); setPhotoError(""); setPhotoReadCount(null); setReadFields(new Set());
   };
-  const photoMimeType = (file: File) => {
-    if (file.type) return file.type.toLowerCase();
-    const extension = file.name.split(".").pop()?.toLowerCase();
-    return extension === "heic" ? "image/heic" : extension === "heif" ? "image/heif" : "";
-  };
   const selectPhoto = (file?: File) => {
     clearPhoto();
     if (!file) return;
-    const mimeType = photoMimeType(file);
-    if (!new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]).has(mimeType)) { setPhotoError("JPG, PNG, WebP, HEIC 사진만 선택할 수 있어요."); return; }
-    if (file.size > MAX_PHOTO_SELECT_BYTES) { setPhotoError("사진은 25MB 이하로 선택해주세요."); return; }
+    const problem = photoProblem(file);
+    if (problem) { setPhotoError(problem); return; }
     setPhotoFile(file); setPhotoPreview(URL.createObjectURL(file));
     // Read the label right away; the button below stays for retrying after an error.
     if (userId) void recognizePhoto(file);

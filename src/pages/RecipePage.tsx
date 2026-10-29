@@ -13,7 +13,7 @@ const initialRecipeSort = (): RecipeSort => {
   return "latest";
 };
 
-type RecipeProps = { recipes: SavedRecipe[]; setRecipes: StorageSetter<SavedRecipe[]>; brews: Brew[]; setBrews: StorageSetter<Brew[]> };
+type RecipeProps = { recipes: SavedRecipe[]; setRecipes: StorageSetter<SavedRecipe[]>; brews: Brew[]; setBrews: StorageSetter<Brew[]>; userId: string | null };
 
 export function RecipePage(props: RecipeProps) {
   return <div className="recipe-page">
@@ -22,7 +22,7 @@ export function RecipePage(props: RecipeProps) {
   </div>;
 }
 
-function RecipeLibrary({ recipes, setRecipes, brews, setBrews }: RecipeProps) {
+function RecipeLibrary({ recipes, setRecipes, brews, setBrews, userId }: RecipeProps) {
   // The form opens as a sheet over the list: for a new recipe (null) or to edit a saved one.
   const [editor, setEditor] = useState<{ editing: SavedRecipe | null } | null>(null);
   const [deletedRecipe, setDeletedRecipe] = useState<SavedRecipe | null>(null);
@@ -94,6 +94,6 @@ function RecipeLibrary({ recipes, setRecipes, brews, setBrews }: RecipeProps) {
       })}
       </div>
     </section>
-    {editor && <RecipeEditor recipe={editor.editing} onSave={save} onClose={() => setEditor(null)} />}
+    {editor && <RecipeEditor recipe={editor.editing} canReadPhoto={userId !== null} onSave={save} onClose={() => setEditor(null)} />}
   </>;
 }
