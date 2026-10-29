@@ -81,6 +81,8 @@ export type SavedRecipe = {
   id: number;
   name: string;
   coffee: number;
+  // 물 온도(℃). 넣지 않아도 되는 칸.
+  temp?: number;
   steps: RecipeStep[];
   immersion?: boolean;
   memo: string;

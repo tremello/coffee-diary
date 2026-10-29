@@ -8,7 +8,7 @@ import { PHOTO_ACCEPT, photoMimeType, photoProblem, preparePhoto } from "../../l
 import { basicRecipeSteps, defaultRecipeSteps, extractionCumulative, immersionActions, immersionSeconds, isAmountlessStep, isBypassStep, normalizedRecipeAction, recipeActions, recipeTime, recipeTimeFromDigits, recipeTimeToSeconds, recipeWater } from "../../lib/recipe";
 import { type RecipeStep, type SavedRecipe } from "../../types";
 
-export type RecipeDraft = Pick<SavedRecipe, "name" | "coffee" | "memo" | "steps" | "immersion">;
+export type RecipeDraft = Pick<SavedRecipe, "name" | "coffee" | "temp" | "memo" | "steps" | "immersion">;
 
 type ReadField = "name" | "coffee" | "immersion" | "steps" | "memo";
 type RecognizedRecipe = { name?: string; coffee?: number; immersion?: boolean; steps?: RecipeStep[]; memo?: string; trimmed?: boolean };
@@ -24,6 +24,7 @@ export function RecipeEditor({ recipe, canReadPhoto, onSave, onClose }: { recipe
   const sheet = useSheet(onClose);
   const [name, setName] = useState(recipe?.name ?? "");
   const [coffee, setCoffee] = useState(recipe ? String(recipe.coffee) : "");
+  const [temp, setTemp] = useState(recipe?.temp ? String(recipe.temp) : "");
   const [memo, setMemo] = useState(recipe?.memo ?? "");
   const [immersion, setImmersion] = useState(Boolean(recipe?.immersion));
   const [steps, setSteps] = useState<RecipeStep[]>(() => recipe && recipe.steps.length >= 2 ? recipe.steps.map(step => ({ ...step, action: normalizedRecipeAction(step.action) })) : defaultRecipeSteps());
@@ -109,7 +110,8 @@ export function RecipeEditor({ recipe, canReadPhoto, onSave, onClose }: { recipe
   const save = () => {
     const coffeeAmount = Number(coffee);
     if (!name.trim() || !(coffeeAmount > 0) || totalWater <= 0) { setShowErrors(true); return; }
-    onSave({ name: name.trim(), coffee: coffeeAmount, memo: memo.trim(), steps: immersion ? steps : basicRecipeSteps(steps), ...(immersion ? { immersion: true } : {}) });
+    const waterTemp = Number(temp);
+    onSave({ name: name.trim(), coffee: coffeeAmount, ...(waterTemp > 0 ? { temp: waterTemp } : {}), memo: memo.trim(), steps: immersion ? steps : basicRecipeSteps(steps), ...(immersion ? { immersion: true } : {}) });
     sheet.dismiss();
   };
 
@@ -153,6 +155,7 @@ export function RecipeEditor({ recipe, canReadPhoto, onSave, onClose }: { recipe
           <div className="be-card">
             <label className={readRow("name", missingName)}><span className="be-row-name">{readDot("name")}이름<span className="be-req"> *</span></span><input value={name} maxLength={40} placeholder="예: 4:6 레시피" onChange={event => setName(event.target.value)} enterKeyHint="next" /></label>
             <label className={readRow("coffee", missingCoffee)}><span className="be-row-name">{readDot("coffee")}원두 양<span className="be-req"> *</span></span><input type="number" inputMode="decimal" min="0.1" step="0.1" value={coffee} placeholder="15" onChange={event => setCoffee(event.target.value)} /><span className="be-unit">g</span></label>
+            <label className="be-row"><span className="be-row-name">권장 온도</span><input type="number" inputMode="decimal" min="1" max="100" step="0.5" value={temp} placeholder="93" onChange={event => setTemp(event.target.value)} /><span className="be-unit">℃</span></label>
             <div className={`${readRow("immersion")} seg-row`}>
               <span className="be-row-name">{readDot("immersion")}방식</span>
               <div className="be-seg" role="group" aria-label="레시피 방식">

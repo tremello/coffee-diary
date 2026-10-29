@@ -17,3 +17,4 @@
 @import "./15-bean-editor.css"; /* New-bean and edit-bean screen: list rows, picker sheets, phone full screen and desktop dialog. */
 @import "./16-brew-sheet.css"; /* Brew log: day groups, tappable cards with stars, brew form and brew detail sheets. */
 @import "./17-recipe-sheet.css"; /* Recipes: "+ 새 레시피" in the list header and the recipe form sheet. */
+@import "./18-recipe-share.css"; /* Recipes: 공유 button and the share image sheet. */

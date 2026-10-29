@@ -2,6 +2,7 @@ import { useState } from "react";
 import { type StorageSetter } from "../data/sync";
 import { JourneySteps } from "../components/ui";
 import { RecipeEditor, type RecipeDraft } from "../components/recipe-editor/RecipeEditor";
+import { RecipeShareSheet } from "../components/recipe-share/RecipeShareSheet";
 import { fmt } from "../lib/format";
 import { extractionCumulative, immersionSeconds, linkBrewsToRecipes, normalizedRecipeAction, recipeTime, recipeWater } from "../lib/recipe";
 import { type Brew, type SavedRecipe } from "../types";
@@ -26,6 +27,7 @@ function RecipeLibrary({ recipes, setRecipes, brews, setBrews, userId }: RecipeP
   // The form opens as a sheet over the list: for a new recipe (null) or to edit a saved one.
   const [editor, setEditor] = useState<{ editing: SavedRecipe | null } | null>(null);
   const [deletedRecipe, setDeletedRecipe] = useState<SavedRecipe | null>(null);
+  const [sharing, setSharing] = useState<SavedRecipe | null>(null);
   const [sort, setSort] = useState<RecipeSort>(initialRecipeSort);
   const chooseSort = (next: RecipeSort) => { setSort(next); try { localStorage.setItem(RECIPE_SORT_KEY, next); } catch {} };
 
@@ -74,7 +76,7 @@ function RecipeLibrary({ recipes, setRecipes, brews, setBrews, userId }: RecipeP
         const { extraction: water, bypass } = recipeWater(recipe.steps);
         const steep = recipe.immersion ? immersionSeconds(recipe.steps) : null;
         return <article className="saved-recipe-card" key={recipe.id}>
-          <div className="saved-recipe-top"><div><h3>{recipe.name}{recipe.immersion && <span className="recipe-type-badge">침출식</span>}</h3><p>원두 {fmt(recipe.coffee)}g · 물 {fmt(water)}g · {water && recipe.coffee ? `1:${(water / recipe.coffee).toFixed(1)}` : "1:–"}{bypass > 0 && ` · 가수 ${fmt(bypass)}g`}{steep !== null && ` · 침출 ${recipeTime(steep)}`}</p></div><div className="saved-recipe-actions"><button type="button" onClick={() => setEditor({ editing: recipe })}>수정</button><button type="button" onClick={() => remove(recipe)}>삭제</button></div></div>
+          <div className="saved-recipe-top"><div><h3>{recipe.name}{recipe.immersion && <span className="recipe-type-badge">침출식</span>}</h3><p>{recipe.temp ? `${fmt(recipe.temp)}℃ · ` : ""}원두 {fmt(recipe.coffee)}g · 물 {fmt(water)}g · {water && recipe.coffee ? `1:${(water / recipe.coffee).toFixed(1)}` : "1:–"}{bypass > 0 && ` · 가수 ${fmt(bypass)}g`}{steep !== null && ` · 침출 ${recipeTime(steep)}`}</p></div><div className="saved-recipe-actions"><button type="button" onClick={() => setSharing(recipe)}>공유</button><button type="button" onClick={() => setEditor({ editing: recipe })}>수정</button><button type="button" onClick={() => remove(recipe)}>삭제</button></div></div>
           <div className="saved-recipe-timeline">{(() => {
             // 스위치는 열린 상태로 시작한다. 상태가 실제로 바뀌는 단계만 표시하고, 닫힌 구간은 타임라인 선으로 보여준다.
             let closed = false;
@@ -94,6 +96,7 @@ function RecipeLibrary({ recipes, setRecipes, brews, setBrews, userId }: RecipeP
       })}
       </div>
     </section>
+    {sharing && <RecipeShareSheet recipe={sharing} onClose={() => setSharing(null)} />}
     {editor && <RecipeEditor recipe={editor.editing} canReadPhoto={userId !== null} onSave={save} onClose={() => setEditor(null)} />}
   </>;
 }

@@ -1,0 +1,9 @@
+/* Recipe share: '공유' on each saved recipe card and the sheet that previews the share image. */
+.saved-recipe-actions button:not(:last-child) { color: var(--fg-7a5733); }
+.rs-body { display: grid; justify-items: center; gap: 12px; padding-top: 8px; }
+.rs-preview { display: block; width: 100%; max-width: 420px; height: auto; border-radius: 12px; box-shadow: 0 6px 24px rgba(var(--sh-4a341e), calc(0.12 * var(--shadow-k))); }
+.rs-loading { display: grid; place-items: center; aspect-ratio: 4 / 5; background: var(--bg-f5eee5); color: var(--fg-6b5d50); font-size: 14px; box-shadow: none; }
+.rs-footer { display: grid; gap: 8px; }
+.rs-secondary { width: 100%; min-height: 46px; border: 1px solid var(--bd-e6dacb); border-radius: 12px; background: var(--bg-ffffff); color: var(--fg-7a5733); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+.rs-secondary:disabled, .rs-footer .bw-save:disabled { opacity: .5; cursor: default; }
+@media (min-width: 760px) { .be-panel.rs-panel { width: min(520px, calc(100vw - 48px)); } }
