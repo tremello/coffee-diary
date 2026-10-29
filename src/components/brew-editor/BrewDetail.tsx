@@ -12,8 +12,9 @@ export function BrewDetail({ brew, beans, brews, notes, onSelect, onAgain, onEdi
   brews: Brew[];
   notes: TastingNote[];
   onSelect: (brew: Brew) => void;
-  onAgain: (brew: Brew) => void;
-  onEdit: (brew: Brew) => void;
+  // Left out where the brew can only be looked at (the stats calendar): no 수정 or 다시 내리기 buttons.
+  onAgain?: (brew: Brew) => void;
+  onEdit?: (brew: Brew) => void;
   onClose: () => void;
 }) {
   const sheet = useSheet(onClose);
@@ -50,7 +51,7 @@ export function BrewDetail({ brew, beans, brews, notes, onSelect, onAgain, onEdi
         <div className="be-head">
           <button type="button" className="be-head-button" onClick={() => sheet.dismiss()}>닫기</button>
           <span className="bw-detail-date">{day.getMonth() + 1}월 {day.getDate()}일 기록</span>
-          <button type="button" className="be-head-button save" onClick={() => onEdit(brew)}>수정</button>
+          {onEdit ? <button type="button" className="be-head-button save" onClick={() => onEdit(brew)}>수정</button> : <span className="be-head-button" aria-hidden="true" />}
         </div>
       </div>
       <div className="be-body" ref={bodyRef}><div className="be-body-inner">
@@ -79,7 +80,7 @@ export function BrewDetail({ brew, beans, brews, notes, onSelect, onAgain, onEdi
           </button>)}</div>
         </section>}
       </div></div>
-      <div className="bw-footer"><button type="button" className="bw-save" onClick={() => onAgain(brew)}>이대로 다시 내리기</button></div>
+      {onAgain && <div className="bw-footer"><button type="button" className="bw-save" onClick={() => onAgain(brew)}>이대로 다시 내리기</button></div>}
     </div>
   </div>;
 }
