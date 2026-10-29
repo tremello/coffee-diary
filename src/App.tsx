@@ -3,7 +3,7 @@ import { useAuth } from "./data/auth";
 import { retryFailedSync, useStorage, useSyncFailed } from "./data/sync";
 import { readLocal } from "./data/storage";
 import { Header } from "./components/Header";
-import { SettingsSheet } from "./components/settings/SettingsSheet";
+import { SettingsPage, SettingsSheet } from "./components/settings/SettingsSheet";
 import { STORAGE_KEYS } from "./data/keys";
 import { readStartPage } from "./data/settings";
 import { FONT } from "./lib/format";
@@ -16,6 +16,7 @@ import { type Bean, type BeanStatus, type Brew, type SavedRecipe, type TastingNo
 
 // "배송 중" was retired (shipping is brief and always ends in degassing); older records read as "디개싱 중" and are saved that way on their next edit.
 const LEGACY_SHIPPING_STATUS = "배송 중";
+const WIDE_QUERY = "(min-width: 541px)";
 
 const normalizeBeans = (beans: Bean[]) => beans.some(bean => (bean.status as string) === LEGACY_SHIPPING_STATUS) ? beans.map(bean => (bean.status as string) === LEGACY_SHIPPING_STATUS ? { ...bean, status: "디개싱 중" as BeanStatus } : bean) : beans;
 
@@ -24,6 +25,14 @@ export default function App() {
   const [page, setPage] = useState<Page>(() => window.location.hash ? pageFromHash(window.location.hash) : readStartPage());
   const [settingsOpen, setSettingsOpen] = useState(false);
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
+  // Phones open settings as a sheet from the header menu; wider screens show it as the last tab, in place of the page.
+  const [wide, setWide] = useState(() => window.matchMedia(WIDE_QUERY).matches);
+  useEffect(() => {
+    const query = window.matchMedia(WIDE_QUERY);
+    const onChange = () => setWide(query.matches);
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+  }, []);
   const [openBrewForm, setOpenBrewForm] = useState(false);
   const [brewBeanId, setBrewBeanId] = useState<number | null>(null);
   const { user, loading: authLoading } = useAuth();
@@ -41,6 +50,7 @@ export default function App() {
     const nextHash = PAGE_HASHES[nextPage];
     if (window.location.hash !== nextHash) window.history.pushState({ page: nextPage }, "", nextHash);
     setPage(nextPage);
+    setSettingsOpen(false);
   };
 
   useEffect(() => {
@@ -55,11 +65,13 @@ export default function App() {
     };
   }, []);
 
+  const settingsProps = { user, data: { beans, brews, notes, recipes, drippers: readLocal<string[]>(STORAGE_KEYS.drippers) ?? [] }, setBeans };
+
   return (
     <div style={{ fontFamily: FONT, maxWidth: 960, margin: "0 auto", padding: "0 0 3rem" }}>
-      <Header page={page} setPage={navigate} user={user} authLoading={authLoading} onOpenSettings={() => setSettingsOpen(true)} />
+      <Header page={page} setPage={navigate} user={user} authLoading={authLoading} settingsOpen={settingsOpen && wide} onOpenSettings={() => setSettingsOpen(true)} />
       {syncFailed && <div className="sync-alert" role="alert"><span>최근 변경을 서버에 저장하지 못했어요. 이 기기에는 남아 있어요.</span><button type="button" onClick={retryFailedSync}>다시 시도</button></div>}
-      {settingsOpen && <SettingsSheet user={user} data={{ beans, brews, notes, recipes, drippers: readLocal<string[]>(STORAGE_KEYS.drippers) ?? [] }} setBeans={setBeans} onClose={closeSettings} />}
+      {settingsOpen && (wide ? <SettingsPage {...settingsProps} /> : <SettingsSheet {...settingsProps} onClose={closeSettings} />)}
       {/* Pages step aside while settings is open so the lists it edits have a single owner; they remount with the new values. */}
       {!settingsOpen && <div className="page-transition" key={page}>
         {page === "Beans" && <BeansPage beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} userId={user?.id ?? null} onBrew={beanId => { setBrewBeanId(beanId ?? null); setOpenBrewForm(true); navigate("Brew Log"); }} />}

@@ -70,3 +70,26 @@
 @keyframes settings-fade { from { opacity: 0; } }
 @keyframes settings-slide { from { transform: translateX(40px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .settings-backdrop, .settings-sheet { animation: none; } }
+/* Wider screens: settings is the last item of the tab row, pushed to the right; the header menu is hidden. Phones keep the header menu and their four-tab bar. */
+.page-tab-settings { display: none; }
+@media (min-width: 541px) {
+  .menu-button { display: none; }
+  .page-tab.page-tab-settings { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+  .page-tab-settings svg { display: block; }
+}
+/* The settings tab on wider screens: categories on the left, the chosen group on the right (1 : 2). Narrow windows put the categories in a row above. */
+.settings-page { display: grid; grid-template-columns: 1fr 2fr; gap: 24px; align-items: start; padding-top: 4px; color: var(--fg-2a211a); }
+.settings-nav { display: flex; flex-direction: column; gap: 4px; padding: 6px; border: 1px solid var(--bd-e6dacb); border-radius: 13px; background: var(--bg-ffffff); }
+.settings-nav-item { display: block; width: 100%; padding: 10px 12px; border: 0; border-radius: 9px; background: transparent; color: var(--fg-5e472d); font: inherit; text-align: left; cursor: pointer; }
+.settings-nav-item:hover { background: var(--bg-f4eee6); }
+.settings-nav-item strong { display: block; font-size: 14px; font-weight: 600; }
+.settings-nav-item small { display: block; margin-top: 2px; color: var(--fg-82715e); font-size: 11px; }
+.settings-nav-item[aria-current="true"] { background: var(--bg-7a5733); color: var(--fg-ffffff); }
+.settings-nav-item[aria-current="true"] small { color: inherit; opacity: .8; }
+.settings-pane .settings-group h3 { margin: 4px 2px 12px; font-size: 18px; color: var(--fg-2a211a); letter-spacing: -0.01em; }
+@media (max-width: 759px) {
+  .settings-page { grid-template-columns: 1fr; gap: 16px; }
+  .settings-nav { flex-direction: row; flex-wrap: wrap; }
+  .settings-nav-item { width: auto; }
+  .settings-nav-item small { display: none; }
+}
