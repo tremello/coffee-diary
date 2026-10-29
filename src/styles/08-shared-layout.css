@@ -1,17 +1,17 @@
 /* Shared page rhythm: each section starts with the same editorial lead and surface system. */
 :root {
-  --surface-card: var(--bg-ffffff);
-  --surface-muted: var(--bg-f5efe6);
-  --surface-border: var(--bd-ede3d6);
-  --surface-radius: 12px;
+  --surface-card: var(--c-surface);
+  --surface-muted: var(--c-soft);
+  --surface-border: var(--c-line);
+  --surface-radius: var(--r-md);
   --content-gap: 16px;
 }
 
 @media (min-width: 541px) {
-  .page-tabs { gap: 2px; margin-top: 18px; padding: 0 0 1px; border-bottom: 1px solid var(--bd-e4dbd0); }
-  .page-tab { position: relative; min-height: 40px; padding: 9px 15px !important; border: 0 !important; border-radius: 8px 8px 0 0 !important; background: transparent !important; color: var(--fg-7b6e60) !important; font-size: 13px !important; transition: color .18s ease, background .18s ease; }
-  .page-tab:hover { color: var(--fg-5f492f) !important; background: var(--bg-f7f2eb) !important; }
-  .page-tab[aria-current="page"] { color: var(--fg-5f492f) !important; background: var(--bg-f3ece2) !important; font-weight: 700; }
+  .page-tabs { gap: 2px; margin-top: 18px; padding: 0 0 1px; border-bottom: 1px solid var(--c-line); }
+  .page-tab { position: relative; min-height: 40px; padding: 9px 15px !important; border: 0 !important; border-radius: 8px 8px 0 0 !important; background: transparent !important; color: var(--c-ink-2) !important; font-size: 13px !important; transition: color .18s ease, background .18s ease; }
+  .page-tab:hover { color: var(--c-brown-deep) !important; background: var(--c-soft) !important; }
+  .page-tab[aria-current="page"] { color: var(--c-brown-deep) !important; background: var(--c-soft-2) !important; font-weight: 700; }
   .page-tab[aria-current="page"]::after { position: absolute; right: 12px; bottom: -2px; left: 12px; height: 2px; border-radius: 2px; background: var(--bg-7a5733); content: ""; }
 }
 
@@ -21,8 +21,8 @@
   .inventory, .recipe-page, .brew-log, .brew-stats { padding-top: 0; }
   .page-intro, .inventory-intro, .stats-header { margin-top: 4px; }
 }
-.page-intro h2, .inventory-intro h2, .stats-header h2 { margin: 0 0 8px; color: var(--fg-2c241d); font-size: 29px; font-weight: 600; letter-spacing: -1.1px; line-height: 1.2; }
-.page-intro p:last-child, .inventory-intro p:last-child, .stats-header p:last-child { color: var(--fg-756958); font-size: 13px; line-height: 1.55; }
+.page-intro h2, .inventory-intro h2, .stats-header h2 { margin: 0 0 8px; color: var(--c-ink); font-size: 29px; font-weight: 600; letter-spacing: -1.1px; line-height: 1.2; }
+.page-intro p:last-child, .inventory-intro p:last-child, .stats-header p:last-child { color: var(--c-ink-2); font-size: 13px; line-height: 1.55; }
 .recipe-intro { margin-bottom: 16px; }
 .brew-log-heading { align-items: flex-end; margin-bottom: 16px; }
 .brew-log-heading-actions { padding-bottom: 1px; }
@@ -30,22 +30,22 @@
 
 .form-card, .brew-card, .recipe-composer-card, .saved-recipe-card, .stats-section {
   border: 1px solid var(--surface-border);
-  border-radius: var(--surface-radius);
+  border-radius: var(--r-md);
   background: var(--surface-card);
   box-shadow: 0 3px 12px rgba(var(--sh-5c442a), calc(0.025 * var(--shadow-k)));
 }
 .form-card { padding: 16px; margin-bottom: 16px; background: var(--surface-muted); }
 .brew-card { padding: 16px; margin-bottom: 10px; transition: border-color .18s ease, box-shadow .18s ease; }
-.brew-card:hover, .saved-recipe-card:hover { border-color: var(--bd-d5c3ae); box-shadow: 0 6px 18px rgba(var(--sh-5c442a), calc(0.06 * var(--shadow-k))); }
+.brew-card:hover, .saved-recipe-card:hover { border-color: var(--c-line-strong); box-shadow: 0 6px 18px rgba(var(--sh-5c442a), calc(0.06 * var(--shadow-k))); }
 .recipe-composer-card { margin-bottom: 16px; }
 .saved-recipe-card { padding: 14px; }
 .stats-section { padding: 18px; margin-bottom: 12px; }
-.stats-cards > div { border: 1px solid var(--bd-ede3d6); border-radius: var(--surface-radius); box-shadow: 0 3px 10px rgba(var(--sh-5c442a), calc(0.02 * var(--shadow-k))); }
+.stats-cards > div { border: 1px solid var(--c-line); border-radius: var(--r-md); box-shadow: 0 3px 10px rgba(var(--sh-5c442a), calc(0.02 * var(--shadow-k))); }
 
-.brew-log-tools { min-height: 38px; margin-bottom: 14px; padding: 4px; border: 1px solid var(--bd-ede3d6); border-radius: 10px; background: var(--bg-f7f2eb); }
-.brew-search input, .brew-log-tools select { border-color: transparent; background: var(--bg-ffffff); }
+.brew-log-tools { min-height: 38px; margin-bottom: 14px; padding: 4px; border: 1px solid var(--c-line); border-radius: var(--r-sm); background: var(--c-soft); }
+.brew-search input, .brew-log-tools select { border-color: transparent; background: var(--c-surface); }
 .brew-log-tools select { min-height: 30px; }
-.empty-state, .stats-empty { padding: 24px 14px; border: 1px dashed var(--bd-ddd1c2); border-radius: var(--surface-radius); background: var(--bg-fcf9f5); color: var(--fg-82715e); font-size: 12px; line-height: 1.55; text-align: center; }
+.empty-state, .stats-empty { padding: 24px 14px; border: 1px dashed var(--c-line-strong); border-radius: var(--surface-radius); background: var(--c-page); color: var(--c-ink-2); font-size: 12px; line-height: 1.55; text-align: center; }
 .empty-state { margin: 0; }
 .stats-empty { margin: 0; }
 
@@ -58,9 +58,9 @@
   .page-intro p:last-child, .inventory-intro p:last-child, .stats-header p:last-child { font-size: 11px; }
   .brew-log-heading { align-items: flex-end; gap: 10px; }
   .brew-log-heading-actions { padding-bottom: 0; }
-  .brew-add-button { min-height: 34px; padding: 7px 10px; font-size: 11px; }
+  .brew-add-button { min-height: 34px; padding: 7px 10px; font-size: 13px; }
   .form-card, .brew-card { padding: 14px; }
-  .recipe-composer-card, .saved-recipe-card, .stats-section { border-radius: 10px; }
+  .recipe-composer-card, .saved-recipe-card, .stats-section { border-radius: var(--r-md); }
   .stats-section { padding: 15px; }
   .brew-log-tools { gap: 4px; padding: 3px; }
 }
@@ -69,16 +69,16 @@
 .recipe-library-empty.recipe-onboarding {
   gap: 8px;
   padding: 34px 20px 28px;
-  border: 1px dashed var(--bd-d9cbb9);
-  border-radius: 14px;
-  background: var(--bg-fcf9f5);
+  border: 1px dashed var(--c-line-strong);
+  border-radius: var(--r-md);
+  background: var(--c-page);
   box-shadow: none;
 }
 .recipe-onboarding > span { width: 34px; height: 34px; font-size: 15px; }
 .recipe-onboarding strong { margin-top: 2px; font-size: 16px; font-weight: 600; }
-.recipe-onboarding p { max-width: 300px; color: var(--fg-82715e); font-size: 12px; }
+.recipe-onboarding p { max-width: 300px; color: var(--c-ink-2); font-size: 12px; }
 .recipe-getting-started { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: min(260px, 100%); gap: 12px; margin: 8px 0 10px; padding: 0; list-style: none; }
-.recipe-getting-started li { display: grid; justify-items: center; gap: 6px; color: var(--fg-705b44); font-size: 11px; }
+.recipe-getting-started li { display: grid; justify-items: center; gap: 6px; color: var(--c-ink-2); font-size: 11px; }
 .recipe-getting-started b { display: grid; width: 24px; height: 24px; place-items: center; border-radius: 50%; color: var(--fg-ffffff); background: var(--bg-7a5733); font-size: 12px; font-variant-numeric: tabular-nums; }
 .recipe-onboarding .primary-button { padding: 9px 13px; font-size: 12px; }
 
@@ -86,9 +86,9 @@
 .onboarding-logo { display: block; width: 38px; height: 38px; object-fit: contain; margin: 0 auto 2px; }
 .inventory-empty > span { display: none; }
 .journey-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: min(360px, 100%); gap: 8px; margin: 0 0 20px; padding: 0; list-style: none; }
-.journey-steps li { display: grid; justify-items: center; gap: 6px; min-width: 0; color: var(--fg-9b8b78); font-size: 11px; line-height: 1.35; }
-.journey-steps b { display: grid; width: 24px; height: 24px; place-items: center; border: 1px solid var(--bd-e6dacb); border-radius: 50%; color: var(--fg-927f68); background: var(--bg-f5efe6); font-size: 11px; font-variant-numeric: tabular-nums; }
-.journey-steps li.is-active { color: var(--fg-624a2e); font-weight: 700; }
+.journey-steps li { display: grid; justify-items: center; gap: 6px; min-width: 0; color: var(--c-ink-3); font-size: 11px; line-height: 1.35; }
+.journey-steps b { display: grid; width: 24px; height: 24px; place-items: center; border: 1px solid var(--c-line); border-radius: 50%; color: var(--c-ink-3); background: var(--c-soft); font-size: 11px; font-variant-numeric: tabular-nums; }
+.journey-steps li.is-active { color: var(--c-brown-deep); font-weight: 700; }
 .journey-steps li.is-active b { border-color: var(--bd-7a5733); color: var(--fg-ffffff); background: var(--bg-7a5733); box-shadow: 0 3px 8px rgba(var(--sh-806444), calc(0.16 * var(--shadow-k))); }
 .recipe-getting-started, .getting-started { display: none; }
 .recipe-library-empty.recipe-onboarding { padding-top: 32px; }
@@ -100,19 +100,19 @@
 }
 
 /* Inventory is the visual baseline for all four main tabs. */
-:root { --surface-radius: 14px; }
+:root { --surface-radius: var(--r-md); }
 .recipe-intro, .brew-log-heading, .stats-header { margin-bottom: 20px; }
 .recipe-intro h2, .brew-log-heading h2, .stats-header h2 { font-size: 30px; letter-spacing: -1px; }
-.recipe-composer-card, .saved-recipe-card, .brew-card, .form-card, .stats-section, .stats-cards > div { border-radius: 14px; }
+.recipe-composer-card, .saved-recipe-card, .brew-card, .form-card, .stats-section, .stats-cards > div { border-radius: var(--r-md); }
 
 /* Controls use the same quiet outlined treatment as inventory filters and sorting. */
 .brew-log-tools { gap: 8px; min-height: 0; margin-bottom: 16px; padding: 0; border: 0; border-radius: 0; background: transparent; }
 .brew-search input, .brew-log-tools select, .stats-header select {
   min-height: 36px;
-  border: 1px solid var(--bd-d9cbb9);
-  border-radius: 7px;
-  background: var(--bg-ffffff);
-  color: var(--fg-75634d);
+  border: 1px solid var(--c-line-strong);
+  border-radius: var(--r-sm);
+  background: var(--c-surface);
+  color: var(--c-ink-2);
   box-shadow: none;
 }
 .brew-log-tools select { flex-basis: 96px; }
@@ -121,8 +121,8 @@
 /* Match the inventory empty card exactly; only its words and active step differ. */
 .inventory-empty, .recipe-library-empty.recipe-onboarding, .brew-empty.inventory-empty {
   padding: 65px 20px;
-  border-color: var(--bd-d9cbb9);
-  border-radius: 14px;
+  border-color: var(--c-line-strong);
+  border-radius: var(--r-md);
   background: transparent;
 }
 .inventory-empty h3, .recipe-library-empty.recipe-onboarding h3 {
@@ -134,7 +134,7 @@
 .inventory-empty p, .recipe-library-empty.recipe-onboarding p {
   max-width: 330px;
   margin: 0 auto 24px;
-  color: var(--fg-6b5d50);
+  color: var(--c-ink-2);
   font-size: 13px;
   line-height: 1.55;
 }
@@ -154,7 +154,7 @@
 /* Ensure the recipe CTA uses the exact same primary-button treatment as inventory. */
 .recipe-library-empty.recipe-onboarding .primary-button {
   border: 1px solid var(--bd-7a5733);
-  border-radius: 9px;
+  border-radius: var(--r-sm);
   padding: 11px 16px;
   color: var(--fg-ffffff);
   background: var(--bg-7a5733);
@@ -174,7 +174,7 @@
   height: 40px;
   min-height: 40px;
   padding: 0 16px;
-  border-radius: 9px;
+  border-radius: var(--r-sm);
   font-size: 13px;
   line-height: 1;
 }
@@ -192,11 +192,11 @@
 
 .bean-dates > label { display: grid; gap: 7px; }
 .purchase-field-label { display: inline-flex; align-items: baseline; gap: 6px; }
-.purchase-field-label .input-hint { color: var(--fg-6b5d50); font-size: 11px; font-weight: 400; }
+.purchase-field-label .input-hint { color: var(--c-ink-2); font-size: 11px; font-weight: 400; }
 
 /* Compact bean provenance fields without leaving a single process button stranded. */
 .bean-origin-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
-.bean-origin-row > label { display: grid; gap: 7px; min-width: 0; color: var(--fg-75634d); font-size: 12px; }
+.bean-origin-row > label { display: grid; gap: 7px; min-width: 0; color: var(--c-ink-2); font-size: 12px; }
 .bean-origin-row input { width: 100%; min-width: 0; height: 38px; padding: 7px 10px; }
 .process-options { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; }
 .process-options button { min-width: 0; padding-right: 6px; padding-left: 6px; white-space: nowrap; }

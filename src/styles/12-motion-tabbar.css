@@ -33,10 +33,10 @@
 .daily-chart { --daily-days: 7; display: grid; grid-auto-flow: column; grid-auto-columns: calc((100% - (var(--daily-days) - 1) * 8px) / var(--daily-days)); gap: 8px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-top: 4px; }
 .daily-chart::-webkit-scrollbar { display: none; }
 .daily-bar { display: grid; grid-template-rows: 16px 120px 18px; justify-items: center; align-items: end; gap: 4px; scroll-snap-align: end; min-width: 0; }
-.daily-bar b { color: var(--fg-59432c); font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.daily-bar b { color: var(--c-brown-deep); font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .daily-bar-track { display: flex; align-items: flex-end; justify-content: center; width: 100%; height: 100%; }
 .daily-bar-track i { display: block; width: min(28px, 70%); border-radius: 6px 6px 3px 3px; background: var(--bg-7a5733); }
-.daily-bar.is-empty .daily-bar-track i { height: 3px; border-radius: 2px; background: var(--bg-eee4d6); }
-.daily-bar span { color: var(--fg-75634d); font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.daily-bar.is-empty .daily-bar-track i { height: 3px; border-radius: 2px; background: var(--c-fill); }
+.daily-bar span { color: var(--c-ink-2); font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 @media (min-width: 721px) { .daily-chart { --daily-days: 14; } }
 @media (hover: hover) and (pointer: fine) { .daily-chart:hover { scrollbar-width: thin; } }

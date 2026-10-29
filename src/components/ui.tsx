@@ -12,7 +12,7 @@ export function StarRating({ value, onChange }: { value: number; onChange: (valu
 export function Field({ label, children, required = false, invalid = false }: { label: string; children: ReactNode; required?: boolean; invalid?: boolean }) {
   return (
     <div>
-      <label style={{ fontSize: 12, color: invalid ? "var(--fg-b65f50)" : "var(--color-text-secondary)", display: "block", marginBottom: 4, fontFamily: FONT }}>{label}{required && <span aria-hidden="true" style={{ color: invalid ? "var(--fg-b65f50)" : "var(--fg-7a5733)", marginLeft: 2 }}>*</span>}</label>
+      <label style={{ fontSize: 12, color: invalid ? "var(--fg-b65f50)" : "var(--color-text-secondary)", display: "block", marginBottom: 4, fontFamily: FONT }}>{label}{required && <span aria-hidden="true" style={{ color: invalid ? "var(--fg-b65f50)" : "var(--c-accent)", marginLeft: 2 }}>*</span>}</label>
       {children}
     </div>
   );

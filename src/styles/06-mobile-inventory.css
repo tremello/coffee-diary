@@ -4,10 +4,10 @@
   .brew-form-grid > :nth-child(2) { grid-column: 1; grid-row: 2; }
   .brew-form-grid > :nth-child(3) { grid-column: 2; grid-row: 2; }
   .brew-form-grid > :nth-child(4) { grid-column: 1 / -1; grid-row: 3; }
-  .inventory-card { grid-template-columns: minmax(0, 1fr) 92px; border-radius: 10px; }
+  .inventory-card { grid-template-columns: minmax(0, 1fr) 92px; border-radius: var(--r-md); }
   .bean-info { padding: 11px 12px; }
   .roastery { font-size: 14px; margin-bottom: 4px; }
-  .bean-info h3 { font-size: 16px; margin-bottom: 6px; line-height: 1.35; }
+  .bean-info h3 { font-size: 17px; margin-bottom: 6px; line-height: 1.35; }
   .title-dates { gap: 4px 9px; margin-bottom: 7px; font-size: 11px; }
   .title-dates strong { padding: 2px 5px; font-size: 11px; }
   .roastery-cup-notes { gap: 4px; margin-top: 3px; }
@@ -39,5 +39,5 @@
 
 /* Keep the compact brewing form controls on one consistent baseline. */
 .brew-form-grid input[type="number"], .brew-form-grid input[type="date"], .brew-form-grid select, .recipe-memo-field textarea, .brew-note-form textarea { min-height: 38px; height: 38px; padding-top: 8px; padding-bottom: 8px; }
-.brew-log input::placeholder, .brew-log textarea::placeholder, .recipe-page input::placeholder, .recipe-page textarea::placeholder { color: var(--fg-6b5d50); font-size: 12px; }
+.brew-log input::placeholder, .brew-log textarea::placeholder, .recipe-page input::placeholder, .recipe-page textarea::placeholder { color: var(--c-ink-2); font-size: 12px; }
 .brew-log select, .recipe-page select { font-size: 12px; }

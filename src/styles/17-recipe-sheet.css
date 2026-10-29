@@ -2,22 +2,22 @@
    editors' be-* layout (15-bean-editor.css, 16-brew-sheet.css). The step rows keep their 07-recipes.css grid. */
 .recipe-list-tools { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
 .recipe-list-tools .recipe-sort-select { width: 104px; max-width: 104px; }
-.recipe-new-button { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 12px; border: 1px solid var(--bd-c9b195); border-radius: 16px; background: var(--bg-f3ece2); color: var(--fg-5e472d); font: inherit; font-size: 12px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.recipe-new-button { display: inline-flex; align-items: center; gap: 4px; height: 34px; padding: 0 14px; border: 1px solid var(--bd-c9b195); border-radius: var(--r-pill); background: var(--c-soft-2); color: var(--c-brown-deep); font: inherit; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
 .recipe-new-button:hover { filter: brightness(.97); }
 
-.rc-hint { color: var(--fg-6b5d50); font-size: 11px; font-weight: 400; }
+.rc-hint { color: var(--c-ink-2); font-size: 11px; font-weight: 400; }
 .rc-panel .be-seg button { padding: 0 12px; font-size: 13px; }
-.rc-steps.recipe-step-editor { border-radius: 14px; }
+.rc-steps.recipe-step-editor { border-radius: var(--r-md); }
 .rc-steps .recipe-step-head { padding-top: 8px; padding-bottom: 8px; }
 .rc-steps .recipe-step-row { min-height: 50px; }
 .rc-steps .recipe-step-row select, .rc-steps .recipe-amount-input input, .rc-steps .recipe-time-input, .rc-steps .recipe-fixed-time, .rc-steps .recipe-no-amount, .rc-steps .recipe-switch-toggle { height: 34px; min-height: 34px; box-sizing: border-box; font-size: 13px; }
 .rc-steps .recipe-cumulative { font-size: 12px; }
 .rc-steps .recipe-amount-input input { padding-left: 4px; padding-right: 18px; text-align: right; }
-.rc-add-step { display: flex; align-items: center; gap: 6px; width: 100%; min-height: 46px; padding: 0 14px; border: 0; border-top: 1px solid var(--bd-eee4d9); background: transparent; color: var(--fg-7a5733); font: inherit; font-size: 14px; font-weight: 700; text-align: left; cursor: pointer; }
+.rc-add-step { display: flex; align-items: center; gap: 6px; width: 100%; min-height: 46px; padding: 0 14px; border: 0; border-top: 1px solid var(--c-line); background: transparent; color: var(--c-accent); font: inherit; font-size: 14px; font-weight: 700; text-align: left; cursor: pointer; }
 .rc-add-step span { font-size: 17px; line-height: 1; }
-.rc-add-step:hover:not(:disabled) { background: var(--bg-f7f1e9); }
-.rc-add-step:disabled { color: var(--fg-6b5d50); font-weight: 400; cursor: default; }
-.rc-metrics { padding: 10px 14px; border-radius: 12px; font-size: 13px; }
+.rc-add-step:hover:not(:disabled) { background: var(--c-soft); }
+.rc-add-step:disabled { color: var(--c-ink-2); font-weight: 400; cursor: default; }
+.rc-metrics { padding: 10px 14px; border-radius: var(--r-sm); font-size: 13px; }
 .rc-panel .recipe-timeline-error { margin: 0; padding: 0 6px; }
 .rc-panel .bw-memo { padding-top: 0; }
 .rc-panel .bw-memo textarea { padding-top: 12px; }
@@ -59,4 +59,4 @@
 
 /* Recipe photo: fields filled from the photo get the bean editor's green dot and tint. */
 .rc-steps-title { display: inline-flex; align-items: center; gap: 6px; }
-.rc-steps.is-read { background: color-mix(in srgb, var(--bg-e3eedf) 35%, var(--bg-ffffff)); }
+.rc-steps.is-read { background: color-mix(in srgb, var(--bg-e3eedf) 35%, var(--c-surface)); }

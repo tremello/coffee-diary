@@ -1,18 +1,18 @@
 .brew-add-button { display: inline-flex; align-items: center; justify-content: center; }
 .brew-search { flex: 1; }
 .brew-search input { width: 100%; box-sizing: border-box; }
-.brew-log-tools select, .stats-header select { border: 1px solid var(--bd-d9cbb9); border-radius: 7px; background: var(--bg-ffffff); color: var(--fg-75634d); padding: 7px 9px; font: inherit; font-size: 12px; }
+.brew-log-tools select, .stats-header select { border: 1px solid var(--c-line-strong); border-radius: var(--r-sm); background: var(--c-surface); color: var(--c-ink-2); padding: 7px 9px; font: inherit; font-size: 12px; }
 .brew-log-tools select { flex: 0 0 88px; }
-.brew-roastery { margin: 0 0 3px; color: var(--fg-6b5d50); font-size: 11px; font-weight: 600; font-family: inherit; }
-.brew-recipe-block, .brew-note-block { margin-top: 9px; padding: 9px 11px; border-radius: 8px; }
-.brew-recipe-block { background: var(--bg-f6f1ea); color: var(--fg-806f5d); }
-.brew-note-block { background: var(--bg-fbf8f3); border: 1px solid var(--bd-e8ddd0); color: var(--fg-6f5a43); }
-.brew-note-inline { margin: 9px 0 0; padding: 9px 11px; border: 1px solid var(--bd-eee5da); border-radius: 8px; background: var(--bg-fbf8f3); color: var(--fg-6f5a43); font-size: 12px; line-height: 1.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.brew-note-inline span { color: var(--fg-967e63); margin-right: 5px; }
-.brew-detail-label { display: block; margin-bottom: 5px; font-size: 11px; color: var(--fg-967e63); letter-spacing: .02em; }
+.brew-roastery { margin: 0 0 3px; color: var(--c-ink-2); font-size: 11px; font-weight: 600; font-family: inherit; }
+.brew-recipe-block, .brew-note-block { margin-top: 9px; padding: 9px 11px; border-radius: var(--r-sm); }
+.brew-recipe-block { background: var(--c-soft); color: var(--c-ink-2); }
+.brew-note-block { background: var(--c-page); border: 1px solid var(--c-line); color: var(--c-ink-2); }
+.brew-note-inline { margin: 9px 0 0; padding: 9px 11px; border: 1px solid var(--c-line); border-radius: var(--r-sm); background: var(--c-page); color: var(--c-ink-2); font-size: 12px; line-height: 1.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brew-note-inline span { color: var(--c-ink-3); margin-right: 5px; }
+.brew-detail-label { display: block; margin-bottom: 5px; font-size: 11px; color: var(--c-ink-3); letter-spacing: .02em; }
 .brew-recipe-block p, .brew-note-block p { margin: 0; font-size: 12px; line-height: 1.5; }
 .brew-recipe-block p { font-style: italic; }
-.brew-recipe-block .brew-metrics { margin-bottom: 4px; color: var(--fg-6f5a43); font-size: 13px; font-style: normal; font-weight: 600; }
+.brew-recipe-block .brew-metrics { margin-bottom: 4px; color: var(--c-ink-2); font-size: 13px; font-style: normal; font-weight: 600; }
 .brew-recipe-block p:not(.brew-metrics) { font-size: 15px; }
 .brew-note-block .flavor-tags { margin-bottom: 5px; }
 .brew-note-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: end; margin-top: 10px; }
@@ -20,19 +20,19 @@
 .brew-core-grid select, .brew-core-grid input[type="date"] { width: 100%; min-height: 38px; height: 38px; box-sizing: border-box; }
 .brew-core-grid input[type="date"], .brew-custom-recipe-fields input[type="number"] { font-size: 12px; }
 .recipe-memo-field { margin-top: 10px; }
-.brew-recipe-picker { display: grid; gap: 8px; margin-top: 10px; padding: 10px 11px; border: 1px solid var(--bd-e4d8ca); border-radius: 8px; background: var(--bg-fbf8f3); }
+.brew-recipe-picker { display: grid; gap: 8px; margin-top: 10px; padding: 10px 11px; border: 1px solid var(--c-line); border-radius: var(--r-sm); background: var(--c-page); }
 .brew-recipe-picker-label { color: var(--color-text-secondary); font-size: 12px; }
-.recipe-mode-options { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 3px; border: 1px solid var(--bd-e6dacb); border-radius: 8px; background: var(--bg-f3ece2); }
-.recipe-mode-options button { border: 0; border-radius: 6px; padding: 7px 8px; color: var(--fg-6b5d50); background: transparent; font-size: 11px; }
+.recipe-mode-options { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 3px; border: 0; border-radius: var(--r-sm); background: var(--c-soft-2); }
+.recipe-mode-options button { border: 0; border-radius: calc(var(--r-sm) - 3px); padding: 7px 8px; color: var(--c-ink-2); background: transparent; font-size: 12px; }
 .recipe-mode-options button[aria-pressed="true"] { color: var(--fg-ffffff); background: var(--bg-7a5733); font-weight: 600; }
 .recipe-mode-content { display: grid; gap: 5px; }
 .brew-recipe-picker select { width: 100%; min-height: 38px; box-sizing: border-box; }
-.brew-recipe-picker p { margin: 0; color: var(--fg-806d58); font-size: 11px; line-height: 1.45; }
+.brew-recipe-picker p { margin: 0; color: var(--c-ink-2); font-size: 11px; line-height: 1.45; }
 .brew-custom-recipe-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
 .brew-custom-recipe-fields input { width: 100%; min-height: 38px; box-sizing: border-box; }
 .custom-recipe-name { grid-column: 1 / -1; }
-.brew-conditions { display: grid; gap: 8px; margin-top: 10px; padding: 10px 11px; border: 1px solid var(--bd-e4d8ca); border-radius: 8px; background: var(--bg-fbf8f3); }
-.brew-conditions small { margin-left: 4px; color: var(--fg-806d58); font-size: 11px; }
+.brew-conditions { display: grid; gap: 8px; margin-top: 10px; padding: 10px 11px; border: 1px solid var(--c-line); border-radius: var(--r-sm); background: var(--c-page); }
+.brew-conditions small { margin-left: 4px; color: var(--c-ink-2); font-size: 11px; }
 .brew-conditions-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
 .brew-conditions-grid > * { min-width: 0; }
 .brew-conditions-grid input { width: 100%; min-height: 38px; box-sizing: border-box; font-size: 12px; }
@@ -42,47 +42,47 @@
 .brew-dripper-option[data-selected="true"] { border-color: var(--bd-7a5733); background: var(--bg-7a5733); }
 .brew-dripper-option[data-selected="true"] > button:first-child { color: var(--fg-ffffff); font-weight: 600; }
 .brew-dripper-option[data-selected="true"] > button:first-child:hover { background: transparent; }
-.brew-dripper-option[data-selected="true"] .remove-purchaser { border-left-color: var(--bd-e4d9cc); color: var(--fg-ffffff); opacity: .75; }
-.brew-dripper-suggestion { border: 1px dashed var(--bd-e0d2c0); border-radius: 16px; background: transparent; color: var(--fg-765d42); padding: 6px 10px; font-size: 11px; cursor: pointer; }
-.brew-dripper-suggestion:hover { border-color: var(--bd-ae9272); background: var(--bg-f0e6d8); }
-.brew-dripper-hint { margin: 6px 0 0; color: var(--fg-806d58); font-size: 11px; line-height: 1.45; }
+.brew-dripper-option[data-selected="true"] .remove-purchaser { border-left-color: var(--c-line); color: var(--fg-ffffff); opacity: .75; }
+.brew-dripper-suggestion { border: 1px dashed var(--c-line-strong); border-radius: var(--r-pill); background: transparent; color: var(--c-ink-2); padding: 6px 10px; font-size: 11px; cursor: pointer; }
+.brew-dripper-suggestion:hover { border-color: var(--bd-ae9272); background: var(--c-soft-2); }
+.brew-dripper-hint { margin: 6px 0 0; color: var(--c-ink-2); font-size: 11px; line-height: 1.45; }
 .brew-dripper-add { display: flex; gap: 12px; margin-top: 8px; }
 .brew-dripper-add input { flex: 1; min-width: 0; min-height: 36px; box-sizing: border-box; font-size: 12px; }
-.brew-dripper-add button { flex: 0 0 auto; align-self: stretch; padding: 0 14px; border: 0; border-radius: 8px; background: var(--bg-7a5733); color: var(--fg-ffffff); font-size: 12px; font-weight: 600; cursor: pointer; }
+.brew-dripper-add button { flex: 0 0 auto; align-self: stretch; padding: 0 14px; border: 0; border-radius: var(--r-sm); background: var(--bg-7a5733); color: var(--fg-ffffff); font-size: 12px; font-weight: 600; cursor: pointer; }
 .brew-dripper-add button:disabled { opacity: .4; cursor: default; }
 .brew-time-input { font-variant-numeric: tabular-nums; text-align: center; }
 /* The box is drawn on the label so the unit can sit right after the centred number. */
-.brew-unit-input { display: flex; align-items: center; justify-content: center; gap: 2px; min-height: 39px; box-sizing: border-box; padding: 0 8px; border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); background: var(--bg-ffffff); cursor: text; }
+.brew-unit-input { display: flex; align-items: center; justify-content: center; gap: 2px; min-height: 39px; box-sizing: border-box; padding: 0 8px; border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); background: var(--c-surface); cursor: text; }
 .brew-unit-input:focus-within { outline: 2px solid var(--bd-7a5733); outline-offset: 4px; }
 .brew-conditions-grid .brew-unit-input input { width: calc(var(--chars) * 1ch + 2px); min-height: 0; padding: 0; border: 0; background: transparent; font-variant-numeric: tabular-nums; text-align: center; -moz-appearance: textfield; appearance: textfield; }
 .brew-unit-input input:focus-visible { outline: none; }
 .brew-unit-input input::-webkit-inner-spin-button, .brew-unit-input input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-.brew-unit-input span { color: var(--fg-8a7967); font-size: 11px; pointer-events: none; }
-.brew-recipe-block p.brew-conditions-line { margin-bottom: 4px; color: var(--fg-806d58); font-size: 12px; font-style: normal; }
-.brew-taste { display: grid; gap: 6px; margin-top: 10px; padding: 9px 11px; border: 1px solid var(--bd-e4d8ca); border-radius: 8px; background: var(--bg-fbf8f3); }
-.brew-taste small { margin-left: 4px; color: var(--fg-806d58); font-size: 11px; }
+.brew-unit-input span { color: var(--c-ink-3); font-size: 11px; pointer-events: none; }
+.brew-recipe-block p.brew-conditions-line { margin-bottom: 4px; color: var(--c-ink-2); font-size: 12px; font-style: normal; }
+.brew-taste { display: grid; gap: 6px; margin-top: 10px; padding: 9px 11px; border: 1px solid var(--c-line); border-radius: var(--r-sm); background: var(--c-page); }
+.brew-taste small { margin-left: 4px; color: var(--c-ink-2); font-size: 11px; }
 .brew-taste-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 14px; }
-.brew-taste-row { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--fg-6b5d50); font-size: 11px; }
+.brew-taste-row { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--c-ink-2); font-size: 11px; }
 .brew-taste-row > span:first-child { flex: 0 0 34px; }
-.brew-taste-row em { flex: 0 0 10px; color: var(--fg-806d58); font-size: 10px; font-style: normal; font-variant-numeric: tabular-nums; text-align: right; }
+.brew-taste-row em { flex: 0 0 10px; color: var(--c-ink-2); font-size: 11px; font-style: normal; font-variant-numeric: tabular-nums; text-align: right; }
 .brew-taste-scale { display: flex; flex: 0 0 auto; gap: 2px; }
 .brew-taste-scale button { display: grid; place-items: center; width: 20px; height: 22px; padding: 0; border: 0; background: transparent; cursor: pointer; }
-.brew-taste-scale button::before { content: ""; width: 9px; height: 9px; border: 1px solid var(--bd-e0d2c0); border-radius: 50%; background: var(--bg-ffffff); }
+.brew-taste-scale button::before { content: ""; width: 9px; height: 9px; border: 1px solid var(--c-line-strong); border-radius: 50%; background: var(--c-surface); }
 .brew-taste-scale button[aria-pressed="true"]::before { border-color: var(--bd-7a5733); background: var(--bg-7a5733); }
-.brew-taste-inline { margin: 6px 0 0; color: var(--fg-806d58); font-size: 11px; }
+.brew-taste-inline { margin: 6px 0 0; color: var(--c-ink-2); font-size: 11px; }
 @media (max-width: 720px) { .brew-taste-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2px 10px; } .brew-taste-row { gap: 4px; } .brew-taste-row > span:first-child { flex-basis: 30px; } .brew-taste-scale { gap: 1px; } .brew-taste-scale button { width: 16px; } }
 .brew-form-error { margin: 10px 0 0; color: var(--fg-b65f50); font-size: 11px; }
 .login-error { margin: 8px 0 0; text-align: right; color: var(--fg-b65f50); font-size: 12px; }
 .brew-form-grid input[type="number"], .brew-form-grid input[type="date"], .brew-form-grid select, .recipe-memo-field textarea, .brew-note-form textarea { min-height: 42px; height: 42px; line-height: 20px; padding-top: 10px; padding-bottom: 10px; }
 .recent-recipes { display: grid; gap: 6px; margin-top: 9px; }
-.recent-recipes > span { color: var(--fg-6b5d50); font-size: 11px; }
+.recent-recipes > span { color: var(--c-ink-2); font-size: 11px; }
 .recent-recipes > div { display: flex; flex-wrap: wrap; gap: 6px; }
-.recent-recipes button { max-width: min(260px, 100%); overflow: hidden; border: 1px solid var(--bd-e0d2c0); border-radius: 999px; background: var(--bg-faf6f0); color: var(--fg-765d42); padding: 6px 10px; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
-.recent-recipes button:hover { border-color: var(--bd-ae9272); background: var(--bg-f0e6d8); color: var(--fg-5f452c); }
+.recent-recipes button { max-width: min(260px, 100%); overflow: hidden; border: 1px solid var(--c-line-strong); border-radius: var(--r-pill); background: var(--c-page); color: var(--c-ink-2); padding: 6px 10px; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.recent-recipes button:hover { border-color: var(--bd-ae9272); background: var(--c-soft-2); color: var(--c-brown-deep); }
 .brew-rating-label { display: block; margin-bottom: 4px; font-size: 12px; color: var(--color-text-secondary); font-family: inherit; }
 .star-rating { display: flex; gap: 1px; height: 32px; align-items: center; }
 .star-rating-star { position: relative; display: inline-block; width: 24px; height: 30px; color: var(--fg-d7c8b5); font-size: 26px; line-height: 30px; }
-.star-rating-star.full { color: var(--fg-7a5733); }
+.star-rating-star.full { color: var(--c-accent); }
 .star-rating-star.half { color: var(--fg-d7c8b5); }
 .star-rating-star.half > span { background: linear-gradient(90deg, var(--bg-7a5733) 50%, var(--bg-d7c8b5) 50%); background-clip: text; -webkit-background-clip: text; color: transparent; }
 .star-rating-star button { position: absolute; top: 0; bottom: 0; width: 50%; padding: 0; border: 0; background: transparent; cursor: pointer; }
@@ -90,11 +90,11 @@
 .star-rating-star button:last-of-type { right: 0; }
 .brew-card-actions { display: flex; gap: 8px; align-items: flex-start; }
 .brew-edit-button, .brew-delete-button { font-size: 12px; border: none; background: none; cursor: pointer; padding: 0; font-family: inherit; }
-.brew-edit-button { color: var(--fg-7a5733); }
+.brew-edit-button { color: var(--c-accent); }
 .brew-delete-button { color: var(--fg-d85a30); }
 .note-actions { display: flex; gap: 8px; align-self: flex-start; }
 .note-edit-button, .note-delete-button { font-size: 12px; border: none; background: none; cursor: pointer; padding: 0; font-family: inherit; }
-.note-edit-button { color: var(--fg-7a5733); }
+.note-edit-button { color: var(--c-accent); }
 .note-delete-button { color: var(--fg-d85a30); }
 .brew-stats { padding-top: 10px; }
 .stats-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin: 14px 0 24px; }
