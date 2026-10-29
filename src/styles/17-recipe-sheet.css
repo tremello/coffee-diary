@@ -1,0 +1,47 @@
+/* Recipes: a small "+ 새 레시피" beside the sort in the list header, and the recipe form as a sheet in the bean and brew
+   editors' be-* layout (15-bean-editor.css, 16-brew-sheet.css). The step rows keep their 07-recipes.css grid. */
+.recipe-list-tools { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.recipe-list-tools .recipe-sort-select { width: 104px; max-width: 104px; }
+.recipe-new-button { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 12px; border: 1px solid var(--bd-c9b195); border-radius: 16px; background: var(--bg-f3ece2); color: var(--fg-5e472d); font: inherit; font-size: 12px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.recipe-new-button:hover { filter: brightness(.97); }
+
+.rc-hint { color: var(--fg-6b5d50); font-size: 11px; font-weight: 400; }
+.rc-panel .be-seg button { padding: 0 12px; font-size: 13px; }
+.rc-steps.recipe-step-editor { border-radius: 14px; }
+.rc-steps .recipe-step-head { padding-top: 8px; padding-bottom: 8px; }
+.rc-steps .recipe-step-row { min-height: 50px; }
+.rc-steps .recipe-step-row select, .rc-steps .recipe-amount-input input, .rc-steps .recipe-time-input, .rc-steps .recipe-fixed-time, .rc-steps .recipe-no-amount, .rc-steps .recipe-switch-toggle { height: 34px; min-height: 34px; box-sizing: border-box; font-size: 13px; }
+.rc-steps .recipe-cumulative { font-size: 12px; }
+.rc-steps .recipe-amount-input input { padding-left: 4px; padding-right: 18px; text-align: right; }
+.rc-add-step { display: flex; align-items: center; gap: 6px; width: 100%; min-height: 46px; padding: 0 14px; border: 0; border-top: 1px solid var(--bd-eee4d9); background: transparent; color: var(--fg-7a5733); font: inherit; font-size: 14px; font-weight: 700; text-align: left; cursor: pointer; }
+.rc-add-step span { font-size: 17px; line-height: 1; }
+.rc-add-step:hover:not(:disabled) { background: var(--bg-f7f1e9); }
+.rc-add-step:disabled { color: var(--fg-6b5d50); font-weight: 400; cursor: default; }
+.rc-metrics { padding: 10px 14px; border-radius: 12px; font-size: 13px; }
+.rc-panel .recipe-timeline-error { margin: 0; padding: 0 6px; }
+.rc-panel .bw-memo { padding-top: 0; }
+.rc-panel .bw-memo textarea { padding-top: 12px; }
+/* iOS zooms into fields under 16px on focus, which shifts the sheet. */
+@media (max-width: 759px) {
+  .rc-steps .recipe-step-row select, .rc-steps .recipe-amount-input input, .rc-steps .recipe-time-input { font-size: 16px; }
+}
+/* Wider screens: the action takes the spare width, amounts stay narrow. The dialog is narrower than the bean editor's. */
+.rc-steps { --rc-time: 60px; --rc-pad: 10px; }
+.rc-steps .recipe-step-head, .rc-steps .recipe-step-row { grid-template-columns: var(--rc-time) minmax(0, 1fr) 96px 56px 22px; padding-left: 10px; padding-right: 10px; }
+.rc-steps.is-immersion .recipe-step-head, .rc-steps.is-immersion .recipe-step-row { grid-template-columns: var(--rc-time) 64px minmax(0, 1fr) 90px 52px 22px; }
+@media (min-width: 760px) { .be-panel.rc-panel { width: min(620px, calc(100vw - 48px)); } }
+@media (max-width: 540px) {
+  .rc-steps { --rc-time: 50px; --rc-pad: 7px; }
+  .rc-steps.is-immersion { --rc-time: 44px; --rc-pad: 6px; }
+  .rc-steps .recipe-step-head, .rc-steps .recipe-step-row { grid-template-columns: var(--rc-time) minmax(0, 1fr) 76px 44px 18px; padding-left: 7px; padding-right: 7px; }
+  .rc-steps.is-immersion .recipe-step-head, .rc-steps.is-immersion .recipe-step-row { grid-template-columns: var(--rc-time) 44px minmax(0, 1fr) 70px 38px 14px; padding-left: 6px; padding-right: 6px; }
+}
+/* The time chips sit on one thin line; while the switch is closed a thick line joins the closing and opening times. */
+.rc-steps .recipe-step-row::before, .rc-steps .recipe-step-row::after { left: calc(var(--rc-pad) + var(--rc-time) / 2); }
+.rc-steps .recipe-step-row::before { width: 1px; margin-left: -.5px; }
+.rc-steps .recipe-step-row.closed-top::after, .rc-steps .recipe-step-row.closed-bottom::after { width: 4px; margin-left: -2px; opacity: 1; }
+.rc-steps .recipe-fixed-time, .rc-steps .recipe-time-input { position: relative; z-index: 1; }
+/* Saved cards: the same thick line between the closing and opening steps, at full strength. */
+.saved-recipe-step.is-closed:not(:last-child) > i::after { left: 6px; width: 4px; opacity: 1; }
+.rc-steps .recipe-step-row.closed-top::after { top: -1px; border-top-left-radius: 0; border-top-right-radius: 0; }
+.rc-steps .recipe-step-row.closed-bottom::after { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
