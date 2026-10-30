@@ -4,8 +4,7 @@ import { type Brew, type BrewForm, type CoffeeValue, isCafeBrew, type TastingNot
 
 export const emptyBrewForm = (): BrewForm => ({ beanId: "", amount: "", waterAmount: "", method: "", date: localDate(), recipe: "", grindSize: "", waterTemp: "", brewTime: "", ...emptyCafeFields() });
 
-// A new cafe cup starts as 핸드드립, the usual order.
-export const emptyCafeFields = (): Pick<BrewForm, "kind" | "cafe" | "menu" | "beanName" | "coffee" | "roasteryNotes" | "price"> => ({ kind: "own", cafe: null, menu: "핸드드립", beanName: "", coffee: { origin: "", process: "" }, roasteryNotes: "", price: "" });
+export const emptyCafeFields = (): Pick<BrewForm, "kind" | "cafe" | "menu" | "beanName" | "coffee" | "roasteryNotes" | "price"> => ({ kind: "own", cafe: null, menu: "", beanName: "", coffee: { origin: "", process: "" }, roasteryNotes: "", price: "" });
 
 // A cafe brew's coffee fields back in the shape the bean rows edit, and out again for saving (a blend keeps its summary
 // in origin, process and variety like a bean does; it may have no coffees at all).
@@ -52,10 +51,14 @@ export const recentCafes = (brews: Brew[]) => {
 // The menu and the coffee of a cafe cup. The first cafe records had one 메뉴·원두 box saved as menu and no beanName; that text was the coffee.
 export const cafeCup = (brew: Brew) => brew.beanName === undefined ? { menu: "", beanName: brew.menu ?? "" } : { menu: brew.menu ?? "", beanName: brew.beanName };
 
-// Card and detail titles: the coffee's name, else the blend's, else the menu, else the cafe.
-export const cafeTitle = (brew: Brew) => { const cup = cafeCup(brew); return cup.beanName.trim() || (brew.beanKind === "blend" ? blendName({ blendName: brew.blendName, parts: brew.parts }) : "") || cup.menu || brew.cafe?.name || "카페"; };
-// The card line under the title: the menu (unless it is the title), 블렌드, then where the coffee is from and how it was processed.
-export const cafeBeanLine = (brew: Brew) => { const cup = cafeCup(brew); return [cafeTitle(brew) !== cup.menu && cup.menu, brew.beanKind === "blend" && "블렌드", brew.roastery, brew.origin, brew.process].filter(Boolean).join(" · "); };
+// Card and detail titles: where the coffee is from (에티오피아 · 구지) or the blend's name, else what older records typed, else the cafe.
+export const cafeTitle = (brew: Brew) => {
+  const cup = cafeCup(brew);
+  const coffee = brew.beanKind === "blend" ? blendName({ blendName: brew.blendName, parts: brew.parts }) || "블렌드" : [brew.origin, brew.farm].filter(Boolean).join(" · ");
+  return cup.beanName.trim() || coffee || cup.menu || brew.cafe?.name || "카페";
+};
+// The card line under the title: variety and process, the price, and what older records kept (menu, roastery).
+export const cafeBeanLine = (brew: Brew) => { const cup = cafeCup(brew); return [cafeTitle(brew) !== cup.menu && cup.menu, brew.beanKind === "blend" ? "" : brew.variety, brew.process, brew.roastery, brew.price && `${fmt(brew.price)}원`].filter(Boolean).join(" · "); };
 
 // 분쇄도 is stored as one string ("코만단테 25클릭"); the form splits it into a grinder and a click count. A registered
 // grinder name wins (longest first), then any text before the first number; text with no number stays as the count.

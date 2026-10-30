@@ -5,14 +5,14 @@ import { useKeyboardInset } from "../bean-editor/useKeyboardInset";
 import { usePickDrag } from "../bean-editor/usePickDrag";
 import { fmt, handleNumericInput, withCommas } from "../../lib/format";
 import { recipeWater } from "../../lib/recipe";
-import { type Bean, BEAN_PROCESSES, type BrewForm, CAFE_MENUS, type CafePlace, type SavedRecipe } from "../../types";
+import { type Bean, BEAN_PROCESSES, type BrewForm, type CafePlace, type SavedRecipe } from "../../types";
 import { brewRatio, brewTimeFromDigits, composeGrind, parseGrind, TASTE_ATTRIBUTES, type TasteScores } from "./brewFormat";
 import { type CoffeeSheet, CoffeeRows } from "../bean-editor/CoffeeRows";
 import { CafeSheet } from "./CafeSheet";
 import { FitText } from "./FitText";
 import { useSheet } from "./useSheet";
 
-type Picker = "bean" | "recipe" | "dripper" | "grinder" | "cafe" | "menu" | null;
+type Picker = "bean" | "recipe" | "dripper" | "grinder" | "cafe" | null;
 
 export type BrewNote = { memo: string; rating: number; taste: TasteScores };
 
@@ -125,21 +125,13 @@ export function BrewEditor({ editing, form, setForm, recentCafes, origins, varie
           </div>
         </section>
 
-        <section className="be-group" aria-labelledby="bw-cup">
-          <h3 className="be-group-label" id="bw-cup">무엇을</h3>
-          <div className="be-card">
-            <button type="button" className="be-row" onClick={() => setPicker("menu")}><span className="be-row-name">메뉴</span>{valueSpan(form.menu, "선택")}</button>
-            <label className="be-row"><span className="be-row-name">원두 이름</span><input value={form.beanName} placeholder="선택" onChange={event => set("beanName", event.target.value)} /></label>
-            <label className="be-row"><span className="be-row-name">가격</span><input type="text" inputMode="numeric" value={withCommas(form.price)} placeholder="7,000" onChange={event => handleNumericInput(event, price => set("price", price))} /><span className="be-unit">원</span></label>
-          </div>
-        </section>
-
-        {/* The coffee itself, laid out like the bean editor's 원두 section; every row may stay empty here. */}
+        {/* The coffee itself, laid out like the bean editor's 원두 section with the cup's price under it; every row may stay empty here. */}
         <section className="be-group" aria-labelledby="bw-coffee">
           <h3 className="be-group-label" id="bw-coffee">원두</h3>
           <div className="be-card">
             <CoffeeRows value={form.coffee} onChange={update => setForm(current => ({ ...current, coffee: update(current.coffee) }))} required={false} error={error} processes={BEAN_PROCESSES} origins={origins} varieties={varieties}
               sheet={coffeeSheet} setSheet={setCoffeeSheet} onAddOrigin={onAddOrigin} onHideVariety={onHideVariety} />
+            <label className="be-row"><span className="be-row-name">가격</span><input type="text" inputMode="numeric" value={withCommas(form.price)} placeholder="7,000" onChange={event => handleNumericInput(event, price => set("price", price))} /><span className="be-unit">원</span></label>
           </div>
         </section>
 
@@ -207,7 +199,6 @@ export function BrewEditor({ editing, form, setForm, recentCafes, origins, varie
         ...recipes.map(item => ({ key: String(item.id), title: item.name, sub: `원두 ${fmt(item.coffee)}g · 물 ${fmt(recipeWater(item.steps).extraction)}g`, current: String(item.id) === selectedRecipeId, onPick: () => { onPickRecipe(String(item.id)); setPicker(null); } }))
       ]} />}
       {picker === "grinder" && <PickSheet title="그라인더" layout="list" value={grinder} options={grinders} placeholder="그라인더 이름 (예: 코만단테)" onPick={next => { onPickGrinder(next); setGrind(next, next === grinder ? grind.clicks : lastClicks(next)); setPicker(null); }} onHide={onHideGrinder} onClose={() => setPicker(null)} />}
-      {picker === "menu" && <PickSheet title="메뉴" layout="grid" value={form.menu} options={(form.menu && !(CAFE_MENUS as readonly string[]).includes(form.menu) ? [...CAFE_MENUS, form.menu] : CAFE_MENUS).map(value => ({ value, count: 0 }))} placeholder="기타 메뉴 (예: 플랫화이트)" gridLabel={null} onPick={menu => { set("menu", menu); setPicker(null); }} onClose={() => setPicker(null)} />}
       {picker === "cafe" && <CafeSheet value={form.cafe} recent={recentCafes} onPick={cafe => { set("cafe", cafe); setPicker(null); }} onClose={() => setPicker(null)} />}
       {picker === "dripper" && <PickSheet title="드리퍼" layout="list" value={form.method} options={drippers} placeholder="드리퍼 이름 (예: 하리오 스위치)" onPick={dripper => { onPickDripper(dripper); setPicker(null); }} onHide={onHideDripper} onClose={() => setPicker(null)} />}
     </form>

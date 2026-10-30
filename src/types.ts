@@ -77,8 +77,8 @@ export type Brew = {
   // Brews without kind are our own.
   kind?: "cafe";
   cafe?: CafePlace;
+  // Only on the first cafe records (a menu, and the coffee typed freely; see cafeCup); no longer asked for.
   menu?: string;
-  // The coffee in the cup, typed freely. Records from before it existed kept that text in menu (see cafeCup).
   beanName?: string;
   // What was in the cup, in the Bean type's field names (beanKind stands in for Bean.kind), so it can become a bean later.
   beanKind?: "blend";
@@ -100,9 +100,6 @@ export type CoffeeValue = Pick<Bean, "kind" | "blendName" | "parts" | "origin" |
 
 // A cafe picked from the Kakao keyword search, or only a typed name (manual).
 export type CafePlace = { name: string; address?: string; lat?: number; lng?: number; mapUrl?: string; placeId?: string; manual?: boolean };
-
-// Menu choices for a cafe cup; anything else is typed under 기타.
-export const CAFE_MENUS = ["핸드드립", "아메리카노", "에스프레소", "라떼", "콜드브루"] as const;
 
 export const isCafeBrew = (brew: Brew) => brew.kind === "cafe";
 
