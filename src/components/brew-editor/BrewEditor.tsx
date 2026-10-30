@@ -116,7 +116,7 @@ export function BrewEditor({ editing, form, setForm, recentCafes, beans, recipes
           <div className="be-card">
             <button type="button" className={`be-row bw-bean-row${missingCafe ? " bad" : ""}`} onClick={() => setPicker("cafe")}>
               <span className="be-row-name">카페<span className="be-req"> *</span></span>
-              {form.cafe?.name ? <span className="be-value bw-bean-value"><span><FitText className="bw-bean-name" text={form.cafe.name} min={12} />{form.cafe.address && <small>{form.cafe.address}</small>}</span><span className="be-chev" aria-hidden="true">›</span></span> : valueSpan("", missingCafe ? "골라주세요" : "검색")}
+              {form.cafe?.name ? <span className="be-value bw-bean-value"><span><FitText className="bw-bean-name" text={form.cafe.name} min={12} /></span><span className="be-chev" aria-hidden="true">›</span></span> : valueSpan("", missingCafe ? "골라주세요" : "검색")}
             </button>
             <label className="be-row"><span className="be-row-name">날짜</span><input type="date" value={form.date} onChange={event => set("date", event.target.value)} /></label>
           </div>
