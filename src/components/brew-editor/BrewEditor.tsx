@@ -3,10 +3,11 @@ import { StarRating } from "../ui";
 import { PickSheet, type PickOption } from "../bean-editor/PickSheet";
 import { useKeyboardInset } from "../bean-editor/useKeyboardInset";
 import { usePickDrag } from "../bean-editor/usePickDrag";
-import { fmt } from "../../lib/format";
+import { fmt, handleNumericInput, withCommas } from "../../lib/format";
 import { recipeWater } from "../../lib/recipe";
 import { type Bean, BEAN_PROCESSES, type BrewForm, CAFE_MENUS, type CafePlace, type SavedRecipe } from "../../types";
 import { brewRatio, brewTimeFromDigits, composeGrind, parseGrind, TASTE_ATTRIBUTES, type TasteScores } from "./brewFormat";
+import { type CoffeeSheet, CoffeeRows } from "../bean-editor/CoffeeRows";
 import { CafeSheet } from "./CafeSheet";
 import { FitText } from "./FitText";
 import { useSheet } from "./useSheet";
@@ -41,11 +42,15 @@ function ListSheet({ title, items, empty, search, noMatch, onClose }: { title: s
 
 // The brew form as "name · value" rows in a sheet over the list (a dialog on wider screens). BrewLog keeps the state and
 // saving; this lays the fields out and opens the pickers.
-export function BrewEditor({ editing, form, setForm, recentCafes, beans, recipes, selectedRecipeId, drippers, grinders, defaultGrinder, lastClicks, note, setNote, notice, error, onPickBean, onPickRecipe, onPickDripper, onHideDripper, onPickGrinder, onHideGrinder, onSave, onClose }: {
+export function BrewEditor({ editing, form, setForm, recentCafes, origins, varieties, onAddOrigin, onHideVariety, beans, recipes, selectedRecipeId, drippers, grinders, defaultGrinder, lastClicks, note, setNote, notice, error, onPickBean, onPickRecipe, onPickDripper, onHideDripper, onPickGrinder, onHideGrinder, onSave, onClose }: {
   editing: boolean;
   form: BrewForm;
   setForm: Dispatch<SetStateAction<BrewForm>>;
   recentCafes: CafePlace[];
+  origins: PickOption[];
+  varieties: PickOption[];
+  onAddOrigin: (origin: string) => void;
+  onHideVariety: (variety: string) => void;
   beans: Bean[];
   recipes: SavedRecipe[];
   selectedRecipeId: string;
@@ -74,7 +79,8 @@ export function BrewEditor({ editing, form, setForm, recentCafes, beans, recipes
   const grind = parseGrind(form.grindSize, grinders.map(option => option.value));
   const grinder = form.grindSize.trim() ? grind.grinder : pickedGrinder ?? defaultGrinder;
   const setGrind = (nextGrinder: string, clicks: string) => { setPickedGrinder(nextGrinder); setForm(current => ({ ...current, grindSize: composeGrind(nextGrinder, clicks) })); };
-  const sheet = useSheet(onClose, () => { if (!picker) return false; setPicker(null); return true; });
+  const [coffeeSheet, setCoffeeSheet] = useState<CoffeeSheet>(null);
+  const sheet = useSheet(onClose, () => { if (coffeeSheet !== null) { setCoffeeSheet(null); return true; } if (!picker) return false; setPicker(null); return true; });
   const set = <K extends keyof BrewForm>(key: K, value: BrewForm[K]) => setForm(current => ({ ...current, [key]: value }));
   const bean = beans.find(item => String(item.id) === form.beanId);
   const recipe = recipes.find(item => String(item.id) === selectedRecipeId);
@@ -86,9 +92,6 @@ export function BrewEditor({ editing, form, setForm, recentCafes, beans, recipes
   const missingWater = Boolean(error) && !(parseFloat(form.waterAmount) > 0);
   const cafeMode = form.kind === "cafe";
   const missingCafe = Boolean(error) && !form.cafe?.name.trim();
-  // 가공 like the bean editor: the usual three as a segmented control, anything else typed under 기타.
-  const [otherProcess, setOtherProcess] = useState(() => Boolean(form.process) && !(BEAN_PROCESSES as readonly string[]).includes(form.process));
-  const isOtherProcess = otherProcess || (Boolean(form.process) && !(BEAN_PROCESSES as readonly string[]).includes(form.process));
   const valueSpan = (value: string, placeholder: string) => <span className={`be-value${value ? "" : " empty"}`}><span>{value || placeholder}</span><span className="be-chev" aria-hidden="true">›</span></span>;
 
   return <div className={`be-layer${sheet.closing ? " closing" : ""}`}>
@@ -126,17 +129,23 @@ export function BrewEditor({ editing, form, setForm, recentCafes, beans, recipes
           <h3 className="be-group-label" id="bw-cup">무엇을</h3>
           <div className="be-card">
             <button type="button" className="be-row" onClick={() => setPicker("menu")}><span className="be-row-name">메뉴</span>{valueSpan(form.menu, "선택")}</button>
-            <label className="be-row"><span className="be-row-name">원두</span><input value={form.beanName} placeholder="예: 케냐 키리냐가 AA" onChange={event => set("beanName", event.target.value)} /></label>
-            <label className="be-row"><span className="be-row-name">산지</span><input value={form.origin} placeholder="예: 에티오피아 구지" onChange={event => set("origin", event.target.value)} /></label>
-            <div className="be-row seg-row">
-              <span className="be-row-name">가공</span>
-              <div className="be-seg" role="group" aria-label="가공방식">
-                {BEAN_PROCESSES.map(process => <button type="button" key={process} aria-pressed={!isOtherProcess && form.process === process} onClick={() => { setOtherProcess(false); set("process", form.process === process ? "" : process); }}>{process}</button>)}
-                <button type="button" aria-pressed={isOtherProcess} onClick={() => { setOtherProcess(!isOtherProcess); set("process", ""); }}>기타</button>
-              </div>
-            </div>
-            {isOtherProcess && <label className="be-row sub"><span className="be-row-name">직접 쓰기</span><input autoFocus={!form.process} value={form.process} placeholder="예: 무산소 내추럴" onChange={event => set("process", event.target.value)} /></label>}
+            <label className="be-row"><span className="be-row-name">원두 이름</span><input value={form.beanName} placeholder="선택" onChange={event => set("beanName", event.target.value)} /></label>
+            <label className="be-row"><span className="be-row-name">가격</span><input type="text" inputMode="numeric" value={withCommas(form.price)} placeholder="7,000" onChange={event => handleNumericInput(event, price => set("price", price))} /><span className="be-unit">원</span></label>
           </div>
+        </section>
+
+        {/* The coffee itself, laid out like the bean editor's 원두 section; every row may stay empty here. */}
+        <section className="be-group" aria-labelledby="bw-coffee">
+          <h3 className="be-group-label" id="bw-coffee">원두</h3>
+          <div className="be-card">
+            <CoffeeRows value={form.coffee} onChange={update => setForm(current => ({ ...current, coffee: update(current.coffee) }))} required={false} error={error} processes={BEAN_PROCESSES} origins={origins} varieties={varieties}
+              sheet={coffeeSheet} setSheet={setCoffeeSheet} onAddOrigin={onAddOrigin} onHideVariety={onHideVariety} />
+          </div>
+        </section>
+
+        <section className="be-group" aria-labelledby="bw-notes">
+          <h3 className="be-group-label" id="bw-notes">로스터리 컵노트</h3>
+          <div className="be-card"><label className="be-row full"><span className="sr-only">로스터리 컵노트</span><input value={form.roasteryNotes} placeholder="예: 흰 꽃, 복숭아, 꿀 (쉼표로 구분)" onChange={event => set("roasteryNotes", event.target.value)} /></label></div>
         </section>
         </> : <>
         <section className="be-group" aria-labelledby="bw-what">

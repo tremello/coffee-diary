@@ -40,7 +40,7 @@ export const blendName = (form: Pick<BeanForm, "blendName" | "parts">) => {
 export const beanValues = (bean: Bean, key: "origin" | "process" | "variety") => isBlend(bean) ? unique(usedParts(bean.parts).map(part => part[key])) : unique([bean[key]]);
 
 // Saving a blend: drop empty rows, write the remainder into a blank ratio, and fill the plain fields with a summary.
-export const blendFields = (form: BeanForm): Partial<BeanForm> => {
+export const blendFields = (form: Pick<BeanForm, "parts" | "blendName">): Partial<BeanForm> => {
   const used = usedParts(form.parts), ratios = partRatios(used);
   const parts = used.map((part, index) => ({ origin: part.origin.trim(), ...(part.process?.trim() ? { process: part.process.trim() } : {}), ...(part.variety?.trim() ? { variety: part.variety.trim() } : {}), ...(ratios[index] ? { ratio: ratios[index] } : {}) }));
   return { kind: "blend", parts, blendName: form.blendName?.trim() ?? "", origin: unique(parts.map(part => part.origin)).join(" · "), process: unique(parts.map(part => part.process)).join(" · "), variety: unique(parts.map(part => part.variety)).join(", "), farm: "" };

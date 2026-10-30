@@ -3,13 +3,14 @@ import { type StorageSetter, useStorage } from "../data/sync";
 import { Empty, JourneySteps } from "../components/ui";
 import { BrewDetail } from "../components/brew-editor/BrewDetail";
 import { BrewEditor, type BrewNote } from "../components/brew-editor/BrewEditor";
-import { brewConditions, brewConditionsForm, cafeBeanLine, cafeTitle, recentCafes, composeGrind, parseGrind, brewRatio, dayHeading, emptyBrewForm, emptyNoteForm, latestBrewOf, normalizeBrewTime, noteMemo, shortDate, TASTE_ATTRIBUTES, tasteScore, tasteSummary } from "../components/brew-editor/brewFormat";
+import { brewConditions, brewConditionsForm, cafeBeanLine, coffeeFields, cafeTitle, recentCafes, composeGrind, parseGrind, brewRatio, dayHeading, emptyBrewForm, emptyNoteForm, latestBrewOf, normalizeBrewTime, noteMemo, shortDate, TASTE_ATTRIBUTES, tasteScore, tasteSummary } from "../components/brew-editor/brewFormat";
 import { RatingStars } from "../components/brew-editor/RatingStars";
-import { STORAGE_KEYS } from "../data/keys";
+import { LIST_KEYS, STORAGE_KEYS } from "../data/keys";
+import { beanValues } from "../lib/blend";
 import { readLocal, writeLocal } from "../data/storage";
 import { fmt, localDate } from "../lib/format";
 import { normalizedRecipeAction, recipeTime, recipeTimeToSeconds, recipeWater } from "../lib/recipe";
-import { type Bean, type BeanStatus, type Brew, type BrewForm, isCafeBrew, type SavedRecipe, type TastingNote } from "../types";
+import { type Bean, BEAN_ORIGINS, type BeanStatus, type Brew, type BrewForm, isCafeBrew, type SavedRecipe, type TastingNote } from "../types";
 
 // Shown only until the user registers drippers of their own.
 const DRIPPER_SUGGESTIONS = ["하리오 V60", "오리가미", "칼리타"];
@@ -45,6 +46,9 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   const [note, setNote] = useState<BrewNote>(emptyNote);
   const [prefill, setPrefill] = useState<Prefill>(null);
   const [drippers, setDrippers] = useStorage<string[]>(STORAGE_KEYS.drippers, [], userId);
+  // The bean editor's origin and variety lists, for the coffee of a cafe brew.
+  const [customOrigins, setCustomOrigins] = useStorage<string[]>(LIST_KEYS.origins, [], userId);
+  const [hiddenVarieties, setHiddenVarieties] = useStorage<string[]>(LIST_KEYS.hiddenVarieties, [], userId);
   const [grinders, setGrinders] = useStorage<string[]>(STORAGE_KEYS.grinders, [], userId);
   const [query, setQuery] = useState("");
   const [brewSort, setBrewSort] = useState<"latest" | "oldest">("latest");
@@ -79,7 +83,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   const grindTouched = form.grindSize !== "" && form.grindSize !== autoGrind(form.beanId);
 
   // Keep the unsaved new brew while the sheet is open; saving or "비우기" removes it.
-  const dirty = Boolean(form.cafe || form.menu || form.beanName || form.origin || form.process || form.beanId || form.amount || form.waterAmount || form.method || form.recipe || grindTouched || form.waterTemp || form.brewTime || note.memo.trim() || note.rating || Object.values(note.taste).some(Boolean));
+  const dirty = Boolean(form.cafe || form.beanName || form.coffee.origin || form.coffee.parts?.some(part => part.origin) || form.roasteryNotes || form.price || form.beanId || form.amount || form.waterAmount || form.method || form.recipe || grindTouched || form.waterTemp || form.brewTime || note.memo.trim() || note.rating || Object.values(note.taste).some(Boolean));
   useEffect(() => {
     if (show && editingId === null && dirty) writeLocal(DRAFT_KEY, { form, recipeId: selectedRecipeId, note } satisfies BrewDraft);
   }, [show, editingId, dirty, form, selectedRecipeId, note]);
@@ -156,7 +160,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     if (!cafe || !form.date) { setBrewError("카페와 날짜를 확인해주세요."); return; }
     const previous = editingId === null ? null : brews.find(item => item.id === editingId) ?? null;
     const text = (value: string) => value.trim() || undefined;
-    const brew: Brew = { id: editingId ?? Date.now(), beanId: 0, amount: 0, kind: "cafe", cafe, method: form.method.trim(), date: form.date, recipe: "", menu: text(form.menu), beanName: form.beanName.trim(), roastery: previous && isCafeBrew(previous) ? previous.roastery : undefined, origin: text(form.origin), process: text(form.process) };
+    const brew: Brew = { id: editingId ?? Date.now(), beanId: 0, amount: 0, kind: "cafe", cafe, method: form.method.trim(), date: form.date, recipe: "", menu: text(form.menu), beanName: form.beanName.trim(), roastery: previous && isCafeBrew(previous) ? previous.roastery : undefined, ...coffeeFields(form.coffee), roasteryNotes: text(form.roasteryNotes), price: text(form.price) };
     setBrews(editingId === null ? [...brews, brew] : brews.map(item => item.id === editingId ? brew : item));
     if (previous && !isCafeBrew(previous)) setBeans(beans.map(item => item.id === previous.beanId ? { ...item, remaining: Math.round((item.remaining + previous.amount) * 10) / 10 } : item));
     saveNote(brew, previous ? noteOf(previous) : null);
@@ -242,11 +246,20 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   const dripperNames = drippers.length ? drippers : DRIPPER_SUGGESTIONS;
   const dripperOptions = (form.method && !dripperNames.includes(form.method) ? [form.method, ...dripperNames] : dripperNames).map(value => ({ value, count: 0 }));
 
+  // Ranked like the bean editor's pickers: the most-used first, by how many beans in the bag use them.
+  const rankByUse = (values: string[], key: "origin" | "variety") => {
+    const counts = new Map<string, number>();
+    beans.filter(bean => !bean.deleted).forEach(bean => beanValues(bean, key).forEach(value => counts.set(value, (counts.get(value) ?? 0) + 1)));
+    return values.map((value, index) => ({ value, count: counts.get(value) ?? 0, index })).sort((a, b) => b.count - a.count || a.index - b.index).map(({ value, count }) => ({ value, count }));
+  };
+  const originNames = [...new Set([...BEAN_ORIGINS, ...customOrigins, ...beans.flatMap(bean => beanValues(bean, "origin"))])];
+  const varietyNames = [...new Set(beans.flatMap(bean => beanValues(bean, "variety")))].filter(variety => !hiddenVarieties.includes(variety));
+
   const normalizedQuery = query.trim().toLowerCase();
   const filteredBrews = brews.filter(brew => {
     if (!normalizedQuery) return true;
     const bean = beans.find(b => b.id === brew.beanId);
-    return [bean?.name, bean?.roastery, brew.recipe, brew.method, brew.date, brew.cafe?.name, brew.menu, brew.beanName, brew.roastery, brew.origin].filter(Boolean).join(" ").toLowerCase().includes(normalizedQuery);
+    return [bean?.name, bean?.roastery, brew.recipe, brew.method, brew.date, brew.cafe?.name, brew.menu, brew.beanName, brew.roastery, brew.blendName, brew.origin, brew.farm, brew.variety].filter(Boolean).join(" ").toLowerCase().includes(normalizedQuery);
   });
   const sorted = [...filteredBrews].sort((a, b) => {
     return brewSort === "latest" ? b.date.localeCompare(a.date) || b.id - a.id : a.date.localeCompare(b.date) || a.id - b.id;
@@ -303,7 +316,8 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
       </Fragment>)}
       {!show && <button type="button" className="bean-fab brew-fab" onClick={openNew}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>브루잉 추가</button>}
 
-      {show && <BrewEditor editing={editingId !== null} form={form} setForm={setForm} recentCafes={recentCafes(brews)} beans={beanChoices} recipes={recipes} selectedRecipeId={selectedRecipeId} drippers={dripperOptions} grinders={grinderOptions} defaultGrinder={defaultGrinder} lastClicks={lastClicks} note={note} setNote={setNote}
+      {show && <BrewEditor editing={editingId !== null} form={form} setForm={setForm} recentCafes={recentCafes(brews)} origins={rankByUse(originNames, "origin")} varieties={rankByUse(varietyNames, "variety")}
+        onAddOrigin={origin => { if (!originNames.includes(origin)) setCustomOrigins([...customOrigins, origin]); }} onHideVariety={variety => setHiddenVarieties([...hiddenVarieties, variety])} beans={beanChoices} recipes={recipes} selectedRecipeId={selectedRecipeId} drippers={dripperOptions} grinders={grinderOptions} defaultGrinder={defaultGrinder} lastClicks={lastClicks} note={note} setNote={setNote}
         notice={prefill && editingId === null ? { text: prefill.text, onClear: clearPrefill } : null} error={brewError}
         onPickBean={beanId => editingId === null ? startWithBean(beanId) : setForm(current => ({ ...current, beanId }))} onPickRecipe={pickRecipe} onPickDripper={pickDripper}
         onHideDripper={dripper => { setDrippers(drippers.filter(item => item !== dripper)); if (form.method === dripper) setForm(current => ({ ...current, method: "" })); }}

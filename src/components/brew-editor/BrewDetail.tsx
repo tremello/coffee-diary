@@ -36,8 +36,11 @@ export function BrewDetail({ brew, beans, brews, notes, onSelect, onAgain, onEdi
   const cup = cafeCup(brew);
   const rows = cafe ? [
     ["메뉴", cup.menu],
-    ["원두", cup.beanName],
-    ["산지 · 가공", [brew.origin, brew.process].filter(Boolean).join(" · ")],
+    ["원두 이름", cup.beanName],
+    brew.beanKind === "blend" ? ["블렌드", blendDetail(brew.parts)] : ["원산지 · 가공", [[brew.origin, brew.farm].filter(Boolean).join(" "), brew.process].filter(Boolean).join(" · ")],
+    ["품종", brew.beanKind === "blend" ? "" : brew.variety ?? ""],
+    ["로스터리 컵노트", splitCupNotes(brew.roasteryNotes).join(", ")],
+    ["가격", brew.price ? `${fmt(brew.price)}원` : ""],
     ["로스터리", brew.roastery ?? ""],
     ["추출", brew.method],
     ["맛", taste]
