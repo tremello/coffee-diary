@@ -2,6 +2,9 @@ export const BEAN_STATUSES = ["디개싱 중", "소비 중"] as const;
 
 export type BeanStatus = (typeof BEAN_STATUSES)[number];
 
+// The process choices offered as a segmented control (beans and cafe brews); anything else is typed under 기타.
+export const BEAN_PROCESSES = ["워시드", "내추럴", "허니"] as const;
+
 export const BEAN_QUALITIES = ["특식", "준특식", "사료"] as const;
 
 export type BeanQuality = (typeof BEAN_QUALITIES)[number];
@@ -67,15 +70,34 @@ export type Brew = {
   grindSize?: string;
   waterTemp?: number;
   brewTime?: string;
+  // A cup drunk at a cafe or made by someone else: no bean of ours (beanId 0, amount 0), so it never touches the inventory.
+  // Brews without kind are our own.
+  kind?: "cafe";
+  cafe?: CafePlace;
+  menu?: string;
+  roastery?: string;
+  origin?: string;
+  process?: string;
 };
 
-export type BrewForm = Omit<Brew, "id" | "beanId" | "recipeId" | "amount" | "waterAmount" | "grindSize" | "waterTemp" | "brewTime"> & {
+// A cafe picked from the Kakao keyword search, or only a typed name (manual).
+export type CafePlace = { name: string; address?: string; lat?: number; lng?: number; mapUrl?: string; placeId?: string; manual?: boolean };
+
+export const isCafeBrew = (brew: Brew) => brew.kind === "cafe";
+
+export type BrewForm = Omit<Brew, "id" | "beanId" | "recipeId" | "amount" | "waterAmount" | "grindSize" | "waterTemp" | "brewTime" | "kind" | "cafe" | "menu" | "roastery" | "origin" | "process"> & {
   beanId: string;
   amount: string;
   waterAmount: string;
   grindSize: string;
   waterTemp: string;
   brewTime: string;
+  kind: "own" | "cafe";
+  cafe: CafePlace | null;
+  menu: string;
+  roastery: string;
+  origin: string;
+  process: string;
 };
 
 export type RecipeStep = {

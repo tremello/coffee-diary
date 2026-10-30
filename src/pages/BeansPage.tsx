@@ -7,12 +7,12 @@ import { BeanEditor } from "../components/bean-editor/BeanEditor";
 import { beanValues, blendFields, blendSummary, isBlend, MAX_BLEND_PARTS, ratioTotal, usedParts } from "../lib/blend";
 import { beanName, fmt, handleNumericInput, localDate, splitCupNotes, withCommas } from "../lib/format";
 import { localizedPhotoField, PHOTO_ORIGIN_LABELS, PHOTO_PROCESS_LABELS, photoMimeType, photoProblem, preparePhoto } from "../lib/photo";
-import { type Bean, BEAN_QUALITIES, BEAN_STATUSES, type BeanForm, type BeanQuality, type BeanStatus, type Brew, type RecognizedBeanFields, type TastingNote } from "../types";
+import { type Bean, BEAN_PROCESSES, BEAN_QUALITIES, BEAN_STATUSES, type BeanForm, type BeanQuality, type BeanStatus, type Brew, type RecognizedBeanFields, type TastingNote } from "../types";
 import { LIST_KEYS } from "../data/keys";
 import { DEVICE_KEYS } from "../data/settings";
 
 // 무산소 가공은 직접 입력칸에 적어요. 이미 등록된 무산소 원두는 세부 검색에 그대로 나와요.
-const DEFAULT_PROCESSES = ["워시드", "내추럴", "허니"];
+const DEFAULT_PROCESSES = BEAN_PROCESSES;
 
 const DEFAULT_ORIGINS = ["에티오피아", "파나마", "콜롬비아", "케냐"];
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { fmt, localDate, parseLocalDate, splitCupNotes } from "../../lib/format";
-import { type Bean, type Brew, type TastingNote } from "../../types";
-import { brewRatio, noteMemo, shortDate, tasteSummary } from "./brewFormat";
+import { type Bean, type Brew, isCafeBrew, type TastingNote } from "../../types";
+import { brewRatio, cafeBeanLine, cafeTitle, noteMemo, shortDate, tasteSummary } from "./brewFormat";
 import { RatingStars } from "./RatingStars";
 import { useSheet } from "./useSheet";
 import { blendDetail, isBlend } from "../../lib/blend";
@@ -21,17 +21,23 @@ export function BrewDetail({ brew, beans, brews, notes, onSelect, onAgain, onEdi
   const sheet = useSheet(onClose);
   const bodyRef = useRef<HTMLDivElement>(null);
   useEffect(() => { bodyRef.current?.scrollTo({ top: 0 }); }, [brew.id]);
-  const bean = beans.find(item => item.id === brew.beanId);
+  // A cafe brew has no bean of ours: it shows the cafe and what was in the cup, and no "이 원두로" history or 다시 내리기.
+  const cafe = isCafeBrew(brew);
+  const bean = cafe ? undefined : beans.find(item => item.id === brew.beanId);
   const noteOf = (item: Brew) => notes.find(note => note.brewId === item.id);
   const note = noteOf(brew);
   const memo = noteMemo(note);
   const taste = tasteSummary(note);
   const day = parseLocalDate(brew.date);
-  const sameBean = brews.filter(item => item.beanId === brew.beanId).sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+  const sameBean = cafe ? [] : brews.filter(item => !isCafeBrew(item) && item.beanId === brew.beanId).sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
   const rated = sameBean.map(item => noteOf(item)?.rating ?? 0).filter(Boolean);
   const average = rated.length ? Math.round(rated.reduce((sum, rating) => sum + rating, 0) / rated.length * 10) / 10 : 0;
   const roastDays = bean?.roastDate ? Math.round((parseLocalDate(localDate()).getTime() - parseLocalDate(bean.roastDate).getTime()) / 86_400_000) : null;
-  const rows = [
+  const rows = cafe ? [
+    ["원두", cafeBeanLine(brew)],
+    ["추출", brew.method],
+    ["맛", taste]
+  ].filter(([, value]) => value) : [
     ["비율", [`${fmt(brew.amount)}g${brew.waterAmount ? ` · ${fmt(brew.waterAmount)}g (${brewRatio(brew.amount, brew.waterAmount)})` : ""}`, brew.recipe].filter(Boolean).join(" · ")],
     ["드리퍼 · 분쇄도", [brew.method, brew.grindSize].filter(Boolean).join(" · ")],
     ["온도 · 시간", [brew.waterTemp && `${fmt(brew.waterTemp)}℃`, brew.brewTime].filter(Boolean).join(" · ")],
@@ -57,15 +63,24 @@ export function BrewDetail({ brew, beans, brews, notes, onSelect, onAgain, onEdi
       </div>
       <div className="be-body" ref={bodyRef}><div className="be-body-inner">
         <div className="bw-detail-title">
-          <div>{bean?.roastery && <p className="brew-roastery">{bean.roastery}</p>}<h2 id="bw-detail-title">{bean?.name || "삭제된 원두"}</h2></div>
+          {cafe ? <div><p className="brew-roastery"><span className="bw-cafe-chip">카페</span>{brew.cafe?.name}</p><h2 id="bw-detail-title">{cafeTitle(brew)}</h2></div>
+            : <div>{bean?.roastery && <p className="brew-roastery">{bean.roastery}</p>}<h2 id="bw-detail-title">{bean?.name || "삭제된 원두"}</h2></div>}
           <RatingStars value={note?.rating ?? 0} />
         </div>
         {memo && <p className="bw-detail-memo">“{memo}”</p>}
 
-        <section className="be-group" aria-labelledby="bw-this">
-          <h3 className="be-group-label" id="bw-this">이번 브루잉</h3>
+        {cafe && brew.cafe && <section className="be-group" aria-labelledby="bw-cafe">
+          <h3 className="be-group-label" id="bw-cafe">카페</h3>
+          <div className="be-card"><div className="be-row bw-kv">
+            <span className="be-row-name">{brew.cafe.name}</span>
+            <span>{brew.cafe.address}{brew.cafe.mapUrl && <> <a className="bw-map-link" href={brew.cafe.mapUrl} target="_blank" rel="noopener noreferrer">지도</a></>}</span>
+          </div></div>
+        </section>}
+
+        {rows.length > 0 && <section className="be-group" aria-labelledby="bw-this">
+          <h3 className="be-group-label" id="bw-this">{cafe ? "이번 한 잔" : "이번 브루잉"}</h3>
           <div className="be-card">{rows.map(([label, value]) => <div className="be-row bw-kv" key={label}><span className="be-row-name">{label}</span><span>{value}</span></div>)}</div>
-        </section>
+        </section>}
 
         {beanRows.length > 0 && <section className="be-group" aria-labelledby="bw-bean">
           <h3 className="be-group-label" id="bw-bean">원두 정보</h3>
@@ -81,7 +96,7 @@ export function BrewDetail({ brew, beans, brews, notes, onSelect, onAgain, onEdi
           </button>)}</div>
         </section>}
       </div></div>
-      {onAgain && <div className="bw-footer"><button type="button" className="bw-save" onClick={() => onAgain(brew)}>이대로 다시 내리기</button></div>}
+      {onAgain && !cafe && <div className="bw-footer"><button type="button" className="bw-save" onClick={() => onAgain(brew)}>이대로 다시 내리기</button></div>}
     </div>
   </div>;
 }

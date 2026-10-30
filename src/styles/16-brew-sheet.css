@@ -85,3 +85,14 @@ form.be-panel .be-quick .be-row-name { color: inherit; font-size: inherit; }
 
 /* Picker lists are flex children of the column .be-pick-scroll; without this they shrink to fit and get clipped instead of scrolling. */
 .be-pick-scroll > * { flex-shrink: 0; }
+
+/* Cafe brews (a cup drunk at a cafe or made by someone else): the kind switch on top of the brew sheet, the 카페 chip in the
+   roastery slot of cards, the picker's 내 주변 / 최근 간 곳 chips and the detail's 지도 link. */
+.bw-kind { display: flex; }
+.bw-kind button { flex: 1 1 0; min-height: 34px; }
+.bw-cafe-chip { display: inline-block; margin-right: 6px; padding: 1px 7px; border-radius: var(--r-pill); background: var(--c-soft-2); color: var(--c-accent); font-size: 11px; font-weight: 600; vertical-align: 1px; }
+.bw-cafe-chips { display: flex; flex: 0 0 auto; gap: 6px; }
+.bw-cafe-chips .bw-again[aria-pressed="true"] { border-color: var(--bd-7a5733); background: var(--c-soft-2); font-weight: 600; }
+.bw-cafe-chips .bw-again:disabled { opacity: .6; cursor: default; }
+.be-pick-new button:disabled { color: var(--c-ink-3); cursor: default; }
+.bw-map-link { margin-left: 4px; color: var(--c-accent); font-size: 12px; font-weight: 600; white-space: nowrap; }

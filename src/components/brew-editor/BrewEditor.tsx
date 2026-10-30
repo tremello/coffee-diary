@@ -5,12 +5,13 @@ import { useKeyboardInset } from "../bean-editor/useKeyboardInset";
 import { usePickDrag } from "../bean-editor/usePickDrag";
 import { fmt } from "../../lib/format";
 import { recipeWater } from "../../lib/recipe";
-import { type Bean, type BrewForm, type SavedRecipe } from "../../types";
+import { type Bean, BEAN_PROCESSES, type BrewForm, type CafePlace, type SavedRecipe } from "../../types";
 import { brewRatio, brewTimeFromDigits, composeGrind, parseGrind, TASTE_ATTRIBUTES, type TasteScores } from "./brewFormat";
+import { CafeSheet } from "./CafeSheet";
 import { FitText } from "./FitText";
 import { useSheet } from "./useSheet";
 
-type Picker = "bean" | "recipe" | "dripper" | "grinder" | null;
+type Picker = "bean" | "recipe" | "dripper" | "grinder" | "cafe" | null;
 
 export type BrewNote = { memo: string; rating: number; taste: TasteScores };
 
@@ -40,10 +41,11 @@ function ListSheet({ title, items, empty, search, noMatch, onClose }: { title: s
 
 // The brew form as "name · value" rows in a sheet over the list (a dialog on wider screens). BrewLog keeps the state and
 // saving; this lays the fields out and opens the pickers.
-export function BrewEditor({ editing, form, setForm, beans, recipes, selectedRecipeId, drippers, grinders, defaultGrinder, lastClicks, note, setNote, notice, error, onPickBean, onPickRecipe, onPickDripper, onHideDripper, onPickGrinder, onHideGrinder, onSave, onClose }: {
+export function BrewEditor({ editing, form, setForm, recentCafes, beans, recipes, selectedRecipeId, drippers, grinders, defaultGrinder, lastClicks, note, setNote, notice, error, onPickBean, onPickRecipe, onPickDripper, onHideDripper, onPickGrinder, onHideGrinder, onSave, onClose }: {
   editing: boolean;
   form: BrewForm;
   setForm: Dispatch<SetStateAction<BrewForm>>;
+  recentCafes: CafePlace[];
   beans: Bean[];
   recipes: SavedRecipe[];
   selectedRecipeId: string;
@@ -82,6 +84,11 @@ export function BrewEditor({ editing, form, setForm, beans, recipes, selectedRec
   const missingBean = Boolean(error) && !bean;
   const missingAmount = Boolean(error) && !(amount > 0);
   const missingWater = Boolean(error) && !(parseFloat(form.waterAmount) > 0);
+  const cafeMode = form.kind === "cafe";
+  const missingCafe = Boolean(error) && !form.cafe?.name.trim();
+  // 가공 like the bean editor: the usual three as a segmented control, anything else typed under 기타.
+  const [otherProcess, setOtherProcess] = useState(() => Boolean(form.process) && !(BEAN_PROCESSES as readonly string[]).includes(form.process));
+  const isOtherProcess = otherProcess || (Boolean(form.process) && !(BEAN_PROCESSES as readonly string[]).includes(form.process));
   const valueSpan = (value: string, placeholder: string) => <span className={`be-value${value ? "" : " empty"}`}><span>{value || placeholder}</span><span className="be-chev" aria-hidden="true">›</span></span>;
 
   return <div className={`be-layer${sheet.closing ? " closing" : ""}`}>
@@ -96,9 +103,43 @@ export function BrewEditor({ editing, form, setForm, beans, recipes, selectedRec
         </div>
       </div>
       <div className="be-body"><div className="be-body-inner">
+        <div className="be-seg bw-kind" role="group" aria-label="기록 종류">
+          <button type="button" aria-pressed={!cafeMode} onClick={() => set("kind", "own")}>내 원두로</button>
+          <button type="button" aria-pressed={cafeMode} onClick={() => set("kind", "cafe")}>카페·남이 내려줌</button>
+        </div>
         {notice && <p className="bw-notice" role="status"><span className="be-dot" aria-hidden="true" /><span>{notice.text}</span><button type="button" onClick={notice.onClear}>비우기</button></p>}
         {error && <p className="be-alert" role="alert">{error}</p>}
 
+        {cafeMode ? <>
+        <section className="be-group" aria-labelledby="bw-where">
+          <h3 className="be-group-label" id="bw-where">어디서</h3>
+          <div className="be-card">
+            <button type="button" className={`be-row bw-bean-row${missingCafe ? " bad" : ""}`} onClick={() => setPicker("cafe")}>
+              <span className="be-row-name">카페<span className="be-req"> *</span></span>
+              {form.cafe?.name ? <span className="be-value bw-bean-value"><span><FitText className="bw-bean-name" text={form.cafe.name} min={12} />{form.cafe.address && <small>{form.cafe.address}</small>}</span><span className="be-chev" aria-hidden="true">›</span></span> : valueSpan("", missingCafe ? "골라주세요" : "검색")}
+            </button>
+            <label className="be-row"><span className="be-row-name">날짜</span><input type="date" value={form.date} onChange={event => set("date", event.target.value)} /></label>
+          </div>
+        </section>
+
+        <section className="be-group" aria-labelledby="bw-cup">
+          <h3 className="be-group-label" id="bw-cup">무엇을</h3>
+          <div className="be-card">
+            <label className="be-row"><span className="be-row-name">메뉴·원두</span><input value={form.menu} placeholder="예: 에티오피아 핸드드립" onChange={event => set("menu", event.target.value)} /></label>
+            <label className="be-row"><span className="be-row-name">로스터리</span><input value={form.roastery} placeholder="선택" onChange={event => set("roastery", event.target.value)} /></label>
+            <label className="be-row"><span className="be-row-name">산지</span><input value={form.origin} placeholder="예: 에티오피아 구지" onChange={event => set("origin", event.target.value)} /></label>
+            <div className="be-row seg-row">
+              <span className="be-row-name">가공</span>
+              <div className="be-seg" role="group" aria-label="가공방식">
+                {BEAN_PROCESSES.map(process => <button type="button" key={process} aria-pressed={!isOtherProcess && form.process === process} onClick={() => { setOtherProcess(false); set("process", form.process === process ? "" : process); }}>{process}</button>)}
+                <button type="button" aria-pressed={isOtherProcess} onClick={() => { setOtherProcess(!isOtherProcess); set("process", ""); }}>기타</button>
+              </div>
+            </div>
+            {isOtherProcess && <label className="be-row sub"><span className="be-row-name">직접 쓰기</span><input autoFocus={!form.process} value={form.process} placeholder="예: 무산소 내추럴" onChange={event => set("process", event.target.value)} /></label>}
+            <button type="button" className="be-row" onClick={() => setPicker("dripper")}><span className="be-row-name">추출</span>{valueSpan(form.method, "선택")}</button>
+          </div>
+        </section>
+        </> : <>
         <section className="be-group" aria-labelledby="bw-what">
           <h3 className="be-group-label" id="bw-what">무엇을{ratio && <span className="bw-ratio">비율 {ratio}</span>}</h3>
           <div className="be-card">
@@ -135,6 +176,7 @@ export function BrewEditor({ editing, form, setForm, beans, recipes, selectedRec
             </div>
           </div>
         </section>
+        </>}
 
         <section className="be-group" aria-labelledby="bw-taste">
           <h3 className="be-group-label" id="bw-taste">맛은 어땠나요{tasteOpen && <button type="button" onClick={() => setTasteOpen(false)}>세부 평가 접기</button>}</h3>
@@ -149,7 +191,7 @@ export function BrewEditor({ editing, form, setForm, beans, recipes, selectedRec
           </div>
         </section>
       </div></div>
-      <div className="bw-footer"><button type="submit" className="bw-save">{editing ? "수정 저장" : amount > 0 ? `저장 (재고 ${fmt(amount)}g 차감)` : "저장"}</button></div>
+      <div className="bw-footer"><button type="submit" className="bw-save">{editing ? "수정 저장" : !cafeMode && amount > 0 ? `저장 (재고 ${fmt(amount)}g 차감)` : "저장"}</button></div>
 
       {picker === "bean" && <ListSheet title="원두" empty="남은 원두가 없어요. 원두 재고에서 먼저 등록해주세요." search="원두, 로스터리로 검색" noMatch="찾는 원두가 없어요" onClose={() => setPicker(null)} items={beans.map(item => ({ key: String(item.id), title: [item.roastery, item.name].filter(Boolean).join(" · "), keywords: [item.origin, item.farm, item.variety, item.process].join(" "), sub: `${fmt(item.remaining)}g 남음${item.status ? ` · ${item.status}` : ""}`, current: String(item.id) === form.beanId, onPick: () => { onPickBean(String(item.id)); setPicker(null); } }))} />}
       {picker === "recipe" && <ListSheet title="레시피" empty="" onClose={() => setPicker(null)} items={[
@@ -157,7 +199,8 @@ export function BrewEditor({ editing, form, setForm, beans, recipes, selectedRec
         ...recipes.map(item => ({ key: String(item.id), title: item.name, sub: `원두 ${fmt(item.coffee)}g · 물 ${fmt(recipeWater(item.steps).extraction)}g`, current: String(item.id) === selectedRecipeId, onPick: () => { onPickRecipe(String(item.id)); setPicker(null); } }))
       ]} />}
       {picker === "grinder" && <PickSheet title="그라인더" layout="list" value={grinder} options={grinders} placeholder="그라인더 이름 (예: 코만단테)" onPick={next => { onPickGrinder(next); setGrind(next, next === grinder ? grind.clicks : lastClicks(next)); setPicker(null); }} onHide={onHideGrinder} onClose={() => setPicker(null)} />}
-      {picker === "dripper" && <PickSheet title="드리퍼" layout="list" value={form.method} options={drippers} placeholder="드리퍼 이름 (예: 하리오 스위치)" onPick={dripper => { onPickDripper(dripper); setPicker(null); }} onHide={onHideDripper} onClose={() => setPicker(null)} />}
+      {picker === "cafe" && <CafeSheet value={form.cafe} recent={recentCafes} onPick={cafe => { set("cafe", cafe); setPicker(null); }} onClose={() => setPicker(null)} />}
+      {picker === "dripper" && <PickSheet title={cafeMode ? "추출" : "드리퍼"} layout="list" value={form.method} options={drippers} placeholder={cafeMode ? "예: 핸드드립, 에스프레소" : "드리퍼 이름 (예: 하리오 스위치)"} onPick={dripper => { if (cafeMode) set("method", dripper); else onPickDripper(dripper); setPicker(null); }} onHide={onHideDripper} onClose={() => setPicker(null)} />}
     </form>
   </div>;
 }

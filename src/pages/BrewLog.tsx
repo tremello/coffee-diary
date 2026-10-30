@@ -3,13 +3,13 @@ import { type StorageSetter, useStorage } from "../data/sync";
 import { Empty, JourneySteps } from "../components/ui";
 import { BrewDetail } from "../components/brew-editor/BrewDetail";
 import { BrewEditor, type BrewNote } from "../components/brew-editor/BrewEditor";
-import { brewConditions, brewConditionsForm, composeGrind, parseGrind, brewRatio, dayHeading, emptyBrewForm, emptyNoteForm, latestBrewOf, normalizeBrewTime, noteMemo, shortDate, TASTE_ATTRIBUTES, tasteScore, tasteSummary } from "../components/brew-editor/brewFormat";
+import { brewConditions, brewConditionsForm, cafeBeanLine, cafeTitle, recentCafes, composeGrind, parseGrind, brewRatio, dayHeading, emptyBrewForm, emptyNoteForm, latestBrewOf, normalizeBrewTime, noteMemo, shortDate, TASTE_ATTRIBUTES, tasteScore, tasteSummary } from "../components/brew-editor/brewFormat";
 import { RatingStars } from "../components/brew-editor/RatingStars";
 import { STORAGE_KEYS } from "../data/keys";
 import { readLocal, writeLocal } from "../data/storage";
 import { fmt, localDate } from "../lib/format";
 import { normalizedRecipeAction, recipeTime, recipeTimeToSeconds, recipeWater } from "../lib/recipe";
-import { type Bean, type BeanStatus, type Brew, type BrewForm, type SavedRecipe, type TastingNote } from "../types";
+import { type Bean, type BeanStatus, type Brew, type BrewForm, isCafeBrew, type SavedRecipe, type TastingNote } from "../types";
 
 // Shown only until the user registers drippers of their own.
 const DRIPPER_SUGGESTIONS = ["하리오 V60", "오리가미", "칼리타"];
@@ -66,7 +66,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   };
 
   // Grinders keep their usual setting: the click count of the newest brew made with that grinder, whatever the recipe or bean.
-  const byNewest = [...brews].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+  const byNewest = brews.filter(brew => !isCafeBrew(brew)).sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
   const grinderOf = (brew?: Brew) => brew?.grindSize ? parseGrind(brew.grindSize, grinders).grinder : "";
   const lastClicks = (grinder: string) => {
     for (const brew of byNewest) { const grind = parseGrind(brew.grindSize ?? "", grinders); if (grinder && grind.grinder === grinder && /^\d/.test(grind.clicks)) return grind.clicks; }
@@ -79,7 +79,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   const grindTouched = form.grindSize !== "" && form.grindSize !== autoGrind(form.beanId);
 
   // Keep the unsaved new brew while the sheet is open; saving or "비우기" removes it.
-  const dirty = Boolean(form.beanId || form.amount || form.waterAmount || form.method || form.recipe || grindTouched || form.waterTemp || form.brewTime || note.memo.trim() || note.rating || Object.values(note.taste).some(Boolean));
+  const dirty = Boolean(form.cafe || form.menu || form.roastery || form.origin || form.process || form.beanId || form.amount || form.waterAmount || form.method || form.recipe || grindTouched || form.waterTemp || form.brewTime || note.memo.trim() || note.rating || Object.values(note.taste).some(Boolean));
   useEffect(() => {
     if (show && editingId === null && dirty) writeLocal(DRAFT_KEY, { form, recipeId: selectedRecipeId, note } satisfies BrewDraft);
   }, [show, editingId, dirty, form, selectedRecipeId, note]);
@@ -105,7 +105,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     resetForm();
     const draft = readLocal<BrewDraft>(DRAFT_KEY);
     if (draft?.form) {
-      setForm(draft.form); setSelectedRecipeId(draft.recipeId ?? ""); setNote({ ...emptyNote(), ...draft.note });
+      setForm({ ...emptyBrewForm(), ...draft.form }); setSelectedRecipeId(draft.recipeId ?? ""); setNote({ ...emptyNote(), ...draft.note });
       setPrefill({ kind: "draft", text: "적던 기록을 이어서 채웠어요" });
     } else setForm({ ...emptyBrewForm(), grindSize: autoGrind("") });
     setDetailId(null);
@@ -137,7 +137,34 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openInitially]);
 
+  // The tasting note rides along with the brew (linked by brewId); a cafe brew's note has beanId 0 like the brew.
+  const saveNote = (brew: Brew, previousNote: TastingNote | null | undefined) => {
+    if (!(note.memo.trim() || note.rating > 0 || Object.values(note.taste).some(Boolean) || previousNote)) return;
+    const base = previousNote ?? emptyNoteForm();
+    const taste = Object.fromEntries(TASTE_ATTRIBUTES.map(({ key }) => [key, note.taste[key] ? String(note.taste[key]) : tasteScore(base[key]) ? "" : base[key] ?? ""]));
+    const saved = { ...base, ...taste, id: previousNote?.id ?? Date.now() + 1, beanId: brew.beanId, brewId: brew.id, rating: note.rating, memo: note.memo.trim(), date: form.date };
+    setNotes(previousNote ? notes.map(item => item.id === previousNote.id ? saved : item) : [...notes, saved]);
+  };
+  const finishSave = () => {
+    if (editingId === null) dropDraft();
+    resetForm();
+    setShow(false);
+  };
+  // A cafe brew never touches the beans; only an own brew turned into a cafe one while editing gives its grams back.
+  const addCafe = () => {
+    const cafe = form.cafe?.name.trim() ? { ...form.cafe, name: form.cafe.name.trim() } : null;
+    if (!cafe || !form.date) { setBrewError("카페와 날짜를 확인해주세요."); return; }
+    const previous = editingId === null ? null : brews.find(item => item.id === editingId) ?? null;
+    const text = (value: string) => value.trim() || undefined;
+    const brew: Brew = { id: editingId ?? Date.now(), beanId: 0, amount: 0, kind: "cafe", cafe, method: form.method.trim(), date: form.date, recipe: "", menu: text(form.menu), roastery: text(form.roastery), origin: text(form.origin), process: text(form.process) };
+    setBrews(editingId === null ? [...brews, brew] : brews.map(item => item.id === editingId ? brew : item));
+    if (previous && !isCafeBrew(previous)) setBeans(beans.map(item => item.id === previous.beanId ? { ...item, remaining: Math.round((item.remaining + previous.amount) * 10) / 10 } : item));
+    saveNote(brew, previous ? noteOf(previous) : null);
+    finishSave();
+  };
+
   const add = () => {
+    if (form.kind === "cafe") { addCafe(); return; }
     if (!form.beanId || !form.amount || !form.date || (editingId === null && !form.waterAmount)) { setBrewError("원두, 원두 양, 물 양을 확인해주세요."); return; }
     const nextBeanId = Number(form.beanId);
     const bean = beans.find(b => b.id === nextBeanId);
@@ -152,7 +179,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     if (brewTime === null) { setBrewError("추출 시간은 2:45처럼 분:초로 입력해주세요."); return; }
     const previous = editingId === null ? null : brews.find(item => item.id === editingId) ?? null;
     const previousNote = previous ? noteOf(previous) : null;
-    const restoredBeans = previous ? beans.map(item => item.id === previous.beanId ? { ...item, remaining: Math.round((item.remaining + previous.amount) * 10) / 10 } : item) : beans;
+    const restoredBeans = previous && !isCafeBrew(previous) ? beans.map(item => item.id === previous.beanId ? { ...item, remaining: Math.round((item.remaining + previous.amount) * 10) / 10 } : item) : beans;
     const available = restoredBeans.find(item => item.id === nextBeanId);
     if (!available || available.remaining < amt) { setBrewError(`잔여량(${fmt(available?.remaining ?? 0)}g)이 부족해요.`); return; }
     const startsConsuming = available.status === "디개싱 중";
@@ -163,20 +190,13 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     const savedGrinder = brew.grindSize ? parseGrind(brew.grindSize, grinders).grinder : "";
     if (savedGrinder && !grinders.includes(savedGrinder)) setGrinders([...grinders, savedGrinder]);
     setBeans(restoredBeans.map(item => item.id === nextBeanId ? { ...item, remaining: Math.round((item.remaining - amt) * 10) / 10, ...(startsConsuming ? { status: "소비 중" as BeanStatus } : {}) } : item));
-    if (note.memo.trim() || note.rating > 0 || Object.values(note.taste).some(Boolean) || previousNote) {
-      const base = previousNote ?? emptyNoteForm();
-      const taste = Object.fromEntries(TASTE_ATTRIBUTES.map(({ key }) => [key, note.taste[key] ? String(note.taste[key]) : tasteScore(base[key]) ? "" : base[key] ?? ""]));
-      const saved = { ...base, ...taste, id: previousNote?.id ?? Date.now() + 1, beanId: nextBeanId, brewId: brew.id, rating: note.rating, memo: note.memo.trim(), date: form.date };
-      setNotes(previousNote ? notes.map(item => item.id === previousNote.id ? saved : item) : [...notes, saved]);
-    }
-    if (editingId === null) dropDraft();
-    resetForm();
-    setShow(false);
+    saveNote(brew, previousNote);
+    finishSave();
   };
 
   const remove = (brew: Brew) => {
     setBrews(brews.filter(b => b.id !== brew.id));
-    setBeans(beans.map(b => b.id === brew.beanId ? { ...b, remaining: Math.round((b.remaining + brew.amount) * 10) / 10 } : b));
+    if (!isCafeBrew(brew)) setBeans(beans.map(b => b.id === brew.beanId ? { ...b, remaining: Math.round((b.remaining + brew.amount) * 10) / 10 } : b));
     setNotes(notes.filter(item => item.brewId !== brew.id));
     setDeletedBrew({ brew, notes: notes.filter(item => item.brewId === brew.id) });
   };
@@ -184,14 +204,14 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     if (!deletedBrew) return;
     const { brew, notes: removedNotes } = deletedBrew;
     setBrews([...brews, brew]);
-    setBeans(beans.map(b => b.id === brew.beanId ? { ...b, remaining: Math.round((b.remaining - brew.amount) * 10) / 10 } : b));
+    if (!isCafeBrew(brew)) setBeans(beans.map(b => b.id === brew.beanId ? { ...b, remaining: Math.round((b.remaining - brew.amount) * 10) / 10 } : b));
     setNotes([...notes, ...removedNotes]);
     setDeletedBrew(null);
   };
   const edit = (brew: Brew) => {
     resetForm();
     setEditingId(brew.id);
-    setForm({ ...brewConditionsForm(brew), beanId: String(brew.beanId), date: brew.date });
+    setForm({ ...brewConditionsForm(brew), beanId: isCafeBrew(brew) ? "" : String(brew.beanId), date: brew.date });
     setSelectedRecipeId(recipeIdFor(brew));
     const saved = noteOf(brew);
     setNote({ memo: saved?.memo ?? "", rating: saved?.rating ?? 0, taste: Object.fromEntries(TASTE_ATTRIBUTES.map(({ key }) => [key, tasteScore(saved?.[key])])) });
@@ -226,7 +246,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   const filteredBrews = brews.filter(brew => {
     if (!normalizedQuery) return true;
     const bean = beans.find(b => b.id === brew.beanId);
-    return [bean?.name, bean?.roastery, brew.recipe, brew.method, brew.date].filter(Boolean).join(" ").toLowerCase().includes(normalizedQuery);
+    return [bean?.name, bean?.roastery, brew.recipe, brew.method, brew.date, brew.cafe?.name, brew.menu, brew.roastery, brew.origin].filter(Boolean).join(" ").toLowerCase().includes(normalizedQuery);
   });
   const sorted = [...filteredBrews].sort((a, b) => {
     return brewSort === "latest" ? b.date.localeCompare(a.date) || b.id - a.id : a.date.localeCompare(b.date) || a.id - b.id;
@@ -248,30 +268,33 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
       {deletedBrew && <div className="delete-notice" role="status"><span>브루잉 기록을 삭제했어요.</span><button type="button" onClick={undoRemove}>되돌리기</button></div>}
 
       <div className="brew-log-tools">
-        <label className="brew-search bean-search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4 4" /></svg><span className="sr-only">브루잉 기록 검색</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="원두, 로스터리, 레시피로 검색" /></label>
+        <label className="brew-search bean-search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4 4" /></svg><span className="sr-only">브루잉 기록 검색</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="원두, 로스터리, 레시피, 카페로 검색" /></label>
         <select className="inventory-sort" aria-label="브루잉 기록 정렬" value={brewSort} onChange={event => setBrewSort(event.target.value as "latest" | "oldest")}><option value="latest">최신순</option><option value="oldest">오래된 순</option></select>
       </div>
 
       {sorted.length === 0 ? (brews.length === 0 ? <div className="brew-empty inventory-empty"><img className="onboarding-logo" src="/coffee-diary-logo-brown-96.png" width="38" height="38" alt="" /><h3>첫 브루잉을 기록해보세요</h3><p>원두와 레시피를 골라 오늘의 한 잔을 남겨보세요.</p><JourneySteps active="brews" /><button type="button" className="primary-button" onClick={openNew}>첫 브루잉 기록하기</button></div> : <Empty text="검색 결과가 없어요" />) : days.map(day => <Fragment key={day.date}>
         <h3 className="bw-day">{dayHeading(day.date, today)}</h3>
         {day.brews.map(brew => {
-          const bean = beans.find(b => b.id === brew.beanId);
+          const cafe = isCafeBrew(brew);
+          const bean = cafe ? undefined : beans.find(b => b.id === brew.beanId);
           const saved = noteOf(brew);
           const memo = noteMemo(saved);
           const taste = tasteSummary(saved);
+          const title = cafe ? cafeTitle(brew) : bean?.name || "삭제된 원두";
           return (
             <article key={brew.id} className="brew-card bw-card">
-              <button type="button" className="bw-card-open" onClick={() => setDetailId(brew.id)} aria-label={`${bean?.name || "삭제된 원두"} 기록 자세히 보기`}>
+              <button type="button" className="bw-card-open" onClick={() => setDetailId(brew.id)} aria-label={`${title} 기록 자세히 보기`}>
                 <span className="bw-card-title">
-                  <span>{bean?.roastery && <span className="brew-roastery bw-line">{bean.roastery}</span>}<span className="bw-card-name bw-line">{bean?.name || "삭제된 원두"}</span></span>
+                  <span>{cafe ? <span className="brew-roastery bw-line"><span className="bw-cafe-chip">카페</span>{brew.cafe?.name}</span> : bean?.roastery && <span className="brew-roastery bw-line">{bean.roastery}</span>}<span className="bw-card-name bw-line">{title}</span></span>
                   <RatingStars value={saved?.rating ?? 0} />
                 </span>
-                <span className="brew-recipe-block bw-line"><span className="brew-metrics bw-line">원두 {fmt(brew.amount)}g {brew.waterAmount ? `· 물 ${fmt(brew.waterAmount)}g · ${brewRatio(brew.amount, brew.waterAmount)}` : ""}</span>{brewConditions(brew) && <span className="brew-conditions-line bw-line">{brewConditions(brew)}</span>}{brew.recipe && <span className="bw-line">{brew.recipe}</span>}</span>
+                {cafe ? (cafeBeanLine(brew) || brew.method) && <span className="brew-recipe-block bw-line">{cafeBeanLine(brew) && <span className="brew-metrics bw-line">{cafeBeanLine(brew)}</span>}{brew.method && <span className="brew-conditions-line bw-line">{brew.method}</span>}</span>
+                  : <span className="brew-recipe-block bw-line"><span className="brew-metrics bw-line">원두 {fmt(brew.amount)}g {brew.waterAmount ? `· 물 ${fmt(brew.waterAmount)}g · ${brewRatio(brew.amount, brew.waterAmount)}` : ""}</span>{brewConditions(brew) && <span className="brew-conditions-line bw-line">{brewConditions(brew)}</span>}{brew.recipe && <span className="bw-line">{brew.recipe}</span>}</span>}
                 {memo && <span className="brew-note-inline bw-line"><span>메모</span> {memo}</span>}
                 {taste && <span className="brew-taste-inline bw-line">{taste}</span>}
               </button>
               <div className="bw-card-foot">
-                <button type="button" className="bw-again" onClick={() => again(brew)}><RepeatIcon />이대로 다시 내리기</button>
+                {cafe ? <span /> : <button type="button" className="bw-again" onClick={() => again(brew)}><RepeatIcon />이대로 다시 내리기</button>}
                 <div className="brew-card-actions"><button type="button" onClick={() => edit(brew)} className="brew-edit-button">수정</button><button type="button" onClick={() => remove(brew)} className="brew-delete-button">삭제</button></div>
               </div>
             </article>
@@ -280,7 +303,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
       </Fragment>)}
       {!show && <button type="button" className="bean-fab brew-fab" onClick={openNew}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>브루잉 추가</button>}
 
-      {show && <BrewEditor editing={editingId !== null} form={form} setForm={setForm} beans={beanChoices} recipes={recipes} selectedRecipeId={selectedRecipeId} drippers={dripperOptions} grinders={grinderOptions} defaultGrinder={defaultGrinder} lastClicks={lastClicks} note={note} setNote={setNote}
+      {show && <BrewEditor editing={editingId !== null} form={form} setForm={setForm} recentCafes={recentCafes(brews)} beans={beanChoices} recipes={recipes} selectedRecipeId={selectedRecipeId} drippers={dripperOptions} grinders={grinderOptions} defaultGrinder={defaultGrinder} lastClicks={lastClicks} note={note} setNote={setNote}
         notice={prefill && editingId === null ? { text: prefill.text, onClear: clearPrefill } : null} error={brewError}
         onPickBean={beanId => editingId === null ? startWithBean(beanId) : setForm(current => ({ ...current, beanId }))} onPickRecipe={pickRecipe} onPickDripper={pickDripper}
         onHideDripper={dripper => { setDrippers(drippers.filter(item => item !== dripper)); if (form.method === dripper) setForm(current => ({ ...current, method: "" })); }}

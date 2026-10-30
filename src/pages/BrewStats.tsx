@@ -4,7 +4,7 @@ import { brewConditions, brewRatio } from "../components/brew-editor/brewFormat"
 import { RatingStars } from "../components/brew-editor/RatingStars";
 import { fmt, localDate, parseLocalDate, toDateKey } from "../lib/format";
 import { isBlend } from "../lib/blend";
-import { type Bean, type Brew, type TastingNote } from "../types";
+import { type Bean, type Brew, type TastingNote, isCafeBrew } from "../types";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const PERIODS = [{ value: 7, label: "7일" }, { value: 30, label: "30일" }, { value: 0, label: "전체" }];
@@ -27,7 +27,9 @@ const longestRun = (dates: Set<string>, from: Date, to: Date) => {
   return best;
 };
 
-export function BrewStats({ beans, brews, notes }: { beans: Bean[]; brews: Brew[]; notes: TastingNote[] }) {
+export function BrewStats({ beans, brews: allBrews, notes }: { beans: Bean[]; brews: Brew[]; notes: TastingNote[] }) {
+  // Stats are about our own beans (grams, cost, habits); cups drunk at a cafe stay in the brew log only.
+  const brews = allBrews.filter(brew => !isCafeBrew(brew));
   const today = localDate();
   const todayDate = parseLocalDate(today);
   const thisMonth = today.slice(0, 7);
