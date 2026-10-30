@@ -5,8 +5,9 @@
 .bw-card { padding: 0; overflow: hidden; }
 .bw-card-open { display: block; width: 100%; padding: 16px 16px 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .bw-line { display: block; }
-.bw-card-title { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.bw-card-title { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 3px; }
 .bw-card-title > span:first-child { min-width: 0; }
+.bw-card-title .brew-roastery { display: block; margin: 0; }
 .bw-card-name { margin: 0 0 2px; font-size: 17px; font-weight: 700; letter-spacing: -.02em; }
 .bw-card .brew-recipe-block > .bw-line { margin: 0; font-size: 15px; line-height: 1.5; font-style: italic; }
 .bw-card .brew-recipe-block > .brew-metrics { margin-bottom: 4px; color: var(--c-ink-2); font-size: 13px; font-style: normal; font-weight: 600; }

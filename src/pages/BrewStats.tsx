@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { BrewDetail } from "../components/brew-editor/BrewDetail";
-import { brewConditions, brewRatio } from "../components/brew-editor/brewFormat";
+import { brewConditions, brewRatio, cafeTitle } from "../components/brew-editor/brewFormat";
 import { RatingStars } from "../components/brew-editor/RatingStars";
 import { fmt, localDate, parseLocalDate, toDateKey } from "../lib/format";
 import { isBlend } from "../lib/blend";
@@ -28,7 +28,7 @@ const longestRun = (dates: Set<string>, from: Date, to: Date) => {
 };
 
 export function BrewStats({ beans, brews: allBrews, notes }: { beans: Bean[]; brews: Brew[]; notes: TastingNote[] }) {
-  // Stats are about our own beans (grams, cost, habits); cups drunk at a cafe stay in the brew log only.
+  // The calendar counts every cup, cafe ones too; grams, cost, habits and the recap are about our own beans only.
   const brews = allBrews.filter(brew => !isCafeBrew(brew));
   const today = localDate();
   const todayDate = parseLocalDate(today);
@@ -38,7 +38,7 @@ export function BrewStats({ beans, brews: allBrews, notes }: { beans: Bean[]; br
   const [period, setPeriod] = useState(7);
   const [detailId, setDetailId] = useState<number | null>(null);
 
-  const byDate = brews.reduce<Map<string, Brew[]>>((result, brew) => result.set(brew.date, [...(result.get(brew.date) ?? []), brew]), new Map());
+  const byDate = allBrews.reduce<Map<string, Brew[]>>((result, brew) => result.set(brew.date, [...(result.get(brew.date) ?? []), brew]), new Map());
   const brewDates = new Set(byDate.keys());
   const beanOf = (brew: Brew) => beans.find(bean => bean.id === brew.beanId);
   const ratingOf = (brew: Brew) => notes.find(note => note.brewId === brew.id)?.rating ?? 0;
@@ -46,11 +46,11 @@ export function BrewStats({ beans, brews: allBrews, notes }: { beans: Bean[]; br
   // Calendar month: leading blanks so the 1st sits under its weekday, then every day of the month.
   const monthStart = parseLocalDate(`${month}-01`);
   const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
-  const firstMonth = brews.reduce((first, brew) => brew.date.slice(0, 7) < first ? brew.date.slice(0, 7) : first, thisMonth);
+  const firstMonth = allBrews.reduce((first, brew) => brew.date.slice(0, 7) < first ? brew.date.slice(0, 7) : first, thisMonth);
   const days = Array.from({ length: monthEnd.getDate() }, (_, index) => addDays(monthStart, index));
-  const monthBrews = brews.filter(brew => brew.date.startsWith(month));
+  const monthBrews = allBrews.filter(brew => brew.date.startsWith(month));
   const prevMonth = monthKey(new Date(monthStart.getFullYear(), monthStart.getMonth() - 1, 1));
-  const prevMonthCups = brews.filter(brew => brew.date.startsWith(prevMonth)).length;
+  const prevMonthCups = allBrews.filter(brew => brew.date.startsWith(prevMonth)).length;
   const brewedDays = new Set(monthBrews.map(brew => brew.date)).size;
   const isThisMonth = month === thisMonth;
   const lastDay = isThisMonth ? todayDate : monthEnd;
@@ -63,13 +63,13 @@ export function BrewStats({ beans, brews: allBrews, notes }: { beans: Bean[]; br
     if (next < firstMonth || next > thisMonth) return;
     setMonth(next);
     // Land on today in this month, otherwise on the month's last brewing day.
-    const lastBrewDay = brews.filter(brew => brew.date.startsWith(next)).reduce((last, brew) => brew.date > last ? brew.date : last, "");
+    const lastBrewDay = allBrews.filter(brew => brew.date.startsWith(next)).reduce((last, brew) => brew.date > last ? brew.date : last, "");
     setSelected(next === thisMonth ? today : lastBrewDay || `${next}-01`);
   };
 
   const dayBrews = [...(byDate.get(selected) ?? [])].sort((a, b) => a.id - b.id);
   const selectedDate = parseLocalDate(selected);
-  const detailBrew = detailId === null ? undefined : brews.find(brew => brew.id === detailId);
+  const detailBrew = detailId === null ? undefined : allBrews.find(brew => brew.id === detailId);
 
   // 돌아보기: the last N days (today included) by bean, with what each cup cost and how it was rated.
   const from = period ? toDateKey(addDays(todayDate, -(period - 1))) : "";
@@ -176,6 +176,12 @@ export function BrewStats({ beans, brews: allBrews, notes }: { beans: Bean[]; br
           {dayBrews.length > 0 && <span>{dayBrews.length}잔 · {fmt(round1(dayBrews.reduce((sum, brew) => sum + brew.amount, 0)))}g</span>}
         </div>
         {dayBrews.length === 0 ? <p className="stats-empty">이날은 내린 기록이 없어요.</p> : dayBrews.map(brew => {
+          if (isCafeBrew(brew)) return <button type="button" key={brew.id} className="cal-brew" onClick={() => setDetailId(brew.id)} aria-label={`${cafeTitle(brew)} 기록 자세히 보기`}>
+            <span className="cal-brew-title">
+              <span><span className="brew-roastery"><span className="bw-cafe-chip">카페</span>{brew.cafe?.name}</span><b>{cafeTitle(brew)}</b></span>
+              <RatingStars value={ratingOf(brew)} />
+            </span>
+          </button>;
           const bean = beanOf(brew);
           return <button type="button" key={brew.id} className="cal-brew" onClick={() => setDetailId(brew.id)} aria-label={`${bean?.name || "삭제된 원두"} 기록 자세히 보기`}>
             <span className="cal-brew-title">
@@ -235,6 +241,6 @@ export function BrewStats({ beans, brews: allBrews, notes }: { beans: Bean[]; br
       </>}
     </section>
 
-    {detailBrew && <BrewDetail brew={detailBrew} beans={beans} brews={brews} notes={notes} onSelect={brew => setDetailId(brew.id)} onClose={() => setDetailId(null)} />}
+    {detailBrew && <BrewDetail brew={detailBrew} beans={beans} brews={allBrews} notes={notes} onSelect={brew => setDetailId(brew.id)} onClose={() => setDetailId(null)} />}
   </div>;
 }

@@ -107,7 +107,7 @@ export function BrewEditor({ editing, form, setForm, recentCafes, origins, varie
       </div>
       <div className="be-body"><div className="be-body-inner">
         <div className="be-seg bw-kind" role="group" aria-label="기록 종류">
-          <button type="button" aria-pressed={!cafeMode} onClick={() => set("kind", "own")}>내 원두로</button>
+          <button type="button" aria-pressed={!cafeMode} onClick={() => set("kind", "own")}>내 원두</button>
           <button type="button" aria-pressed={cafeMode} onClick={() => set("kind", "cafe")}>카페·남이 내려줌</button>
         </div>
         {notice && <p className="bw-notice" role="status"><span className="be-dot" aria-hidden="true" /><span>{notice.text}</span><button type="button" onClick={notice.onClear}>비우기</button></p>}

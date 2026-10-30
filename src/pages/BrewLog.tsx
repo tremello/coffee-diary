@@ -3,7 +3,7 @@ import { type StorageSetter, useStorage } from "../data/sync";
 import { Empty, JourneySteps } from "../components/ui";
 import { BrewDetail } from "../components/brew-editor/BrewDetail";
 import { BrewEditor, type BrewNote } from "../components/brew-editor/BrewEditor";
-import { brewConditions, brewConditionsForm, cafeBeanLine, coffeeFields, cafeTitle, recentCafes, composeGrind, parseGrind, brewRatio, dayHeading, emptyBrewForm, emptyNoteForm, latestBrewOf, normalizeBrewTime, noteMemo, shortDate, TASTE_ATTRIBUTES, tasteScore, tasteSummary } from "../components/brew-editor/brewFormat";
+import { brewConditions, brewConditionsForm, coffeeFields, cafeTitle, recentCafes, composeGrind, parseGrind, brewRatio, dayHeading, emptyBrewForm, emptyNoteForm, latestBrewOf, normalizeBrewTime, noteMemo, shortDate, TASTE_ATTRIBUTES, tasteScore, tasteSummary } from "../components/brew-editor/brewFormat";
 import { RatingStars } from "../components/brew-editor/RatingStars";
 import { LIST_KEYS, STORAGE_KEYS } from "../data/keys";
 import { beanValues } from "../lib/blend";
@@ -297,12 +297,14 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
           return (
             <article key={brew.id} className="brew-card bw-card">
               <button type="button" className="bw-card-open" onClick={() => setDetailId(brew.id)} aria-label={`${title} 기록 자세히 보기`}>
+                {/* The stars share only the small top line, so the name below gets the card's full width. */}
                 <span className="bw-card-title">
-                  <span>{cafe ? <span className="brew-roastery bw-line"><span className="bw-cafe-chip">카페</span>{brew.cafe?.name}</span> : bean?.roastery && <span className="brew-roastery bw-line">{bean.roastery}</span>}<span className="bw-card-name bw-line">{title}</span></span>
+                  <span>{cafe ? <span className="brew-roastery"><span className="bw-cafe-chip">카페</span>{brew.cafe?.name}</span> : bean?.roastery && <span className="brew-roastery">{bean.roastery}</span>}</span>
                   <RatingStars value={saved?.rating ?? 0} />
                 </span>
-                {cafe ? (cafeBeanLine(brew) || brew.method) && <span className="brew-recipe-block bw-line">{cafeBeanLine(brew) && <span className="brew-metrics bw-line">{cafeBeanLine(brew)}</span>}{brew.method && <span className="brew-conditions-line bw-line">{brew.method}</span>}</span>
-                  : <span className="brew-recipe-block bw-line"><span className="brew-metrics bw-line">원두 {fmt(brew.amount)}g {brew.waterAmount ? `· 물 ${fmt(brew.waterAmount)}g · ${brewRatio(brew.amount, brew.waterAmount)}` : ""}</span>{brewConditions(brew) && <span className="brew-conditions-line bw-line">{brewConditions(brew)}</span>}{brew.recipe && <span className="bw-line">{brew.recipe}</span>}</span>}
+                <span className="bw-card-name bw-line">{title}</span>
+                {/* A cafe cup has no grams or brewing conditions of ours: the card is its name and the memo, like a bean's. */}
+                {!cafe && <span className="brew-recipe-block bw-line"><span className="brew-metrics bw-line">원두 {fmt(brew.amount)}g {brew.waterAmount ? `· 물 ${fmt(brew.waterAmount)}g · ${brewRatio(brew.amount, brew.waterAmount)}` : ""}</span>{brewConditions(brew) && <span className="brew-conditions-line bw-line">{brewConditions(brew)}</span>}{brew.recipe && <span className="bw-line">{brew.recipe}</span>}</span>}
                 {memo && <span className="brew-note-inline bw-line"><span>메모</span> {memo}</span>}
                 {taste && <span className="brew-taste-inline bw-line">{taste}</span>}
               </button>
