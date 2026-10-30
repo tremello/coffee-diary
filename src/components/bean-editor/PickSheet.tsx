@@ -5,12 +5,14 @@ export type PickOption = { value: string; count: number };
 
 // Picker over the bean editor. "grid" shows every option as a tile (origins); "list" filters while typing and offers
 // the typed text as a new value (roasteries, varieties).
-export function PickSheet({ title, value, options, layout, placeholder, onPick, onHide, onClose }: {
+export function PickSheet({ title, value, options, layout, placeholder, gridLabel = "자주 고른 순서", onPick, onHide, onClose }: {
   title: string;
   value: string;
   options: PickOption[];
   layout: "grid" | "list";
   placeholder: string;
+  // The line over the tiles; null leaves it out (fixed choices such as cafe menus).
+  gridLabel?: string | null;
   onPick: (value: string) => void;
   onHide?: (value: string) => void;
   onClose: () => void;
@@ -38,7 +40,7 @@ export function PickSheet({ title, value, options, layout, placeholder, onPick, 
       {layout === "list" && <label className="be-pick-search"><span className="sr-only">{title} 이름</span><input value={query} placeholder={placeholder} onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); event.currentTarget.blur(); } }} /></label>}
       <div className="be-pick-scroll" ref={pick.scrollRef}>
         {layout === "grid" ? <>
-          <p className="be-pick-label">자주 고른 순서</p>
+          {gridLabel && <p className="be-pick-label">{gridLabel}</p>}
           <div className="be-pick-grid">{options.map(option => <button type="button" key={option.value} aria-pressed={option.value === value} onClick={() => onPick(option.value)}>{option.value}</button>)}</div>
         </> : <>
           {shown.length > 0 && <p className="be-pick-label">{typed ? "예전에 쓴 것" : "자주 쓴 순서"}</p>}

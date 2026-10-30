@@ -75,6 +75,9 @@ export type Brew = {
   kind?: "cafe";
   cafe?: CafePlace;
   menu?: string;
+  // The coffee in the cup, typed freely. Records from before it existed kept that text in menu (see cafeCup).
+  beanName?: string;
+  // Only on the first cafe records; no longer asked for.
   roastery?: string;
   origin?: string;
   process?: string;
@@ -83,9 +86,12 @@ export type Brew = {
 // A cafe picked from the Kakao keyword search, or only a typed name (manual).
 export type CafePlace = { name: string; address?: string; lat?: number; lng?: number; mapUrl?: string; placeId?: string; manual?: boolean };
 
+// Menu choices for a cafe cup; anything else is typed under 기타.
+export const CAFE_MENUS = ["핸드드립", "아메리카노", "에스프레소", "라떼", "콜드브루"] as const;
+
 export const isCafeBrew = (brew: Brew) => brew.kind === "cafe";
 
-export type BrewForm = Omit<Brew, "id" | "beanId" | "recipeId" | "amount" | "waterAmount" | "grindSize" | "waterTemp" | "brewTime" | "kind" | "cafe" | "menu" | "roastery" | "origin" | "process"> & {
+export type BrewForm = Omit<Brew, "id" | "beanId" | "recipeId" | "amount" | "waterAmount" | "grindSize" | "waterTemp" | "brewTime" | "kind" | "cafe" | "menu" | "beanName" | "roastery" | "origin" | "process"> & {
   beanId: string;
   amount: string;
   waterAmount: string;
@@ -95,7 +101,7 @@ export type BrewForm = Omit<Brew, "id" | "beanId" | "recipeId" | "amount" | "wat
   kind: "own" | "cafe";
   cafe: CafePlace | null;
   menu: string;
-  roastery: string;
+  beanName: string;
   origin: string;
   process: string;
 };

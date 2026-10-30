@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { fmt, localDate, parseLocalDate, splitCupNotes } from "../../lib/format";
 import { type Bean, type Brew, isCafeBrew, type TastingNote } from "../../types";
-import { brewRatio, cafeBeanLine, cafeTitle, noteMemo, shortDate, tasteSummary } from "./brewFormat";
+import { brewRatio, cafeCup, cafeTitle, noteMemo, shortDate, tasteSummary } from "./brewFormat";
 import { RatingStars } from "./RatingStars";
 import { useSheet } from "./useSheet";
 import { blendDetail, isBlend } from "../../lib/blend";
@@ -33,8 +33,12 @@ export function BrewDetail({ brew, beans, brews, notes, onSelect, onAgain, onEdi
   const rated = sameBean.map(item => noteOf(item)?.rating ?? 0).filter(Boolean);
   const average = rated.length ? Math.round(rated.reduce((sum, rating) => sum + rating, 0) / rated.length * 10) / 10 : 0;
   const roastDays = bean?.roastDate ? Math.round((parseLocalDate(localDate()).getTime() - parseLocalDate(bean.roastDate).getTime()) / 86_400_000) : null;
+  const cup = cafeCup(brew);
   const rows = cafe ? [
-    ["원두", cafeBeanLine(brew)],
+    ["메뉴", cup.menu],
+    ["원두", cup.beanName],
+    ["산지 · 가공", [brew.origin, brew.process].filter(Boolean).join(" · ")],
+    ["로스터리", brew.roastery ?? ""],
     ["추출", brew.method],
     ["맛", taste]
   ].filter(([, value]) => value) : [

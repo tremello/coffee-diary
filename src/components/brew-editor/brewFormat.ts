@@ -3,7 +3,7 @@ import { type Brew, type BrewForm, isCafeBrew, type TastingNote, type TastingNot
 
 export const emptyBrewForm = (): BrewForm => ({ beanId: "", amount: "", waterAmount: "", method: "", date: localDate(), recipe: "", grindSize: "", waterTemp: "", brewTime: "", ...emptyCafeFields() });
 
-export const emptyCafeFields = (): Pick<BrewForm, "kind" | "cafe" | "menu" | "roastery" | "origin" | "process"> => ({ kind: "own", cafe: null, menu: "", roastery: "", origin: "", process: "" });
+export const emptyCafeFields = (): Pick<BrewForm, "kind" | "cafe" | "menu" | "beanName" | "origin" | "process"> => ({ kind: "own", cafe: null, menu: "", beanName: "", origin: "", process: "" });
 
 // The form keeps brew time as m:ss (typed as digits, 245 → 2:45); seconds past 59 roll over into minutes.
 export const normalizeBrewTime = (value: string) => {
@@ -27,7 +27,7 @@ export const brewRatio = (amount: number, waterAmount?: number) => waterAmount &
 // A cafe brew carries its cafe and what was in the cup instead.
 export const brewConditionsForm = (brew: Brew): Omit<BrewForm, "beanId" | "date"> => ({
   amount: isCafeBrew(brew) ? "" : String(brew.amount), waterAmount: brew.waterAmount ? String(brew.waterAmount) : "", method: brew.method, recipe: brew.recipe, grindSize: brew.grindSize ?? "", waterTemp: brew.waterTemp ? String(brew.waterTemp) : "", brewTime: brew.brewTime ?? "",
-  ...(isCafeBrew(brew) ? { kind: "cafe", cafe: brew.cafe ?? null, menu: brew.menu ?? "", roastery: brew.roastery ?? "", origin: brew.origin ?? "", process: brew.process ?? "" } : emptyCafeFields())
+  ...(isCafeBrew(brew) ? { kind: "cafe", cafe: brew.cafe ?? null, ...cafeCup(brew), origin: brew.origin ?? "", process: brew.process ?? "" } : emptyCafeFields())
 });
 
 // The cafes of past cafe brews, newest first, one per place (Kakao id, else the name).
@@ -37,9 +37,13 @@ export const recentCafes = (brews: Brew[]) => {
     .map(brew => brew.cafe!).filter(cafe => { const key = cafe.placeId || cafe.name; if (seen.has(key)) return false; seen.add(key); return true; });
 };
 
-// Card and detail titles: the menu (else the cafe) for a cafe brew, the bean's name for our own.
-export const cafeTitle = (brew: Brew) => brew.menu?.trim() || brew.cafe?.name || "카페";
-export const cafeBeanLine = (brew: Brew) => [brew.roastery, brew.origin, brew.process].filter(Boolean).join(" · ");
+// The menu and the coffee of a cafe cup. The first cafe records had one 메뉴·원두 box saved as menu and no beanName; that text was the coffee.
+export const cafeCup = (brew: Brew) => brew.beanName === undefined ? { menu: "", beanName: brew.menu ?? "" } : { menu: brew.menu ?? "", beanName: brew.beanName };
+
+// Card and detail titles: the coffee, else the menu, else the cafe.
+export const cafeTitle = (brew: Brew) => { const cup = cafeCup(brew); return cup.beanName.trim() || cup.menu || brew.cafe?.name || "카페"; };
+// The card line under the title: the menu (unless it is the title), then where the coffee is from and how it was processed.
+export const cafeBeanLine = (brew: Brew) => { const cup = cafeCup(brew); return [cup.beanName.trim() && cup.menu, brew.roastery, brew.origin, brew.process].filter(Boolean).join(" · "); };
 
 // 분쇄도 is stored as one string ("코만단테 25클릭"); the form splits it into a grinder and a click count. A registered
 // grinder name wins (longest first), then any text before the first number; text with no number stays as the count.

@@ -1,3 +1,4 @@
+import { cafeCup } from "../components/brew-editor/brewFormat";
 import { blendDetail, isBlend } from "./blend";
 import { type Bean, type Brew, isCafeBrew, type SavedRecipe, type TastingNote } from "../types";
 
@@ -24,10 +25,10 @@ export const downloadCsv = ({ beans, brews }: ExportData) => {
   const byId = new Map(beans.map(bean => [bean.id, bean]));
   const beanTable = toCsv(["원두", "로스터리", "원산지", "농장", "품종", "가공", "구매일", "로스팅일", "구매량(g)", "남은 양(g)", "가격", "상태", "등급", "컵노트", "메모", "블렌드 구성"],
     live.map(b => [b.name, b.roastery, b.origin, b.farm, b.variety, b.process, b.date, b.roastDate, b.purchased, b.remaining, b.price, b.status, b.quality, b.roasteryNotes, b.memo, isBlend(b) ? blendDetail(b.parts) : ""]));
-  // Cafe brews put the menu in the 원두 column, leave the grams empty, and fill the cafe columns at the end.
-  const brewTable = toCsv(["날짜", "원두", "원두량(g)", "물(g)", "드리퍼", "레시피", "분쇄도", "물 온도(℃)", "추출 시간", "카페", "카페 주소", "로스터리", "산지", "가공"],
+  // Cafe brews put their coffee in the 원두 column, leave the grams empty, and fill the cafe columns at the end.
+  const brewTable = toCsv(["날짜", "원두", "원두량(g)", "물(g)", "드리퍼", "레시피", "분쇄도", "물 온도(℃)", "추출 시간", "카페", "카페 주소", "메뉴", "산지", "가공"],
     [...brews].sort((a, b) => b.date.localeCompare(a.date)).map(b => isCafeBrew(b)
-      ? [b.date, b.menu ?? "", "", "", b.method, "", "", "", "", b.cafe?.name, b.cafe?.address, b.roastery, b.origin, b.process]
+      ? [b.date, cafeCup(b).beanName, "", "", b.method, "", "", "", "", b.cafe?.name, b.cafe?.address, cafeCup(b).menu, b.origin, b.process]
       : [b.date, byId.get(b.beanId)?.name ?? "", b.amount, b.waterAmount, b.method, b.recipe, b.grindSize, b.waterTemp, b.brewTime]));
   download(`coffee-diary-${today()}.csv`, "text/csv", `﻿[원두]\r\n${beanTable}\r\n\r\n[브루잉 기록]\r\n${brewTable}`);
 };

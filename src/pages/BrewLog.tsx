@@ -79,7 +79,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   const grindTouched = form.grindSize !== "" && form.grindSize !== autoGrind(form.beanId);
 
   // Keep the unsaved new brew while the sheet is open; saving or "비우기" removes it.
-  const dirty = Boolean(form.cafe || form.menu || form.roastery || form.origin || form.process || form.beanId || form.amount || form.waterAmount || form.method || form.recipe || grindTouched || form.waterTemp || form.brewTime || note.memo.trim() || note.rating || Object.values(note.taste).some(Boolean));
+  const dirty = Boolean(form.cafe || form.menu || form.beanName || form.origin || form.process || form.beanId || form.amount || form.waterAmount || form.method || form.recipe || grindTouched || form.waterTemp || form.brewTime || note.memo.trim() || note.rating || Object.values(note.taste).some(Boolean));
   useEffect(() => {
     if (show && editingId === null && dirty) writeLocal(DRAFT_KEY, { form, recipeId: selectedRecipeId, note } satisfies BrewDraft);
   }, [show, editingId, dirty, form, selectedRecipeId, note]);
@@ -156,7 +156,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     if (!cafe || !form.date) { setBrewError("카페와 날짜를 확인해주세요."); return; }
     const previous = editingId === null ? null : brews.find(item => item.id === editingId) ?? null;
     const text = (value: string) => value.trim() || undefined;
-    const brew: Brew = { id: editingId ?? Date.now(), beanId: 0, amount: 0, kind: "cafe", cafe, method: form.method.trim(), date: form.date, recipe: "", menu: text(form.menu), roastery: text(form.roastery), origin: text(form.origin), process: text(form.process) };
+    const brew: Brew = { id: editingId ?? Date.now(), beanId: 0, amount: 0, kind: "cafe", cafe, method: form.method.trim(), date: form.date, recipe: "", menu: text(form.menu), beanName: form.beanName.trim(), roastery: previous && isCafeBrew(previous) ? previous.roastery : undefined, origin: text(form.origin), process: text(form.process) };
     setBrews(editingId === null ? [...brews, brew] : brews.map(item => item.id === editingId ? brew : item));
     if (previous && !isCafeBrew(previous)) setBeans(beans.map(item => item.id === previous.beanId ? { ...item, remaining: Math.round((item.remaining + previous.amount) * 10) / 10 } : item));
     saveNote(brew, previous ? noteOf(previous) : null);
@@ -246,7 +246,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   const filteredBrews = brews.filter(brew => {
     if (!normalizedQuery) return true;
     const bean = beans.find(b => b.id === brew.beanId);
-    return [bean?.name, bean?.roastery, brew.recipe, brew.method, brew.date, brew.cafe?.name, brew.menu, brew.roastery, brew.origin].filter(Boolean).join(" ").toLowerCase().includes(normalizedQuery);
+    return [bean?.name, bean?.roastery, brew.recipe, brew.method, brew.date, brew.cafe?.name, brew.menu, brew.beanName, brew.roastery, brew.origin].filter(Boolean).join(" ").toLowerCase().includes(normalizedQuery);
   });
   const sorted = [...filteredBrews].sort((a, b) => {
     return brewSort === "latest" ? b.date.localeCompare(a.date) || b.id - a.id : a.date.localeCompare(b.date) || a.id - b.id;
