@@ -1,10 +1,7 @@
 /* One bean list: cards show the short summary and open in place into the full card when tapped (one at a time). */
 .bean-list .inventory-card { cursor: pointer; }
-.bean-card-actions { grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; }
+.bean-list .inventory-card:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+.bean-card-actions { align-items: center; }
 .bean-card-actions .edit-bean, .bean-list .density-compact .bean-card-actions .edit-bean { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; font-size: 12px; font-weight: 600; color: var(--c-accent); }
 .bean-card-actions .edit-bean svg { flex: 0 0 auto; }
-.card-expand-toggle { grid-column: 3; grid-row: 1; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: var(--r-pill); background: var(--c-soft); color: var(--c-ink-2); }
-.card-expand-toggle svg { transition: transform .22s cubic-bezier(.2, .8, .2, 1); }
-.card-expand-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
 .bean-list .density-compact .bean-card-actions { margin-top: 6px; }
-@media (prefers-reduced-motion: reduce) { .card-expand-toggle svg { transition: none; } }

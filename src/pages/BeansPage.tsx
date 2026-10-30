@@ -47,6 +47,14 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
   const [sort, setSort] = useState<BeanSort>("registered");
   const [qualityFilter, setQualityFilter] = useState<"all" | BeanQuality>("all");
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [twoColumns, setTwoColumns] = useState(() => window.matchMedia?.("(min-width: 541px)").matches ?? false);
+  useEffect(() => {
+    const query = window.matchMedia?.("(min-width: 541px)");
+    if (!query) return;
+    const update = () => setTwoColumns(query.matches);
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
   // Before/after measurements for the cards that change size, so the tapped card stays put and grows smoothly.
   const expandAnchor = useRef<{ id: number; top: number; heights: Map<number, number> } | null>(null);
   const [swipeOpenId, setSwipeOpenId] = useState<number | null>(null);
@@ -225,6 +233,10 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
     }
     return a.id - b.id;
   });
+  // On two columns the opened card takes the whole row; if it sat on the right, its left neighbour moves just below it so no gap is left.
+  const listOrder = [...sortedVisible];
+  const openIndex = twoColumns ? listOrder.findIndex(bean => bean.id === expandedId) : -1;
+  if (openIndex > 0 && openIndex % 2 === 1) [listOrder[openIndex - 1], listOrder[openIndex]] = [listOrder[openIndex], listOrder[openIndex - 1]];
   const clearPhoto = () => {
     if (photoPreview) URL.revokeObjectURL(photoPreview);
     setPhotoFile(null); setPhotoPreview(""); setPhotoBusy(false); setPhotoError(""); setPhotoReadCount(null); setReadFields(new Set());
@@ -415,9 +427,9 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
       {!advancedFiltersOpen && activeFilterChips.length > 0 && <div className="active-filter-chips" aria-label="적용된 세부 검색 조건">{activeFilterChips.map(chip => <button type="button" key={chip.key} onClick={chip.clear} aria-label={`${chip.label} 조건 해제`}>{chip.label}<span aria-hidden="true">×</span></button>)}<button type="button" className="active-filter-clear" onClick={clearDetailFilters}>모두 지우기</button></div>}
       {swipeHint && active.length > 0 && <p className="swipe-hint">카드를 왼쪽으로 밀면 바로 브루잉을 기록할 수 있어요.<button type="button" onClick={dismissSwipeHint} aria-label="안내 닫기">×</button></p>}
       <div className="bean-list">
-        {sortedVisible.map(bean => {
+        {listOrder.map(bean => {
           const pct = bean.purchased > 0 ? Math.max(0, Math.min(100, bean.remaining / bean.purchased * 100)) : 0;
-          return <SwipeToBrew key={bean.id} className={expandedId === bean.id ? "density-detail is-expanded" : "density-compact"} beanId={bean.id} beanName={bean.name} disabled={bean.remaining <= 0} open={swipeOpenId === bean.id} onOpenChange={open => { setSwipeOpenId(open ? bean.id : null); if (open) dismissSwipeHint(); }} onBrew={() => onBrew(bean.id)}><article className="inventory-card" onClick={event => onCardClick(event, bean.id)}>
+          return <SwipeToBrew key={bean.id} className={expandedId === bean.id ? "density-detail is-expanded" : "density-compact"} beanId={bean.id} beanName={bean.name} disabled={bean.remaining <= 0} open={swipeOpenId === bean.id} onOpenChange={open => { setSwipeOpenId(open ? bean.id : null); if (open) dismissSwipeHint(); }} onBrew={() => onBrew(bean.id)}><article className="inventory-card" tabIndex={0} aria-expanded={expandedId === bean.id} aria-label={`${bean.name}, 눌러서 ${expandedId === bean.id ? "접기" : "자세히 보기"}`} onClick={event => onCardClick(event, bean.id)} onKeyDown={event => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); toggleExpanded(bean.id); } }}>
             <div className="bean-info">
               <p className="roastery"><span>{bean.roastery || "로스터리 미입력"}</span></p>
               <h3>{bean.name}</h3>
@@ -425,7 +437,7 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
               <BeanDates bean={bean} />
               <div className="compact-summary"><strong>{bean.roastery || "로스터리 미입력"}</strong><time className="compact-roast" dateTime={bean.roastDate}>로스팅 : {bean.roastDate || "날짜 미입력"}</time><b>{bean.name}</b>{isBlend(bean) && <span className="blend-line"><span className="blend-tag">블렌드</span><span>{blendSummary(bean.parts)}</span></span>}{bean.roasteryNotes && <span className="compact-cup-notes">{splitCupNotes(bean.roasteryNotes).map((note, index) => <i key={index}>{note}</i>)}</span>}</div>
               {bean.roasteryNotes && <div className="roastery-cup-notes"><span className="detail-label">로스터리 컵노트</span><div className="flavor-tags">{splitCupNotes(bean.roasteryNotes).map((note, index) => <span key={index}>{note}</span>)}</div></div>}
-              <div className="bean-card-actions"><button className="edit-bean" onClick={() => edit(bean)} aria-label={`${bean.name} 원두 정보 수정`}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16v4Z" /><path d="M13.5 6.5l4 4" /></svg>원두 정보 수정</button>{expandedId === bean.id && <details className="record-details"><summary>내 메모 보기</summary><BeanComments bean={bean} notes={notes.filter(note => note.beanId === bean.id)} /></details>}<button type="button" className="card-expand-toggle" aria-expanded={expandedId === bean.id} aria-label={`${bean.name} ${expandedId === bean.id ? "접기" : "자세히 보기"}`} onClick={() => toggleExpanded(bean.id)}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg></button></div>
+              <div className="bean-card-actions"><button className="edit-bean" onClick={() => edit(bean)} aria-label={`${bean.name} 원두 정보 수정`}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16v4Z" /><path d="M13.5 6.5l4 4" /></svg>원두 정보 수정</button>{expandedId === bean.id && <details className="record-details"><summary>내 메모 보기</summary><BeanComments bean={bean} notes={notes.filter(note => note.beanId === bean.id)} /></details>}</div>
             </div>
             <div className="bean-stock">
               <div className="stock-status-row"><RoastAge bean={bean} today={cardToday} />{bean.remaining <= 0 ? <span data-status="finished" className={`stock-status ${pct <= 20 ? "low" : ""}`}>다 마셨어요</span> : (() => {

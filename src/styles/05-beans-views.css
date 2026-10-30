@@ -47,7 +47,7 @@
 .bean-list.density-dense .stock-percent { margin-top: 3px; font-size: 11px; }
 @media (min-width: 541px) {
 .bean-list, .bean-list.density-dense { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.bean-list { align-items: start; }
+.bean-list .swipe-card.density-detail { grid-column: 1 / -1; }
 .bean-list .density-compact .inventory-card { grid-template-columns: minmax(0, 1fr) 132px; }
 }
 /* Empty state spans both columns so it doesn't sit in the left half on PC. */
