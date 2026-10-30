@@ -6,6 +6,9 @@ export const BEAN_QUALITIES = ["특식", "준특식", "사료"] as const;
 
 export type BeanQuality = (typeof BEAN_QUALITIES)[number];
 
+// One coffee in a blend. Only the origin is required; labels often leave out the rest.
+export type BlendPart = { origin: string; process?: string; variety?: string; ratio?: number };
+
 export type Bean = {
   id: number;
   name: string;
@@ -26,6 +29,10 @@ export type Bean = {
   memo?: string;
   status?: BeanStatus;
   quality?: BeanQuality;
+  // Blends keep each coffee in parts; origin, process and variety then hold a joined summary so older readers still work.
+  kind?: "blend";
+  blendName?: string;
+  parts?: BlendPart[];
 };
 
 export type BeanForm = Omit<Bean, "id" | "purchased" | "remaining" | "consumed"> & {
@@ -43,6 +50,8 @@ export type RecognizedBeanFields = {
   purchased?: number | string;
   roastDate?: string;
   price?: number | string;
+  blendName?: string;
+  blendParts?: { origin?: string; process?: string; variety?: string; ratio?: number | string }[];
 };
 
 export type Brew = {

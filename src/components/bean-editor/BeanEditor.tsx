@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type Dispatch, type FormEvent, type PointerEvent, type SetStateAction } from "react";
+import { isBlend, MAX_BLEND_PARTS, partRatios, ratioTotal, usedParts } from "../../lib/blend";
 import { beanName, handleNumericInput, withCommas } from "../../lib/format";
 import { PHOTO_ACCEPT } from "../../lib/photo";
-import { type Bean, BEAN_QUALITIES, BEAN_STATUSES, type BeanForm } from "../../types";
+import { type Bean, BEAN_QUALITIES, BEAN_STATUSES, type BeanForm, type BlendPart } from "../../types";
+import { PartSheet } from "./PartSheet";
 import { type PickOption, PickSheet } from "./PickSheet";
 import { RebuySheet } from "./RebuySheet";
 import { useKeyboardInset } from "./useKeyboardInset";
@@ -48,6 +50,7 @@ export function BeanEditor({ editing, form, setForm, processes, origins, roaster
 }) {
   useKeyboardInset();
   const [picker, setPicker] = useState<Picker>(null);
+  const [partIndex, setPartIndex] = useState<number | null>(null);
   const [closing, setClosing] = useState(false);
   const panelRef = useRef<HTMLFormElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
@@ -57,6 +60,10 @@ export function BeanEditor({ editing, form, setForm, processes, origins, roaster
   const [otherProcess, setOtherProcess] = useState(() => Boolean(form.process) && !processes.includes(form.process));
   const isOther = otherProcess || (Boolean(form.process) && !processes.includes(form.process));
   const name = beanName(form);
+  const blend = isBlend(form);
+  const parts = form.parts ?? [];
+  const ratios = partRatios(parts);
+  const total = ratioTotal(usedParts(parts));
   const missingOrigin = Boolean(error) && !form.origin.trim();
   const missingVariety = Boolean(error) && !form.variety?.trim();
   const missingProcess = Boolean(error) && !form.process.trim();
@@ -97,7 +104,7 @@ export function BeanEditor({ editing, form, setForm, processes, origins, roaster
   };
 
   useEffect(() => {
-    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") { if (picker) setPicker(null); else dismiss(); } };
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") { if (partIndex !== null) setPartIndex(null); else if (picker) setPicker(null); else dismiss(); } };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   });
@@ -117,6 +124,17 @@ export function BeanEditor({ editing, form, setForm, processes, origins, roaster
       <span className={`be-value${value ? "" : " empty"}`}><span>{value || (bad ? "골라주세요" : "선택")}</span><span className="be-chev" aria-hidden="true">›</span></span>
     </button>;
   };
+  // Switching to blend starts from the single origin already entered plus an empty second row; switching back keeps the
+  // rows (saving drops them) and takes the first one as the single origin.
+  const setKind = (toBlend: boolean) => setForm(current => {
+    if (toBlend === isBlend(current)) return current;
+    if (toBlend) return { ...current, kind: "blend", parts: current.parts?.length ? current.parts : [{ origin: current.origin, process: current.process || undefined, variety: current.variety || undefined }, { origin: "" }] };
+    const first = current.parts?.find(part => part.origin.trim());
+    return { ...current, kind: undefined, ...(first ? { origin: first.origin, process: first.process ?? "", variety: first.variety ?? "" } : {}) };
+  });
+  const setPart = (index: number, part: BlendPart) => setForm(current => ({ ...current, parts: (current.parts ?? []).map((item, at) => at === index ? part : item) }));
+  const removePart = (index: number) => setForm(current => ({ ...current, parts: (current.parts ?? []).filter((_, at) => at !== index) }));
+  const addPart = () => { setForm(current => ({ ...current, parts: [...(current.parts ?? []), { origin: "" }] })); setPartIndex(parts.length); };
   const pick = (field: "origin" | "variety" | "roastery") => (value: string) => {
     if (field === "origin" && value) onAddOrigin(value);
     set(field, value);
@@ -164,17 +182,35 @@ export function BeanEditor({ editing, form, setForm, processes, origins, roaster
           <section className="be-group" aria-labelledby="be-bean">
             <h3 className="be-group-label" id="be-bean">원두</h3>
             <div className="be-card">
-              {pickRow("origin", "원산지", true, missingOrigin)}
-              <label className={rowClass("farm")}>{rowName("farm", "농장·지역")}<input value={form.farm ?? ""} placeholder="예: 구지" onChange={event => set("farm", event.target.value)} /></label>
-              {pickRow("variety", "품종", true, missingVariety)}
-              <div className={`${rowClass("process", missingProcess && !isOther)} seg-row`}>
-                {rowName("process", "가공", true)}
-                <div className="be-seg" role="group" aria-label="가공방식">
-                  {processes.map(process => <button type="button" key={process} aria-pressed={!isOther && form.process === process} onClick={() => { setOtherProcess(false); set("process", form.process === process ? "" : process); }}>{process}</button>)}
-                  <button type="button" aria-pressed={isOther} onClick={() => { if (isOther) { setOtherProcess(false); set("process", ""); } else { setOtherProcess(true); set("process", ""); } }}>기타</button>
-                </div>
+              <div className="be-row seg-row">
+                <span className="be-row-name">종류</span>
+                <div className="be-seg" role="group" aria-label="원두 종류"><button type="button" aria-pressed={!blend} onClick={() => setKind(false)}>싱글 오리진</button><button type="button" aria-pressed={blend} onClick={() => setKind(true)}>블렌드</button></div>
               </div>
-              {isOther && <label className={`be-row sub${missingProcess ? " bad" : ""}`}><span className="be-row-name">직접 쓰기</span><input autoFocus={!form.process} value={form.process} placeholder="예: 무산소 내추럴" onChange={event => set("process", event.target.value)} /></label>}
+              {blend ? <>
+                <label className={rowClass("blendName")}>{rowName("blendName", "블렌드 이름")}<input value={form.blendName ?? ""} placeholder="비우면 원산지로 지어요" onChange={event => set("blendName", event.target.value)} /></label>
+                {parts.map((part, index) => {
+                  const bad = Boolean(error) && !part.origin.trim() && usedParts(parts).length < 2;
+                  const ratio = part.origin.trim() ? ratios[index] : undefined;
+                  return <button type="button" key={index} className={rowClass("parts", bad)} onClick={() => setPartIndex(index)}>
+                    <span className="be-row-name">{readFields.has("parts") && <span className="be-dot" aria-hidden="true" />}{part.origin.trim() ? <>{part.origin}{part.process && <small className="be-part-sub">{part.process}</small>}</> : <span className="be-part-empty">원두 {index + 1}{index < 2 && <span className="be-req"> *</span>}</span>}</span>
+                    <span className={`be-value${ratio ? "" : " empty"}`}><span className={ratio && !part.ratio ? "be-part-auto" : undefined}>{ratio ? `${ratio}%` : part.origin.trim() ? "비율" : bad ? "골라주세요" : "선택"}</span><span className="be-chev" aria-hidden="true">›</span></span>
+                  </button>;
+                })}
+                {total > 0 && total !== 100 && <p className={`be-ratio-note${total > 100 ? " bad" : ""}`}>비율 합계 {total}%{total > 100 ? " · 100% 이하로 맞춰주세요" : ""}</p>}
+                {parts.length < MAX_BLEND_PARTS && <button type="button" className="be-row be-add-part" onClick={addPart}>+ 구성 원두 추가</button>}
+              </> : <>
+                {pickRow("origin", "원산지", true, missingOrigin)}
+                <label className={rowClass("farm")}>{rowName("farm", "농장·지역")}<input value={form.farm ?? ""} placeholder="예: 구지" onChange={event => set("farm", event.target.value)} /></label>
+                {pickRow("variety", "품종", true, missingVariety)}
+                <div className={`${rowClass("process", missingProcess && !isOther)} seg-row`}>
+                  {rowName("process", "가공", true)}
+                  <div className="be-seg" role="group" aria-label="가공방식">
+                    {processes.map(process => <button type="button" key={process} aria-pressed={!isOther && form.process === process} onClick={() => { setOtherProcess(false); set("process", form.process === process ? "" : process); }}>{process}</button>)}
+                    <button type="button" aria-pressed={isOther} onClick={() => { if (isOther) { setOtherProcess(false); set("process", ""); } else { setOtherProcess(true); set("process", ""); } }}>기타</button>
+                  </div>
+                </div>
+                {isOther && <label className={`be-row sub${missingProcess ? " bad" : ""}`}><span className="be-row-name">직접 쓰기</span><input autoFocus={!form.process} value={form.process} placeholder="예: 무산소 내추럴" onChange={event => set("process", event.target.value)} /></label>}
+              </>}
             </div>
           </section>
 
@@ -216,6 +252,9 @@ export function BeanEditor({ editing, form, setForm, processes, origins, roaster
       {picker === "origin" && <PickSheet title="원산지" layout="grid" value={form.origin} options={origins} placeholder="목록에 없으면 직접 쓰기" onPick={pick("origin")} onClose={() => setPicker(null)} />}
       {picker === "variety" && <PickSheet title="품종" layout="list" value={form.variety ?? ""} options={varieties} placeholder="품종 이름" onPick={pick("variety")} onHide={onHideVariety} onClose={() => setPicker(null)} />}
       {picker === "roastery" && <PickSheet title="로스터리" layout="list" value={form.roastery} options={roasteries} placeholder="로스터리 이름" onPick={pick("roastery")} onHide={onHideRoastery} onClose={() => setPicker(null)} />}
+      {partIndex !== null && parts[partIndex] && <PartSheet key={partIndex} index={partIndex} part={parts[partIndex]} origins={origins} processes={processes}
+        remainder={!parts[partIndex].ratio ? partRatios(parts.map((part, at) => at === partIndex ? { ...part, ratio: undefined } : part))[partIndex] : undefined}
+        canRemove={parts.length > 2} onChange={part => setPart(partIndex, part)} onAddOrigin={onAddOrigin} onRemove={() => removePart(partIndex)} onClose={() => setPartIndex(null)} />}
       {picker === "rebuy" && <RebuySheet beans={pastBeans} onPick={bean => { onRebuy(bean); setPicker(null); }} onClose={() => setPicker(null)} />}
     </form>
   </div>;

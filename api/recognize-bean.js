@@ -29,6 +29,24 @@ const beanSchema = {
   }
 };
 const BEAN_FIELDS = Object.keys(beanSchema.properties).filter(field => field !== "labelLines");
+// Blends: the coffees in the bag. Kept out of BEAN_FIELDS so they never count as a missing field.
+beanSchema.properties.blendName = { type: "string", description: "블렌드일 때만: 블렌드 이름(라벨 원문 표기). 예: Fall Blend" };
+beanSchema.properties.blendParts = {
+  type: "array",
+  description: "원산지가 둘 이상인 블렌드일 때만: 섞인 원두마다 한 줄. 싱글 오리진이면 빈 배열",
+  items: {
+    type: "object",
+    properties: {
+      origin: { type: "string", description: "국가 이름(한국어). 예: 브라질" },
+      process: { type: "string", description: "가공 방식(한국어). 예: 내추럴" },
+      variety: { type: "string", description: "품종(한국어 발음 표기). 예: 버번" },
+      ratio: { type: "number", description: "비율(%) 숫자만. 예: 40" }
+    }
+  }
+};
+const MAX_BLEND_PARTS = 5;
+// A blend's origin, process and variety live in blendParts, so those empty fields are expected.
+const BLEND_FIELDS = new Set(["origin", "process", "variety"]);
 beanSchema.properties.notOnLabel = {
   type: "array",
   items: { type: "string", enum: BEAN_FIELDS },
@@ -80,7 +98,13 @@ const PROMPT = `# 원두 봉투 라벨 읽기 가이드
 - roasteryNotes: 컵노트를 한국어 맛 표현으로 바꿔 쉼표로 나눕니다. 예: "Rose, Pink Blossom, Guava, Yellow peach" → "장미, 핑크 블라썸, 구아바, 황도".
 - purchased: 무게를 g 숫자만 씁니다. 200g→200, 1kg→1000.
 - roastDate: 로스팅 날짜를 YYYY-MM-DD로 씁니다. 2026.10.20, 20/10/2026, 26.10.20 모두 2026-10-20. 연·월·일 중 하나라도 모르면 비웁니다. 유통기한·포장일은 쓰지 않습니다.
-- price: 원 단위 숫자만 씁니다. 18,000원→18000.`;
+- price: 원 단위 숫자만 씁니다. 18,000원→18000.
+
+## 블렌드
+- 라벨에 BLEND, 블렌드라고 적혀 있거나, 원산지가 둘 이상 적혀 있으면(예: "Ethiopia 60% / Brazil 40%") 블렌드입니다.
+- 블렌드면 blendParts에 섞인 원두마다 한 줄씩 origin, process, variety, ratio를 씁니다. 라벨에 없는 값은 비웁니다. 각 값의 작성법은 위 항목과 같습니다.
+- 블렌드면 origin, variety, process 칸은 비우고 farm도 비웁니다. blendName에는 상품 이름(예: "Fall Blend", "모모스 시그니처 블렌드")을 씁니다.
+- 싱글 오리진이면 blendParts는 빈 배열, blendName은 비웁니다.`;
 
 async function verifyUser(request) {
   const header = request.headers?.authorization ?? "";
@@ -109,8 +133,12 @@ function filledValue(value) {
   return false;
 }
 
+function isBlend(bean) {
+  return Array.isArray(bean.blendParts) && bean.blendParts.length >= 2;
+}
+
 function missingFields(bean) {
-  return BEAN_FIELDS.filter(field => !filledValue(bean[field]));
+  return BEAN_FIELDS.filter(field => !filledValue(bean[field]) && !(isBlend(bean) && BLEND_FIELDS.has(field)));
 }
 
 // Missing fields that Gemini didn't explicitly judge as absent from the label.
@@ -173,6 +201,17 @@ function cleanBean(bean) {
     if (typeof cleaned[field] === "string") cleaned[field] = cleanText(cleaned[field], field);
   }
   if (typeof cleaned.variety === "string") cleaned.variety = cleanVariety(cleaned.variety);
+  if (typeof cleaned.blendName === "string") cleaned.blendName = cleanText(cleaned.blendName, "roastery");
+  cleaned.blendParts = (Array.isArray(cleaned.blendParts) ? cleaned.blendParts : [])
+    .filter(part => part && typeof part === "object" && typeof part.origin === "string" && part.origin.trim())
+    .slice(0, MAX_BLEND_PARTS)
+    .map(part => ({
+      origin: cleanText(part.origin, "origin"),
+      ...(typeof part.process === "string" && part.process.trim() ? { process: cleanText(part.process, "process") } : {}),
+      ...(typeof part.variety === "string" && part.variety.trim() ? { variety: koreanVariety(cleanVariety(cleanText(part.variety, "variety"))) } : {}),
+      ...(Number(part.ratio) > 0 && Number(part.ratio) <= 100 ? { ratio: Math.round(Number(part.ratio)) } : {})
+    }));
+  if (!isBlend(cleaned)) { delete cleaned.blendParts; delete cleaned.blendName; }
   return cleaned;
 }
 
@@ -399,7 +438,7 @@ export default async function handler(request, response) {
 
     const bean = read.fields;
 
-    if (missingFields(bean).length === BEAN_FIELDS.length) return response.status(422).json({ error: "사진에서 원두 정보를 찾지 못했어요." });
+    if (!isBlend(bean) && missingFields(bean).length === BEAN_FIELDS.length) return response.status(422).json({ error: "사진에서 원두 정보를 찾지 못했어요." });
     return response.status(200).json({ bean });
   } catch (error) {
     console.error("Bean photo recognition failed", error instanceof Error ? error.message : "unknown error");

@@ -4,6 +4,7 @@ import { type StorageSetter, useStorage } from "../data/sync";
 import { SwipeToBrew } from "../components/SwipeToBrew";
 import { JourneySteps } from "../components/ui";
 import { BeanEditor } from "../components/bean-editor/BeanEditor";
+import { beanValues, blendFields, blendSummary, isBlend, MAX_BLEND_PARTS, ratioTotal, usedParts } from "../lib/blend";
 import { beanName, fmt, handleNumericInput, localDate, splitCupNotes, withCommas } from "../lib/format";
 import { localizedPhotoField, PHOTO_ORIGIN_LABELS, PHOTO_PROCESS_LABELS, photoMimeType, photoProblem, preparePhoto } from "../lib/photo";
 import { type Bean, BEAN_QUALITIES, BEAN_STATUSES, type BeanForm, type BeanQuality, type BeanStatus, type Brew, type RecognizedBeanFields, type TastingNote } from "../types";
@@ -89,11 +90,11 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
   const [photoReadCount, setPhotoReadCount] = useState<number | null>(null);
   const [readFields, setReadFields] = useState<Set<string>>(() => new Set());
   const [customOrigins, setCustomOrigins] = useStorage<string[]>(LIST_KEYS.origins, [], userId);
-  const origins = [...new Set([...DEFAULT_ORIGINS, ...customOrigins, ...beans.map(b => b.origin).filter(Boolean)])];
+  const origins = [...new Set([...DEFAULT_ORIGINS, ...customOrigins, ...beans.flatMap(bean => beanValues(bean, "origin"))])];
   const [hiddenRoasteries, setHiddenRoasteries] = useStorage<string[]>(LIST_KEYS.hiddenRoasteries, [], userId);
   const [hiddenVarieties, setHiddenVarieties] = useStorage<string[]>(LIST_KEYS.hiddenVarieties, [], userId);
   const roasteries = [...new Set(beans.map(bean => bean.roastery?.trim()).filter((roastery): roastery is string => Boolean(roastery)))].filter(roastery => !hiddenRoasteries.includes(roastery));
-  const varieties = [...new Set(beans.map(bean => bean.variety?.trim()).filter((variety): variety is string => Boolean(variety)))].filter(variety => !hiddenVarieties.includes(variety));
+  const varieties = [...new Set(beans.flatMap(bean => beanValues(bean, "variety")))].filter(variety => !hiddenVarieties.includes(variety));
   const hideRoastery = (roastery: string) => setHiddenRoasteries([...hiddenRoasteries, roastery]);
   const hideVariety = (variety: string) => setHiddenVarieties([...hiddenVarieties, variety]);
   const [deletedId, setDeletedId] = useState<number | null>(null);
@@ -120,6 +121,7 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
       if (!Number.isFinite(days)) return [];
       return [days <= 7 ? AGE_OPTIONS[0] : days <= 30 ? AGE_OPTIONS[1] : AGE_OPTIONS[2]];
     }
+    if (key === "origin" || key === "process" || key === "variety") return beanValues(bean, key);
     const value = bean[key]?.trim();
     return value ? [value] : [];
   };
@@ -220,17 +222,27 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
       if (!response.ok) throw new Error(payload.error || "사진에서 정보를 읽지 못했어요.");
       const result = (payload.bean ?? {}) as RecognizedBeanFields;
       const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
-      const origin = localizedPhotoField(text(result.origin), PHOTO_ORIGIN_LABELS);
-      const process = localizedPhotoField(text(result.process), PHOTO_PROCESS_LABELS);
-      if (origin && !origins.includes(origin) && !customOrigins.includes(origin)) setCustomOrigins([...customOrigins, origin]);
+      // Two or more coffees on the label make it a blend; each becomes a part row.
+      const parts = (Array.isArray(result.blendParts) ? result.blendParts : []).map(part => ({
+        origin: localizedPhotoField(text(part?.origin), PHOTO_ORIGIN_LABELS),
+        process: localizedPhotoField(text(part?.process), PHOTO_PROCESS_LABELS) || undefined,
+        variety: text(part?.variety) || undefined,
+        ratio: Number(part?.ratio) > 0 && Number(part?.ratio) <= 100 ? Math.round(Number(part?.ratio)) : undefined
+      })).filter(part => part.origin).slice(0, MAX_BLEND_PARTS);
+      const blend = parts.length >= 2;
+      const origin = blend ? "" : localizedPhotoField(text(result.origin), PHOTO_ORIGIN_LABELS);
+      const process = blend ? "" : localizedPhotoField(text(result.process), PHOTO_PROCESS_LABELS);
+      const newOrigins = [...new Set([origin, ...parts.map(part => part.origin)])].filter(value => value && !origins.includes(value) && !customOrigins.includes(value));
+      if (newOrigins.length) setCustomOrigins([...customOrigins, ...newOrigins]);
       // A new photo replaces what an earlier photo (or typing) put in these fields.
       setForm(current => ({
         ...current,
         origin: "", farm: "", variety: "", process: "", roastery: "", roasteryNotes: "", purchased: "", price: "",
         roastDate: current.date,
+        ...(blend ? { kind: "blend" as const, parts, blendName: text(result.blendName) } : { kind: undefined, parts: undefined, blendName: undefined }),
         ...(origin ? { origin } : {}),
         ...(text(result.farm) ? { farm: text(result.farm) } : {}),
-        ...(text(result.variety) ? { variety: text(result.variety) } : {}),
+        ...(!blend && text(result.variety) ? { variety: text(result.variety) } : {}),
         ...(process ? { process } : {}),
         ...(text(result.roastery) ? { roastery: text(result.roastery) } : {}),
         ...(text(result.roasteryNotes) ? { roasteryNotes: text(result.roasteryNotes) } : {}),
@@ -241,7 +253,8 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
       setRoastDateTouched(Boolean(text(result.roastDate)));
       const read = new Set([
         ...(origin ? ["origin"] : []), ...(process ? ["process"] : []),
-        ...(["farm", "variety", "roastery", "roasteryNotes", "roastDate"] as const).filter(field => text(result[field])),
+        ...(blend ? ["parts", ...(text(result.blendName) ? ["blendName"] : [])] : []),
+        ...(["farm", "variety", "roastery", "roasteryNotes", "roastDate"] as const).filter(field => !(blend && field === "variety") && text(result[field])),
         ...(["purchased", "price"] as const).filter(field => result[field] !== undefined && String(result[field]).trim())
       ]);
       setReadFields(read); setPhotoReadCount(read.size);
@@ -288,27 +301,33 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
   };
   const dateRange = (label: string, from: string, setFrom: (value: string) => void, to: string, setTo: (value: string) => void) => <fieldset className="range-filter-group"><legend>{label}</legend><div><span className="date-field" data-empty={!from} data-placeholder="시작일"><input type="date" value={from} onChange={event => setFrom(event.target.value)} aria-label={`${label} 시작일`} /></span><span>~</span><span className="date-field" data-empty={!to} data-placeholder="종료일"><input type="date" value={to} onChange={event => setTo(event.target.value)} aria-label={`${label} 종료일`} /></span></div></fieldset>;
   // Picker options, most used first; values nobody has used yet keep their listed order after them.
-  const rankByUse = (values: string[], field: (bean: Bean) => string | undefined) => {
+  const rankByUse = (values: string[], field: (bean: Bean) => string | string[] | undefined) => {
     const counts = new Map<string, number>();
-    available.forEach(bean => { const value = field(bean)?.trim(); if (value) counts.set(value, (counts.get(value) ?? 0) + 1); });
+    available.forEach(bean => [field(bean)].flat().forEach(value => { const text = value?.trim(); if (text) counts.set(text, (counts.get(text) ?? 0) + 1); }));
     return values.map((value, index) => ({ value, count: counts.get(value) ?? 0, index })).sort((a, b) => b.count - a.count || a.index - b.index).map(({ value, count }) => ({ value, count }));
   };
   // Buying the same bean again: copy what describes the bean, leave the amount, dates and status for this bag.
   const rebuy = (bean: Bean) => {
-    setForm(current => ({ ...current, origin: bean.origin, farm: bean.farm ?? "", variety: bean.variety ?? "", process: bean.process, roastery: bean.roastery, roasteryNotes: bean.roasteryNotes ?? "", price: bean.price, quality: bean.quality }));
+    setForm(current => ({ ...current, origin: bean.origin, farm: bean.farm ?? "", variety: bean.variety ?? "", process: bean.process, roastery: bean.roastery, roasteryNotes: bean.roasteryNotes ?? "", price: bean.price, quality: bean.quality, kind: bean.kind, blendName: bean.blendName, parts: bean.parts?.map(part => ({ ...part })) }));
     setReadFields(new Set());
   };
   const save = (event: React.FormEvent) => {
     event.preventDefault();
     const purchased = Number(form.purchased);
-    const missing = [!form.origin.trim() && "원산지", !form.variety?.trim() && "품종", !form.process.trim() && "가공방식", !(Number.isFinite(purchased) && purchased > 0) && "구매량"].filter(Boolean);
+    const blend = isBlend(form);
+    const missing = (blend ? [usedParts(form.parts).length < 2 && "구성 원두 2개의 원산지"] : [!form.origin.trim() && "원산지", !form.variety?.trim() && "품종", !form.process.trim() && "가공방식"])
+      .concat(!(Number.isFinite(purchased) && purchased > 0) && "구매량").filter(Boolean);
     if (missing.length) { setError(`${missing.join("·")} 칸을 채워주세요.`); return; }
+    if (blend && ratioTotal(usedParts(form.parts)) > 100) { setError("구성 원두 비율을 합해서 100% 이하로 맞춰주세요."); return; }
     const previous = beans.find(b => b.id === editingId);
     const consumed = Number(form.consumed);
     if (!Number.isFinite(consumed) || consumed < 0) { setError("소비량은 0 이상의 숫자로 입력해주세요."); return; }
     const used = Math.round(((previous ? previous.purchased - previous.remaining - (previous.consumed ?? 0) : 0) + consumed) * 10) / 10;
     if (purchased < used) { setError(`이미 사용한 ${fmt(used)}g보다 구매량이 적을 수 없어요.`); return; }
-    const bean: Bean = { ...form, name: beanName(form), id: editingId ?? Date.now(), purchased, consumed, remaining: Math.round((purchased - used) * 10) / 10 };
+    // A single origin keeps no blend fields, even if the form was switched to blend and back.
+    const { kind: _kind, blendName: _blendName, parts: _parts, ...single } = form;
+    const fields: BeanForm = blend ? { ...form, ...blendFields(form) } : single;
+    const bean: Bean = { ...fields, name: beanName(fields), id: editingId ?? Date.now(), purchased, consumed, remaining: Math.round((purchased - used) * 10) / 10 };
     setBeans(editingId === null ? [...beans, bean] : beans.map(b => b.id === editingId ? bean : b));
     close();
   };
@@ -328,9 +347,9 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
         form={form}
         setForm={setForm}
         processes={DEFAULT_PROCESSES}
-        origins={rankByUse(origins, bean => bean.origin)}
+        origins={rankByUse(origins, bean => beanValues(bean, "origin"))}
         roasteries={rankByUse(roasteries, bean => bean.roastery)}
-        varieties={rankByUse(varieties, bean => bean.variety)}
+        varieties={rankByUse(varieties, bean => beanValues(bean, "variety"))}
         pastBeans={editingId === null ? available : []}
         readFields={readFields}
         photo={editingId === null ? { preview: photoPreview, busy: photoBusy, error: photoError, readCount: photoReadCount, canRead: Boolean(userId), onSelect: selectPhoto, onRetry: () => recognizePhoto(), onClear: clearPhoto } : null}
@@ -370,8 +389,9 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
             <div className="bean-info">
               <p className="roastery"><span>{bean.roastery || "로스터리 미입력"}</span></p>
               <h3>{bean.name}</h3>
+              {isBlend(bean) && <div className="blend-line"><span className="blend-tag">블렌드</span><span>{blendSummary(bean.parts)}</span></div>}
               <BeanDates bean={bean} />
-              <div className="compact-summary"><strong>{bean.roastery || "로스터리 미입력"}</strong><time className="compact-roast" dateTime={bean.roastDate}>로스팅 : {bean.roastDate || "날짜 미입력"}</time><b>{bean.name}</b>{bean.roasteryNotes && <span className="compact-cup-notes">{splitCupNotes(bean.roasteryNotes).map((note, index) => <i key={index}>{note}</i>)}</span>}</div>
+              <div className="compact-summary"><strong>{bean.roastery || "로스터리 미입력"}</strong><time className="compact-roast" dateTime={bean.roastDate}>로스팅 : {bean.roastDate || "날짜 미입력"}</time><b>{bean.name}</b>{isBlend(bean) && <span className="blend-line"><span className="blend-tag">블렌드</span><span>{blendSummary(bean.parts)}</span></span>}{bean.roasteryNotes && <span className="compact-cup-notes">{splitCupNotes(bean.roasteryNotes).map((note, index) => <i key={index}>{note}</i>)}</span>}</div>
               {bean.roasteryNotes && <div className="roastery-cup-notes"><span className="detail-label">로스터리 컵노트</span><div className="flavor-tags">{splitCupNotes(bean.roasteryNotes).map((note, index) => <span key={index}>{note}</span>)}</div></div>}
               <div className="bean-card-actions"><button className="edit-bean" onClick={() => edit(bean)} aria-label={`${bean.name} 원두 정보 수정`}>원두 정보 수정</button><details className="record-details"><summary>내 메모 보기</summary><BeanComments bean={bean} notes={notes.filter(note => note.beanId === bean.id)} /></details></div>
             </div>

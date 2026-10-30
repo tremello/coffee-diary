@@ -3,6 +3,7 @@ import { BrewDetail } from "../components/brew-editor/BrewDetail";
 import { brewConditions, brewRatio } from "../components/brew-editor/brewFormat";
 import { RatingStars } from "../components/brew-editor/RatingStars";
 import { fmt, localDate, parseLocalDate, toDateKey } from "../lib/format";
+import { isBlend } from "../lib/blend";
 import { type Bean, type Brew, type TastingNote } from "../types";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
@@ -124,8 +125,10 @@ export function BrewStats({ beans, brews, notes }: { beans: Bean[]; brews: Brew[
   const best = ratedRows[0];
   // Value: most stars per 1,000원 a cup, among beans with both a price and a rating.
   const value = ratedRows.filter(row => row.cupCost).sort((a, b) => b.rating / b.cupCost! - a.rating / a.cupCost!)[0];
-  const processRows = [...new Set(recent.map(brew => beanOf(brew)?.process?.trim()).filter((process): process is string => Boolean(process)))]
-    .map(process => ({ process, rating: average(ratingsOf(recent.filter(brew => beanOf(brew)?.process?.trim() === process))) }))
+  // Blends count as one group of their own: splitting a cup between its coffees would blur both.
+  const processOf = (brew: Brew) => { const bean = beanOf(brew); return bean && isBlend(bean) ? "블렌드" : bean?.process?.trim(); };
+  const processRows = [...new Set(recent.map(processOf).filter((process): process is string => Boolean(process)))]
+    .map(process => ({ process, rating: average(ratingsOf(recent.filter(brew => processOf(brew) === process))) }))
     .filter(row => row.rating).sort((a, b) => b.rating - a.rating);
   const periodLabel = period ? `최근 ${period}일` : "전체 기간";
   const prevLabel = period ? `지난 ${period}일` : "";

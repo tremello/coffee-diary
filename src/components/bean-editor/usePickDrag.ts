@@ -15,11 +15,11 @@ const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)"
 
 type Drag = { startY: number; startHeight: number; lastY: number; lastTime: number; velocity: number };
 
-export function usePickDrag(onClose: () => void) {
+export function usePickDrag(onClose: () => void, initial: Snap = "half") {
   const sheetRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [phone, setPhone] = useState(isPhone);
-  const [snap, setSnap] = useState<Snap>("half");
+  const [snap, setSnap] = useState<Snap>(initial);
   const [dragHeight, setDragHeight] = useState<number | null>(null);
   const [closing, setClosing] = useState(false);
   const keyboard = useKeyboardInset();

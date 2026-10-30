@@ -4,6 +4,7 @@ import { type Bean, type Brew, type TastingNote } from "../../types";
 import { brewRatio, noteMemo, shortDate, tasteSummary } from "./brewFormat";
 import { RatingStars } from "./RatingStars";
 import { useSheet } from "./useSheet";
+import { blendDetail, isBlend } from "../../lib/blend";
 
 // One brew in full: how it was brewed, the bean it used, and every brew of that bean so the good ones are easy to repeat.
 export function BrewDetail({ brew, beans, brews, notes, onSelect, onAgain, onEdit, onClose }: {
@@ -37,7 +38,7 @@ export function BrewDetail({ brew, beans, brews, notes, onSelect, onAgain, onEdi
     ["맛", taste]
   ].filter(([, value]) => value);
   const beanRows = bean ? [
-    ["원산지 · 가공", [[bean.origin, bean.farm].filter(Boolean).join(" "), bean.process].filter(Boolean).join(" · ")],
+    isBlend(bean) ? ["블렌드", blendDetail(bean.parts)] : ["원산지 · 가공", [[bean.origin, bean.farm].filter(Boolean).join(" "), bean.process].filter(Boolean).join(" · ")],
     ["품종", bean.variety ?? ""],
     ["로스팅 · 남은 양", [bean.roastDate && `${shortDate(bean.roastDate)}${roastDays !== null && roastDays >= 0 ? ` (${roastDays}일째)` : ""}`, bean.deleted ? "삭제된 원두" : `${fmt(bean.remaining)}g 남음`].filter(Boolean).join(" · ")],
     ["로스터리 컵노트", splitCupNotes(bean.roasteryNotes).join(", ")]

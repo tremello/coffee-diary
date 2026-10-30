@@ -1,8 +1,9 @@
 import { type BeanForm } from "../types";
+import { blendName, isBlend } from "./blend";
 
 export const localDate = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`; };
 
-export const beanName = (bean: BeanForm) => [bean.origin, bean.farm, bean.variety, bean.process].map(value => value?.trim()).filter(Boolean).join(" ");
+export const beanName = (bean: BeanForm) => isBlend(bean) ? blendName(bean) : [bean.origin, bean.farm, bean.variety, bean.process].map(value => value?.trim()).filter(Boolean).join(" ");
 
 export const FONT = "'IBM Plex Sans KR', 'Apple SD Gothic Neo', sans-serif";
 

@@ -1,0 +1,17 @@
+/* Blend beans: the 종류 switch, part rows and part sheet in the bean editor, and the 블렌드 line on bean cards. */
+.be-part-sub { margin-left: 6px; color: var(--c-ink-2); font-size: 12px; }
+.be-part-empty, .be-part-auto { color: var(--c-ink-2); }
+button.be-add-part { color: var(--c-accent); }
+.be-ratio-note { margin: 0; padding: 8px 14px; border-top: 1px solid var(--c-line); color: var(--c-ink-2); font-size: 12px; }
+.be-ratio-note.bad { color: var(--fg-a64f43); font-weight: 600; }
+.be-pick-head .be-pick-remove { color: var(--fg-a64f43); }
+.be-pick-head .be-pick-done { color: var(--c-accent); font-weight: 600; }
+.be-part .be-pick-scroll { gap: 10px; padding-bottom: 4px; }
+.be-part .be-pick-grid button { min-height: 42px; }
+.be-part .be-card { flex: 0 0 auto; }
+
+.blend-line { display: flex; align-items: center; gap: 6px; min-width: 0; margin: -2px 0 10px; color: var(--c-ink-2); font-size: 12px; }
+.blend-line > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.blend-tag { flex: 0 0 auto; padding: 2px 8px; border-radius: var(--r-pill); background: var(--c-soft-2); color: var(--c-brown-deep); font-size: 11px; font-weight: 600; line-height: 1.4; }
+.bean-list.density-compact .compact-summary .blend-line { grid-column: 1 / -1; margin: 0; }
+.bean-list.density-compact .bean-info > .blend-line, .bean-list.density-dense .bean-info > .blend-line { display: none; }
