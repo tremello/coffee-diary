@@ -20,3 +20,4 @@
 @import "./18-recipe-share.css"; /* Recipes: 공유 button and the share image sheet. */
 @import "./19-brew-stats.css"; /* Stats tab: brewing calendar, the chosen day's brews and the recent-days recap. */
 @import "./20-blend.css"; /* Blend beans: editor part rows and sheet, and the 블렌드 line on bean cards. */
+@import "./21-bean-expand.css"; /* Bean list: tap a card to open it in place; pencil edit button and open/close chevron. */

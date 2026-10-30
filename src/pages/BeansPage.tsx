@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { supabase } from "../supabase";
 import { type StorageSetter, useStorage } from "../data/sync";
 import { SwipeToBrew } from "../components/SwipeToBrew";
@@ -30,18 +30,12 @@ const REMAINING_OPTIONS = ["100g 이하", "100~200g", "200g 이상"];
 
 const AGE_OPTIONS = ["D+7 이내", "D+8~30", "D+31 이상"];
 
-// The default bean list view is a per-device setting (설정 > 화면), kept outside the synced cf_ keys: phones start compact, wider screens detailed.
-// Switching the view on the page lasts until the app is reopened; only settings change the default.
-export type BeanDensity = "detail" | "compact";
-
-const BEAN_DENSITY_KEY = DEVICE_KEYS.beanDensity;
-
 const SWIPE_HINT_KEY = DEVICE_KEYS.swipeHint;
 
-export const initialBeanDensity = (): BeanDensity => {
-  try { const saved = localStorage.getItem(BEAN_DENSITY_KEY); if (saved === "detail" || saved === "compact") return saved; } catch {}
-  return window.matchMedia?.("(max-width: 540px)").matches ? "compact" : "detail";
-};
+// Cards show the short summary; tapping one opens it in place into the full card, one at a time.
+// Taps on the card's own controls (status chip, edit, memo, cup-note scroller) never toggle it.
+const CARD_CONTROLS = "button, a, summary, details, input, select, textarea, .flavor-tags, .compact-cup-notes";
+const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
 const emptyBeanForm: BeanForm = { name: "", origin: "", process: "", roastery: "", date: "", purchased: "", consumed: "", price: "", roasteryNotes: "", roastDate: "", farm: "", variety: "", flavor: "", memo: "", status: undefined, quality: undefined };
 
@@ -52,7 +46,9 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
   const [filter, setFilter] = useState("active");
   const [sort, setSort] = useState<BeanSort>("registered");
   const [qualityFilter, setQualityFilter] = useState<"all" | BeanQuality>("all");
-  const [density, setDensity] = useState<BeanDensity>(initialBeanDensity);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  // Before/after measurements for the cards that change size, so the tapped card stays put and grows smoothly.
+  const expandAnchor = useRef<{ id: number; top: number; heights: Map<number, number> } | null>(null);
   const [swipeOpenId, setSwipeOpenId] = useState<number | null>(null);
   const [swipeHint, setSwipeHint] = useState(() => { try { return window.matchMedia?.("(pointer: coarse)").matches && !localStorage.getItem(SWIPE_HINT_KEY); } catch { return false; } });
   const dismissSwipeHint = () => { setSwipeHint(false); try { localStorage.setItem(SWIPE_HINT_KEY, "1"); } catch {} };
@@ -62,7 +58,43 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
     document.addEventListener("pointerdown", closeOutside);
     return () => document.removeEventListener("pointerdown", closeOutside);
   }, [swipeOpenId]);
-  const chooseDensity = (next: BeanDensity) => setDensity(next);
+  const cardOf = (id: number) => document.querySelector<HTMLElement>(`[data-swipe-id="${id}"] .inventory-card`);
+  const toggleExpanded = (id: number) => {
+    const changing = [expandedId, id].filter((value): value is number => value !== null);
+    const heights = new Map(changing.map(cardId => [cardId, cardOf(cardId)?.offsetHeight ?? 0]));
+    expandAnchor.current = { id, top: cardOf(id)?.getBoundingClientRect().top ?? 0, heights };
+    setSwipeOpenId(null);
+    setExpandedId(expandedId === id ? null : id);
+  };
+  const onCardClick = (event: MouseEvent<HTMLElement>, id: number) => {
+    if ((event.target as HTMLElement).closest(CARD_CONTROLS)) return;
+    if (swipeOpenId === id) { setSwipeOpenId(null); return; }
+    toggleExpanded(id);
+  };
+  useLayoutEffect(() => {
+    const anchor = expandAnchor.current;
+    expandAnchor.current = null;
+    if (!anchor) return;
+    const card = cardOf(anchor.id);
+    if (!card) return;
+    // Keep the tapped card where the finger was even if a card above it just closed.
+    const shift = card.getBoundingClientRect().top - anchor.top;
+    if (shift) window.scrollBy(0, shift);
+    if (!prefersReducedMotion()) anchor.heights.forEach((from, cardId) => {
+      const target = cardOf(cardId);
+      const to = target?.offsetHeight ?? 0;
+      if (!target || !from || from === to) return;
+      target.animate([{ height: `${from}px` }, { height: `${to}px` }], { duration: 220, easing: "cubic-bezier(.2, .8, .2, 1)" });
+      target.querySelectorAll(".bean-info, .bean-stock").forEach(part => part.animate([{ opacity: 0.35 }, { opacity: 1 }], { duration: 220, easing: "ease-out" }));
+    });
+    // If the opened card runs under the bottom tab bar, bring its end into view.
+    if (expandedId === anchor.id) {
+      const rect = card.getBoundingClientRect();
+      const bottomLimit = window.innerHeight - (window.matchMedia?.("(max-width: 540px)").matches ? 110 : 24);
+      const overflow = Math.min(rect.bottom - bottomLimit, rect.top - 16);
+      if (overflow > 0) window.scrollBy({ top: overflow, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+    }
+  }, [expandedId]);
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [facetFilters, setFacetFilters] = useState<BeanFacetFilters>(emptyBeanFacetFilters);
   const [priceMin, setPriceMin] = useState("");
@@ -365,7 +397,7 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
         onDelete={editingId !== null ? remove : undefined}
       />}
       <label className="bean-search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4 4" /></svg><span className="sr-only">원두 검색</span><input type="search" value={beanQuery} onChange={event => setBeanQuery(event.target.value)} placeholder="원산지, 로스터리, 컵노트로 검색" /></label>
-      <div className="inventory-toolbar"><div className="inventory-toolbar-top"><label className="view-mode-control" htmlFor="bean-density">보기<select id="bean-density" className="inventory-sort" value={density} onChange={event => chooseDensity(event.target.value as BeanDensity)}><option value="detail">자세히</option><option value="compact">간략하게</option></select></label><button type="button" className="advanced-filter-button" aria-expanded={advancedFiltersOpen} onClick={() => setAdvancedFiltersOpen(!advancedFiltersOpen)}>세부 검색{activeDetailCount > 0 && <b>{activeDetailCount}</b>}</button></div><div className="inventory-toolbar-row"><div className="inventory-filters" aria-label="원두 재고 필터">
+      <div className="inventory-toolbar"><div className="inventory-toolbar-top"><button type="button" className="advanced-filter-button" aria-expanded={advancedFiltersOpen} onClick={() => setAdvancedFiltersOpen(!advancedFiltersOpen)}>세부 검색{activeDetailCount > 0 && <b>{activeDetailCount}</b>}</button></div><div className="inventory-toolbar-row"><div className="inventory-filters" aria-label="원두 재고 필터">
         {[["active", "보유 중"], ["finished", "소비 완료"], ["all", "전체"]].map(([value, label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}
       </div><div className="inventory-toolbar-meta"><label htmlFor="bean-sort">정렬</label><select id="bean-sort" className="inventory-sort" value={sort} onChange={event => setSort(event.target.value as BeanSort)}><option value="registered">등록순</option><option value="latest">최신순</option><option value="roastOldest">로스팅 날짜 빠른 순</option><option value="remaining">재고 적은 순</option><option value="unitPriceDesc">단가 높은 순</option><option value="unitPriceAsc">단가 낮은 순</option></select></div></div></div>
       {advancedFiltersOpen && <section className="advanced-filter-panel" aria-label="원두 세부 검색">
@@ -382,10 +414,10 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
       </section>}
       {!advancedFiltersOpen && activeFilterChips.length > 0 && <div className="active-filter-chips" aria-label="적용된 세부 검색 조건">{activeFilterChips.map(chip => <button type="button" key={chip.key} onClick={chip.clear} aria-label={`${chip.label} 조건 해제`}>{chip.label}<span aria-hidden="true">×</span></button>)}<button type="button" className="active-filter-clear" onClick={clearDetailFilters}>모두 지우기</button></div>}
       {swipeHint && active.length > 0 && <p className="swipe-hint">카드를 왼쪽으로 밀면 바로 브루잉을 기록할 수 있어요.<button type="button" onClick={dismissSwipeHint} aria-label="안내 닫기">×</button></p>}
-      <div className={`bean-list density-${density}`}>
+      <div className="bean-list">
         {sortedVisible.map(bean => {
           const pct = bean.purchased > 0 ? Math.max(0, Math.min(100, bean.remaining / bean.purchased * 100)) : 0;
-          return <SwipeToBrew key={bean.id} beanId={bean.id} beanName={bean.name} disabled={bean.remaining <= 0} open={swipeOpenId === bean.id} onOpenChange={open => { setSwipeOpenId(open ? bean.id : null); if (open) dismissSwipeHint(); }} onBrew={() => onBrew(bean.id)}><article className="inventory-card">
+          return <SwipeToBrew key={bean.id} className={expandedId === bean.id ? "density-detail is-expanded" : "density-compact"} beanId={bean.id} beanName={bean.name} disabled={bean.remaining <= 0} open={swipeOpenId === bean.id} onOpenChange={open => { setSwipeOpenId(open ? bean.id : null); if (open) dismissSwipeHint(); }} onBrew={() => onBrew(bean.id)}><article className="inventory-card" onClick={event => onCardClick(event, bean.id)}>
             <div className="bean-info">
               <p className="roastery"><span>{bean.roastery || "로스터리 미입력"}</span></p>
               <h3>{bean.name}</h3>
@@ -393,7 +425,7 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
               <BeanDates bean={bean} />
               <div className="compact-summary"><strong>{bean.roastery || "로스터리 미입력"}</strong><time className="compact-roast" dateTime={bean.roastDate}>로스팅 : {bean.roastDate || "날짜 미입력"}</time><b>{bean.name}</b>{isBlend(bean) && <span className="blend-line"><span className="blend-tag">블렌드</span><span>{blendSummary(bean.parts)}</span></span>}{bean.roasteryNotes && <span className="compact-cup-notes">{splitCupNotes(bean.roasteryNotes).map((note, index) => <i key={index}>{note}</i>)}</span>}</div>
               {bean.roasteryNotes && <div className="roastery-cup-notes"><span className="detail-label">로스터리 컵노트</span><div className="flavor-tags">{splitCupNotes(bean.roasteryNotes).map((note, index) => <span key={index}>{note}</span>)}</div></div>}
-              <div className="bean-card-actions"><button className="edit-bean" onClick={() => edit(bean)} aria-label={`${bean.name} 원두 정보 수정`}>원두 정보 수정</button><details className="record-details"><summary>내 메모 보기</summary><BeanComments bean={bean} notes={notes.filter(note => note.beanId === bean.id)} /></details></div>
+              <div className="bean-card-actions"><button className="edit-bean" onClick={() => edit(bean)} aria-label={`${bean.name} 원두 정보 수정`}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16v4Z" /><path d="M13.5 6.5l4 4" /></svg>원두 정보 수정</button>{expandedId === bean.id && <details className="record-details"><summary>내 메모 보기</summary><BeanComments bean={bean} notes={notes.filter(note => note.beanId === bean.id)} /></details>}<button type="button" className="card-expand-toggle" aria-expanded={expandedId === bean.id} aria-label={`${bean.name} ${expandedId === bean.id ? "접기" : "자세히 보기"}`} onClick={() => toggleExpanded(bean.id)}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg></button></div>
             </div>
             <div className="bean-stock">
               <div className="stock-status-row"><RoastAge bean={bean} today={cardToday} />{bean.remaining <= 0 ? <span data-status="finished" className={`stock-status ${pct <= 20 ? "low" : ""}`}>다 마셨어요</span> : (() => {

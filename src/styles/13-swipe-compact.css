@@ -23,15 +23,15 @@
 .swipe-hint button { border: 0; background: transparent; color: var(--c-ink-2); font-size: 16px; line-height: 1; padding: 2px 4px; }
 @media (prefers-reduced-motion: reduce) { .swipe-brew-action, .swipe-brew-label, .swipe-brew-commit { transition: none; } .swipe-card.will-commit .swipe-brew-face img { animation: none; } }
 /* 간략하게: tighter card bottom and a smaller remaining-amount donut. */
-.bean-list.density-compact .bean-info { padding-bottom: 10px; }
-.bean-list.density-compact .bean-stock { gap: 6px; padding-top: 12px; padding-bottom: 10px; }
-.bean-list.density-compact .compact-stock-donut { width: 56px; }
-.bean-list.density-compact .compact-stock-donut::before { inset: 6px; }
-.bean-list.density-compact .compact-stock-donut strong { font-size: 16px; }
-.bean-list.density-compact .compact-stock-donut strong span { font-size: 11px; }
-.bean-list.density-compact .stock-status { padding: 4px 8px; font-size: 11px; }
+.bean-list .density-compact .bean-info { padding-bottom: 10px; }
+.bean-list .density-compact .bean-stock { gap: 6px; padding-top: 12px; padding-bottom: 10px; }
+.bean-list .density-compact .compact-stock-donut { width: 56px; }
+.bean-list .density-compact .compact-stock-donut::before { inset: 6px; }
+.bean-list .density-compact .compact-stock-donut strong { font-size: 16px; }
+.bean-list .density-compact .compact-stock-donut strong span { font-size: 11px; }
+.bean-list .density-compact .stock-status { padding: 4px 8px; font-size: 11px; }
 /* The donut fills the stock column down to the card's bottom padding. */
-.bean-list.density-compact .compact-stock-donut { width: 70px; }
-.bean-list.density-compact .compact-stock-donut::before { inset: 7px; }
-.bean-list.density-compact .compact-stock-donut strong { font-size: 18px; }
-.bean-list.density-compact .compact-stock-donut strong span { font-size: 11px; }
+.bean-list .density-compact .compact-stock-donut { width: 70px; }
+.bean-list .density-compact .compact-stock-donut::before { inset: 7px; }
+.bean-list .density-compact .compact-stock-donut strong { font-size: 18px; }
+.bean-list .density-compact .compact-stock-donut strong span { font-size: 11px; }

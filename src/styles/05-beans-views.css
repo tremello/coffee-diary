@@ -1,35 +1,35 @@
 /* 간략 보기: 휴대폰·컴퓨터 공통 */
-.bean-list.density-compact .inventory-card { grid-template-columns: minmax(0, 1fr) 104px; }
-.bean-list.density-compact .bean-info { padding: 14px 13px; }
-.bean-list.density-compact .bean-info > .roastery,
-.bean-list.density-compact .bean-info > h3,
-.bean-list.density-compact .bean-info > .title-dates,
-.bean-list.density-compact .bean-info > .roastery-cup-notes,
-.bean-list.density-compact .bean-info > .bean-comments { display: none; }
-.bean-list.density-compact .compact-summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 8px; color: var(--c-ink-2); }
-.bean-list.density-compact .compact-summary strong { min-width: 0; font-size: 12px; font-weight: 600; }
-.bean-list.density-compact .compact-roast { align-self: start; padding: 2px 5px; border-radius: var(--r-pill); background: var(--c-soft-2); color: var(--c-ink-2); font-size: 11px; line-height: 1.3; white-space: nowrap; }
-.bean-list.density-compact .compact-summary b { grid-column: 1 / -1; font-size: 16px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bean-list.density-compact .compact-cup-notes { grid-column: 1 / -1; display: flex; min-width: 0; gap: 4px; overflow: hidden; }
-.bean-list.density-compact .compact-cup-notes i { flex: 0 0 auto; max-width: 90px; overflow: hidden; text-overflow: ellipsis; padding: 3px 6px; border-radius: var(--r-pill); background: var(--c-soft); color: var(--c-ink-2); font-size: 12px; font-style: normal; line-height: 1.3; white-space: nowrap; }
-.bean-list.density-compact .bean-card-actions { margin-top: 9px; font-size: 11px; }
-.bean-list.density-compact .bean-card-actions .edit-bean { display: inline-block; margin-top: 0; font-size: 11px; }
-.bean-list.density-compact .bean-card-actions .record-details { margin-top: 0; }
-.bean-list.density-compact .record-details > summary { font-size: 11px; }
-.bean-list.density-compact .record-details .bean-comments { margin-top: 8px; padding-top: 8px; }
-.bean-list.density-compact .bean-stock { align-items: center; justify-content: flex-start; gap: 10px; padding: 14px 10px; }
-.bean-list.density-compact .stock-status-row { align-self: stretch; justify-content: space-between; }
-.bean-list.density-compact .remaining-label { display: none; }
-.bean-list.density-compact .remaining-weight { display: none; }
-.bean-list.density-compact .purchased-weight { display: none; }
-.bean-list.density-compact .stock-meter { display: none; }
-.bean-list.density-compact .stock-percent { display: none; }
-.bean-list.density-compact .compact-stock-donut { --stock-progress: 0%; display: grid; position: relative; place-content: center; width: 68px; aspect-ratio: 1; margin-top: 2px; border-radius: 50%; background: conic-gradient(var(--bg-7a5733) var(--stock-progress), var(--c-fill) 0); }
-.bean-list.density-compact .compact-stock-donut::before { content: ""; position: absolute; inset: 7px; border-radius: inherit; background: var(--c-soft); }
-.bean-list.density-compact .compact-stock-donut strong, .bean-list.density-compact .compact-stock-donut small { position: relative; z-index: 1; text-align: center; }
-.bean-list.density-compact .compact-stock-donut strong { font-size: 19px; line-height: 1; letter-spacing: -1px; }
-.bean-list.density-compact .compact-stock-donut strong span { margin-left: 1px; font-size: 11px; font-weight: 400; letter-spacing: 0; }
-.bean-list.density-compact .compact-stock-donut small { display: none; }
+.bean-list .density-compact .inventory-card { grid-template-columns: minmax(0, 1fr) 104px; }
+.bean-list .density-compact .bean-info { padding: 14px 13px; }
+.bean-list .density-compact .bean-info > .roastery,
+.bean-list .density-compact .bean-info > h3,
+.bean-list .density-compact .bean-info > .title-dates,
+.bean-list .density-compact .bean-info > .roastery-cup-notes,
+.bean-list .density-compact .bean-info > .bean-comments { display: none; }
+.bean-list .density-compact .compact-summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 8px; color: var(--c-ink-2); }
+.bean-list .density-compact .compact-summary strong { min-width: 0; font-size: 12px; font-weight: 600; }
+.bean-list .density-compact .compact-roast { align-self: start; padding: 2px 5px; border-radius: var(--r-pill); background: var(--c-soft-2); color: var(--c-ink-2); font-size: 11px; line-height: 1.3; white-space: nowrap; }
+.bean-list .density-compact .compact-summary b { grid-column: 1 / -1; font-size: 16px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bean-list .density-compact .compact-cup-notes { grid-column: 1 / -1; display: flex; min-width: 0; gap: 4px; overflow: hidden; }
+.bean-list .density-compact .compact-cup-notes i { flex: 0 0 auto; max-width: 90px; overflow: hidden; text-overflow: ellipsis; padding: 3px 6px; border-radius: var(--r-pill); background: var(--c-soft); color: var(--c-ink-2); font-size: 12px; font-style: normal; line-height: 1.3; white-space: nowrap; }
+.bean-list .density-compact .bean-card-actions { margin-top: 9px; font-size: 11px; }
+.bean-list .density-compact .bean-card-actions .edit-bean { display: inline-block; margin-top: 0; font-size: 11px; }
+.bean-list .density-compact .bean-card-actions .record-details { margin-top: 0; }
+.bean-list .density-compact .record-details > summary { font-size: 11px; }
+.bean-list .density-compact .record-details .bean-comments { margin-top: 8px; padding-top: 8px; }
+.bean-list .density-compact .bean-stock { align-items: center; justify-content: flex-start; gap: 10px; padding: 14px 10px; }
+.bean-list .density-compact .stock-status-row { align-self: stretch; justify-content: space-between; }
+.bean-list .density-compact .remaining-label { display: none; }
+.bean-list .density-compact .remaining-weight { display: none; }
+.bean-list .density-compact .purchased-weight { display: none; }
+.bean-list .density-compact .stock-meter { display: none; }
+.bean-list .density-compact .stock-percent { display: none; }
+.bean-list .density-compact .compact-stock-donut { --stock-progress: 0%; display: grid; position: relative; place-content: center; width: 68px; aspect-ratio: 1; margin-top: 2px; border-radius: 50%; background: conic-gradient(var(--bg-7a5733) var(--stock-progress), var(--c-fill) 0); }
+.bean-list .density-compact .compact-stock-donut::before { content: ""; position: absolute; inset: 7px; border-radius: inherit; background: var(--c-soft); }
+.bean-list .density-compact .compact-stock-donut strong, .bean-list .density-compact .compact-stock-donut small { position: relative; z-index: 1; text-align: center; }
+.bean-list .density-compact .compact-stock-donut strong { font-size: 19px; line-height: 1; letter-spacing: -1px; }
+.bean-list .density-compact .compact-stock-donut strong span { margin-left: 1px; font-size: 11px; font-weight: 400; letter-spacing: 0; }
+.bean-list .density-compact .compact-stock-donut small { display: none; }
 .bean-list.density-dense { gap: 7px; }
 .bean-list.density-dense .inventory-card { grid-template-columns: minmax(0, 1fr) 88px; }
 .bean-list.density-dense .bean-info { padding: 10px 11px; }
@@ -46,8 +46,9 @@
 .bean-list.density-dense .purchased-weight { display: none; }
 .bean-list.density-dense .stock-percent { margin-top: 3px; font-size: 11px; }
 @media (min-width: 541px) {
-.bean-list.density-compact, .bean-list.density-dense { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.bean-list.density-compact .inventory-card { grid-template-columns: minmax(0, 1fr) 132px; }
+.bean-list, .bean-list.density-dense { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.bean-list { align-items: start; }
+.bean-list .density-compact .inventory-card { grid-template-columns: minmax(0, 1fr) 132px; }
 }
 /* Empty state spans both columns so it doesn't sit in the left half on PC. */
 .bean-list > .inventory-empty { grid-column: 1 / -1; }

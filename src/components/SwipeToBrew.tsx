@@ -25,7 +25,7 @@ const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion:
 
 type Drag = { pointerId: number; x: number; y: number; axis: "x" | "y" | null; start: number; offset: number; frame: number; lastX: number; lastT: number; velocity: number };
 
-export function SwipeToBrew({ beanId, beanName, disabled, open, onOpenChange, onBrew, children }: { beanId: number; beanName: string; disabled: boolean; open: boolean; onOpenChange: (open: boolean) => void; onBrew: () => void; children: ReactNode }) {
+export function SwipeToBrew({ beanId, beanName, disabled, open, onOpenChange, onBrew, className = "", children }: { beanId: number; beanName: string; disabled: boolean; open: boolean; onOpenChange: (open: boolean) => void; onBrew: () => void; className?: string; children: ReactNode }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const actionRef = useRef<HTMLButtonElement>(null);
@@ -150,7 +150,7 @@ export function SwipeToBrew({ beanId, beanName, disabled, open, onOpenChange, on
     springTo(open ? -SWIPE_OPEN_OFFSET : 0, 0);
   }, [open]);
   useEffect(() => stopSettle, []);
-  return <div ref={rootRef} className={`swipe-card ${open ? "is-open" : ""}`} data-swipe-id={beanId} onPointerDown={begin} onPointerMove={track} onPointerUp={finish} onPointerCancel={finish}
+  return <div ref={rootRef} className={`swipe-card ${className} ${open ? "is-open" : ""}`} data-swipe-id={beanId} onPointerDown={begin} onPointerMove={track} onPointerUp={finish} onPointerCancel={finish}
     onClickCapture={event => { if (swiped.current) { event.stopPropagation(); event.preventDefault(); swiped.current = false; } }}>
     {!disabled && <div className="swipe-brew-clip" aria-hidden="true"><button ref={actionRef} type="button" className="swipe-brew-action" tabIndex={-1} onClick={onBrew}><span className="swipe-brew-face"><img src="/coffee-diary-logo-brown-96.png" width="26" height="26" alt="" /><span className="swipe-brew-labels"><span className="swipe-brew-label">브루잉</span><span className="swipe-brew-commit">놓으면 브루잉</span></span></span></button></div>}
     <div ref={bodyRef} className="swipe-card-body">{children}</div>
