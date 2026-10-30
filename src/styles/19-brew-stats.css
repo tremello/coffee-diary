@@ -62,7 +62,9 @@
 .cal-brew { display: flex; flex-direction: column; gap: 4px; width: 100%; padding: 12px; border: 1px solid var(--c-line); border-radius: var(--r-md); background: var(--c-page); color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .cal-brew-title { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .cal-brew-title > span:first-child { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.cal-brew-title b { font-size: 14px; font-weight: 600; line-height: 1.4; }
+/* The stars share only the roastery line; the name below uses the full width. */
+.cal-brew-title { align-items: center; }
+.cal-brew-name { margin-top: -3px; font-size: 14px; font-weight: 600; line-height: 1.4; }
 .cal-brew .brew-roastery { margin: 0; }
 .cal-brew-line { color: var(--c-ink-2); font-size: 12px; line-height: 1.5; }
 

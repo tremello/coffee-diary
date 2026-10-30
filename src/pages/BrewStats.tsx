@@ -178,16 +178,18 @@ export function BrewStats({ beans, brews: allBrews, notes }: { beans: Bean[]; br
         {dayBrews.length === 0 ? <p className="stats-empty">이날은 내린 기록이 없어요.</p> : dayBrews.map(brew => {
           if (isCafeBrew(brew)) return <button type="button" key={brew.id} className="cal-brew" onClick={() => setDetailId(brew.id)} aria-label={`${cafeTitle(brew)} 기록 자세히 보기`}>
             <span className="cal-brew-title">
-              <span><span className="brew-roastery"><span className="bw-cafe-chip">카페</span>{brew.cafe?.name}</span><b>{cafeTitle(brew)}</b></span>
+              <span><span className="brew-roastery"><span className="bw-cafe-chip">카페</span>{brew.cafe?.name}</span></span>
               <RatingStars value={ratingOf(brew)} />
             </span>
+            <b className="cal-brew-name">{cafeTitle(brew)}</b>
           </button>;
           const bean = beanOf(brew);
           return <button type="button" key={brew.id} className="cal-brew" onClick={() => setDetailId(brew.id)} aria-label={`${bean?.name || "삭제된 원두"} 기록 자세히 보기`}>
             <span className="cal-brew-title">
-              <span>{bean?.roastery && <span className="brew-roastery">{bean.roastery}</span>}<b>{bean?.name || "삭제된 원두"}</b></span>
+              <span>{bean?.roastery && <span className="brew-roastery">{bean.roastery}</span>}</span>
               <RatingStars value={ratingOf(brew)} />
             </span>
+            <b className="cal-brew-name">{bean?.name || "삭제된 원두"}</b>
             <span className="cal-brew-line">원두 {fmt(brew.amount)}g{brew.waterAmount ? ` · 물 ${fmt(brew.waterAmount)}g · ${brewRatio(brew.amount, brew.waterAmount)}` : ""}</span>
             {(brewConditions(brew) || brew.recipe) && <span className="cal-brew-line">{[brewConditions(brew), brew.recipe].filter(Boolean).join(" · ")}</span>}
           </button>;
