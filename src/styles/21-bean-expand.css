@@ -5,3 +5,11 @@
 .bean-card-actions .edit-bean, .bean-list .density-compact .bean-card-actions .edit-bean { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; font-size: 12px; font-weight: 600; color: var(--c-accent); }
 .bean-card-actions .edit-bean svg { flex: 0 0 auto; }
 .bean-list .density-compact .bean-card-actions { margin-top: 6px; }
+/* With the view picker gone, 세부 검색 sits after the sort box so the filters fit on one line. */
+@media (max-width: 540px) {
+  .inventory-toolbar-row { gap: 6px; }
+  .inventory-filters button { padding: 7px 2px; }
+  .inventory-toolbar-meta { gap: 6px; }
+  .inventory-toolbar-meta .inventory-sort { width: 92px; max-width: 92px; }
+  .inventory-toolbar-meta .advanced-filter-button { flex: 0 0 auto; padding: 0 9px; white-space: nowrap; }
+}
