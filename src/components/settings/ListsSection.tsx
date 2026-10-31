@@ -6,6 +6,8 @@ import { ChipList, SettingsDisclosure, SettingsGroup } from "./parts";
 export function ListsSection({ userId }: { userId: string | null }) {
   const [drippers, setDrippers] = useStorage<string[]>(STORAGE_KEYS.drippers, [], userId);
   const [grinders, setGrinders] = useStorage<string[]>(STORAGE_KEYS.grinders, [], userId);
+  const [filters, setFilters] = useStorage<string[]>(STORAGE_KEYS.filters, [], userId);
+  const [waters, setWaters] = useStorage<string[]>(STORAGE_KEYS.waters, [], userId);
   const [origins, setOrigins] = useStorage<string[]>(LIST_KEYS.origins, [], userId);
   const [hiddenRoasteries, setHiddenRoasteries] = useStorage<string[]>(LIST_KEYS.hiddenRoasteries, [], userId);
   const [hiddenVarieties, setHiddenVarieties] = useStorage<string[]>(LIST_KEYS.hiddenVarieties, [], userId);
@@ -17,6 +19,12 @@ export function ListsSection({ userId }: { userId: string | null }) {
     </SettingsDisclosure>
     <SettingsDisclosure label="내 그라인더" summary={`${grinders.length}개`}>
       <ChipList items={grinders} empty="등록한 그라인더가 없어요. 브루잉을 기록할 때 추가할 수 있어요." actionLabel={item => `${item} 삭제`} onAction={item => setGrinders(without(grinders, item))} />
+    </SettingsDisclosure>
+    <SettingsDisclosure label="내 필터" summary={`${filters.length}개`}>
+      <ChipList items={filters} empty="등록한 필터가 없어요. 브루잉을 기록할 때 추가할 수 있어요." actionLabel={item => `${item} 삭제`} onAction={item => setFilters(without(filters, item))} />
+    </SettingsDisclosure>
+    <SettingsDisclosure label="내 물" summary={`${waters.length}개`}>
+      <ChipList items={waters} empty="등록한 물이 없어요. 브루잉을 기록할 때 추가할 수 있어요." actionLabel={item => `${item} 삭제`} onAction={item => setWaters(without(waters, item))} />
     </SettingsDisclosure>
     <SettingsDisclosure label="숨긴 로스터리·품종" summary={`${hiddenCount}개`}>
       {hiddenCount === 0 ? <p className="settings-empty">숨긴 항목이 없어요.</p> : <>

@@ -65,7 +65,7 @@ export default function App() {
     };
   }, []);
 
-  const settingsProps = { user, data: { beans, brews, notes, recipes, drippers: readLocal<string[]>(STORAGE_KEYS.drippers) ?? [] }, setBeans };
+  const settingsProps = { user, data: { beans, brews, notes, recipes, drippers: readLocal<string[]>(STORAGE_KEYS.drippers) ?? [], filters: readLocal<string[]>(STORAGE_KEYS.filters) ?? [], waters: readLocal<string[]>(STORAGE_KEYS.waters) ?? [] }, setBeans };
 
   return (
     <div style={{ fontFamily: FONT, maxWidth: 960, margin: "0 auto", padding: "0 0 3rem" }}>

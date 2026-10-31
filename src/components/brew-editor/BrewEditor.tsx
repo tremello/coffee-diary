@@ -12,7 +12,7 @@ import { CafeSheet } from "./CafeSheet";
 import { FitText } from "./FitText";
 import { useSheet } from "./useSheet";
 
-type Picker = "bean" | "recipe" | "dripper" | "grinder" | "cafe" | null;
+type Picker = "bean" | "recipe" | "dripper" | "grinder" | "filter" | "water" | "cafe" | null;
 
 export type BrewNote = { memo: string; rating: number; taste: TasteScores };
 
@@ -42,7 +42,7 @@ function ListSheet({ title, items, empty, search, noMatch, onClose }: { title: s
 
 // The brew form as "name · value" rows in a sheet over the list (a dialog on wider screens). BrewLog keeps the state and
 // saving; this lays the fields out and opens the pickers.
-export function BrewEditor({ editing, form, setForm, recentCafes, origins, varieties, onAddOrigin, onHideVariety, beans, recipes, selectedRecipeId, drippers, grinders, defaultGrinder, lastClicks, note, setNote, notice, error, onPickBean, onPickRecipe, onPickDripper, onHideDripper, onPickGrinder, onHideGrinder, onSave, onClose }: {
+export function BrewEditor({ editing, form, setForm, recentCafes, origins, varieties, onAddOrigin, onHideVariety, beans, recipes, selectedRecipeId, drippers, filters, waters, grinders, defaultGrinder, lastClicks, note, setNote, notice, error, onPickBean, onPickRecipe, onPickDripper, onHideDripper, onPickFilter, onHideFilter, onPickWater, onHideWater, onPickGrinder, onHideGrinder, onSave, onClose }: {
   editing: boolean;
   form: BrewForm;
   setForm: Dispatch<SetStateAction<BrewForm>>;
@@ -55,6 +55,8 @@ export function BrewEditor({ editing, form, setForm, recentCafes, origins, varie
   recipes: SavedRecipe[];
   selectedRecipeId: string;
   drippers: PickOption[];
+  filters: PickOption[];
+  waters: PickOption[];
   grinders: PickOption[];
   defaultGrinder: string;
   lastClicks: (grinder: string) => string;
@@ -66,6 +68,10 @@ export function BrewEditor({ editing, form, setForm, recentCafes, origins, varie
   onPickRecipe: (recipeId: string) => void;
   onPickDripper: (dripper: string) => void;
   onHideDripper: (dripper: string) => void;
+  onPickFilter: (filter: string) => void;
+  onHideFilter: (filter: string) => void;
+  onPickWater: (water: string) => void;
+  onHideWater: (water: string) => void;
   onPickGrinder: (grinder: string) => void;
   onHideGrinder: (grinder: string) => void;
   onSave: () => void;
@@ -174,6 +180,11 @@ export function BrewEditor({ editing, form, setForm, recentCafes, origins, varie
               <label className="bw-half"><span className="be-row-name">물 온도</span><input type="number" inputMode="decimal" min="1" max="100" step="0.5" value={form.waterTemp} placeholder="92" onChange={event => set("waterTemp", event.target.value)} /><span className="be-unit">℃</span></label>
               <label className="bw-half"><span className="be-row-name">추출 시간</span><input inputMode="numeric" aria-label="추출 시간 (숫자만 눌러도 돼요: 245 → 2:45)" value={form.brewTime} placeholder="2:45" onFocus={event => event.target.select()} onChange={event => set("brewTime", brewTimeFromDigits(event.target.value))} /></label>
             </div>
+            {/* 물 sits under 물 온도 and 필터 under 추출 시간; both are picked from remembered lists like the dripper. */}
+            <div className="be-row bw-pair">
+              <button type="button" className="bw-half bw-pick" onClick={() => setPicker("water")}><span className="be-row-name">물</span>{valueSpan(form.water, "선택")}</button>
+              <button type="button" className="bw-half bw-pick" onClick={() => setPicker("filter")}><span className="be-row-name">필터</span>{valueSpan(form.filter, "선택")}</button>
+            </div>
           </div>
         </section>
         </>}
@@ -199,6 +210,8 @@ export function BrewEditor({ editing, form, setForm, recentCafes, origins, varie
         ...recipes.map(item => ({ key: String(item.id), title: item.name, sub: `원두 ${fmt(item.coffee)}g · 물 ${fmt(recipeWater(item.steps).extraction)}g`, current: String(item.id) === selectedRecipeId, onPick: () => { onPickRecipe(String(item.id)); setPicker(null); } }))
       ]} />}
       {picker === "grinder" && <PickSheet title="그라인더" layout="list" value={grinder} options={grinders} placeholder="그라인더 이름 (예: 코만단테)" onPick={next => { onPickGrinder(next); setGrind(next, next === grinder ? grind.clicks : lastClicks(next)); setPicker(null); }} onHide={onHideGrinder} onClose={() => setPicker(null)} />}
+      {picker === "filter" && <PickSheet title="필터" layout="list" value={form.filter} options={filters} placeholder="필터 이름 (예: 카펙 아바카)" onPick={filter => { onPickFilter(filter); setPicker(null); }} onHide={onHideFilter} onClose={() => setPicker(null)} />}
+      {picker === "water" && <PickSheet title="물" layout="list" value={form.water} options={waters} placeholder="물 이름 (예: 삼다수, 정수기 물)" onPick={water => { onPickWater(water); setPicker(null); }} onHide={onHideWater} onClose={() => setPicker(null)} />}
       {picker === "cafe" && <CafeSheet value={form.cafe} recent={recentCafes} onPick={cafe => { set("cafe", cafe); setPicker(null); }} onClose={() => setPicker(null)} />}
       {picker === "dripper" && <PickSheet title="드리퍼" layout="list" value={form.method} options={drippers} placeholder="드리퍼 이름 (예: 하리오 스위치)" onPick={dripper => { onPickDripper(dripper); setPicker(null); }} onHide={onHideDripper} onClose={() => setPicker(null)} />}
     </form>

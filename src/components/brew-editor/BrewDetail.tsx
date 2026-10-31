@@ -48,6 +48,7 @@ export function BrewDetail({ brew, beans, brews, notes, onSelect, onAgain, onEdi
     ["비율", [`${fmt(brew.amount)}g${brew.waterAmount ? ` · ${fmt(brew.waterAmount)}g (${brewRatio(brew.amount, brew.waterAmount)})` : ""}`, brew.recipe].filter(Boolean).join(" · ")],
     ["드리퍼 · 분쇄도", [brew.method, brew.grindSize].filter(Boolean).join(" · ")],
     ["온도 · 시간", [brew.waterTemp && `${fmt(brew.waterTemp)}℃`, brew.brewTime].filter(Boolean).join(" · ")],
+    ["물 · 필터", [brew.water, brew.filter].filter(Boolean).join(" · ")],
     ["맛", taste]
   ].filter(([, value]) => value);
   const beanRows = bean ? [

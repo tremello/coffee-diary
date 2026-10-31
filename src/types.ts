@@ -73,6 +73,9 @@ export type Brew = {
   grindSize?: string;
   waterTemp?: number;
   brewTime?: string;
+  // Paper filter and water used, picked from lists the account remembers (cf_filters, cf_waters) like the dripper.
+  filter?: string;
+  water?: string;
   // A cup drunk at a cafe or made by someone else: no bean of ours (beanId 0, amount 0), so it never touches the inventory.
   // Brews without kind are our own.
   kind?: "cafe";
@@ -103,13 +106,15 @@ export type CafePlace = { name: string; address?: string; lat?: number; lng?: nu
 
 export const isCafeBrew = (brew: Brew) => brew.kind === "cafe";
 
-export type BrewForm = Omit<Brew, "id" | "beanId" | "recipeId" | "amount" | "waterAmount" | "grindSize" | "waterTemp" | "brewTime" | "kind" | "cafe" | "menu" | "beanName" | "roastery" | "beanKind" | "blendName" | "parts" | "origin" | "farm" | "variety" | "process" | "roasteryNotes" | "price"> & {
+export type BrewForm = Omit<Brew, "id" | "beanId" | "recipeId" | "amount" | "waterAmount" | "grindSize" | "waterTemp" | "brewTime" | "filter" | "water" | "kind" | "cafe" | "menu" | "beanName" | "roastery" | "beanKind" | "blendName" | "parts" | "origin" | "farm" | "variety" | "process" | "roasteryNotes" | "price"> & {
   beanId: string;
   amount: string;
   waterAmount: string;
   grindSize: string;
   waterTemp: string;
   brewTime: string;
+  filter: string;
+  water: string;
   kind: "own" | "cafe";
   cafe: CafePlace | null;
   menu: string;

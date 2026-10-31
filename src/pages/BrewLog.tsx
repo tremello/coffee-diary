@@ -15,6 +15,8 @@ import { type Bean, BEAN_ORIGINS, type BeanStatus, type Brew, type BrewForm, isC
 // Shown only until the user registers drippers of their own.
 const DRIPPER_SUGGESTIONS = ["하리오 V60", "오리가미", "칼리타"];
 const GRINDER_SUGGESTIONS = ["코만단테", "1Zpresso K-Ultra", "타임모어 C3"];
+const FILTER_SUGGESTIONS = ["하리오 V60 필터", "카펙 아바카", "오리가미 웨이브 필터"];
+const WATER_SUGGESTIONS = ["정수기 물", "삼다수", "브리타 정수 물"];
 
 // An unsaved new brew survives closing the sheet by accident; cf_ so it is cleared with the account's other local data.
 const DRAFT_KEY = "cf_brew_draft";
@@ -50,6 +52,8 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   const [customOrigins, setCustomOrigins] = useStorage<string[]>(LIST_KEYS.origins, [], userId);
   const [hiddenVarieties, setHiddenVarieties] = useStorage<string[]>(LIST_KEYS.hiddenVarieties, [], userId);
   const [grinders, setGrinders] = useStorage<string[]>(STORAGE_KEYS.grinders, [], userId);
+  const [filters, setFilters] = useStorage<string[]>(STORAGE_KEYS.filters, [], userId);
+  const [waters, setWaters] = useStorage<string[]>(STORAGE_KEYS.waters, [], userId);
   const [query, setQuery] = useState("");
   const [brewSort, setBrewSort] = useState<"latest" | "oldest">("latest");
   const [selectedRecipeId, setSelectedRecipeId] = useState("");
@@ -81,9 +85,14 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   const autoGrind = (beanId: string) => { const grinder = defaultGrinderFor(beanId); return composeGrind(grinder, lastClicks(grinder)); };
   const withLastClicks = (grindSize: string) => { const { grinder } = parseGrind(grindSize, grinders); const clicks = grinder ? lastClicks(grinder) : ""; return clicks ? composeGrind(grinder, clicks) : grindSize; };
   const grindTouched = form.grindSize !== "" && form.grindSize !== autoGrind(form.beanId);
+  // Filter and water rarely change, so an empty one starts as what the latest brew that noted it used.
+  const lastUsed = (key: "filter" | "water") => byNewest.find(brew => brew[key])?.[key] ?? "";
+  const habits = () => ({ filter: lastUsed("filter"), water: lastUsed("water") });
+  const withHabits = (next: BrewForm): BrewForm => { const usual = habits(); return { ...next, filter: next.filter || usual.filter, water: next.water || usual.water }; };
+  const habitsTouched = (form.filter !== "" && form.filter !== lastUsed("filter")) || (form.water !== "" && form.water !== lastUsed("water"));
 
   // Keep the unsaved new brew while the sheet is open; saving or "비우기" removes it.
-  const dirty = Boolean(form.cafe || form.beanName || form.coffee.origin || form.coffee.parts?.some(part => part.origin) || form.roasteryNotes || form.price || form.beanId || form.amount || form.waterAmount || form.method || form.recipe || grindTouched || form.waterTemp || form.brewTime || note.memo.trim() || note.rating || Object.values(note.taste).some(Boolean));
+  const dirty = Boolean(form.cafe || form.beanName || form.coffee.origin || form.coffee.parts?.some(part => part.origin) || form.roasteryNotes || form.price || form.beanId || form.amount || form.waterAmount || form.method || form.recipe || grindTouched || form.waterTemp || form.brewTime || habitsTouched || note.memo.trim() || note.rating || Object.values(note.taste).some(Boolean));
   useEffect(() => {
     if (show && editingId === null && dirty) writeLocal(DRAFT_KEY, { form, recipeId: selectedRecipeId, note } satisfies BrewDraft);
   }, [show, editingId, dirty, form, selectedRecipeId, note]);
@@ -93,7 +102,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   // "이대로 다시 내리기" keeps the brew's own click; a bean's last-conditions prefill takes the grinder's latest one.
   const fillFrom = (brew: Brew, beanId: string, exact = false) => {
     const conditions = brewConditionsForm(brew);
-    setForm({ ...conditions, grindSize: exact ? conditions.grindSize : withLastClicks(conditions.grindSize), beanId, date: localDate() });
+    setForm(withHabits({ ...conditions, grindSize: exact ? conditions.grindSize : withLastClicks(conditions.grindSize), beanId, date: localDate() }));
     setSelectedRecipeId(recipeIdFor(brew));
   };
   // A newly picked bean starts from the conditions of its latest brew, unless the user already typed conditions of their own.
@@ -101,7 +110,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     const last = latestBrewOf(brews, Number(beanId));
     const untouched = prefill?.kind === "bean" || !(form.amount || form.waterAmount || form.method || grindTouched || form.waterTemp || form.brewTime);
     if (last && untouched) { fillFrom(last, beanId); setPrefill({ kind: "bean", text: `지난번(${shortDate(last.date)}) 이 원두로 내린 조건을 채웠어요` }); }
-    else if (prefill?.kind === "bean") { setForm(current => ({ ...emptyBrewForm(), beanId, date: current.date, grindSize: autoGrind(beanId) })); setSelectedRecipeId(""); setPrefill(null); }
+    else if (prefill?.kind === "bean") { setForm(current => withHabits({ ...emptyBrewForm(), beanId, date: current.date, grindSize: autoGrind(beanId) })); setSelectedRecipeId(""); setPrefill(null); }
     else setForm(current => ({ ...current, beanId }));
     setBrewError("");
   };
@@ -111,7 +120,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     if (draft?.form) {
       setForm({ ...emptyBrewForm(), ...draft.form }); setSelectedRecipeId(draft.recipeId ?? ""); setNote({ ...emptyNote(), ...draft.note });
       setPrefill({ kind: "draft", text: "적던 기록을 이어서 채웠어요" });
-    } else setForm({ ...emptyBrewForm(), grindSize: autoGrind("") });
+    } else setForm(withHabits({ ...emptyBrewForm(), grindSize: autoGrind("") }));
     setDetailId(null);
     setShow(true);
   };
@@ -119,7 +128,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     resetForm();
     const last = latestBrewOf(brews, beanId);
     if (last) { fillFrom(last, String(beanId)); setPrefill({ kind: "bean", text: `지난번(${shortDate(last.date)}) 이 원두로 내린 조건을 채웠어요` }); }
-    else setForm({ ...emptyBrewForm(), beanId: String(beanId), grindSize: autoGrind(String(beanId)) });
+    else setForm(withHabits({ ...emptyBrewForm(), beanId: String(beanId), grindSize: autoGrind(String(beanId)) }));
     setShow(true);
   };
   const again = (brew: Brew) => {
@@ -130,8 +139,8 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     setShow(true);
   };
   const clearPrefill = () => {
-    if (prefill?.kind === "draft") { dropDraft(); resetForm(); setForm({ ...emptyBrewForm(), grindSize: autoGrind("") }); return; }
-    setForm(current => ({ ...emptyBrewForm(), beanId: current.beanId, date: current.date, grindSize: autoGrind(current.beanId) }));
+    if (prefill?.kind === "draft") { dropDraft(); resetForm(); setForm(withHabits({ ...emptyBrewForm(), grindSize: autoGrind("") })); return; }
+    setForm(current => withHabits({ ...emptyBrewForm(), beanId: current.beanId, date: current.date, grindSize: autoGrind(current.beanId) }));
     setSelectedRecipeId(""); setPrefill(null);
   };
   useEffect(() => {
@@ -188,9 +197,11 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     if (!available || available.remaining < amt) { setBrewError(`잔여량(${fmt(available?.remaining ?? 0)}g)이 부족해요.`); return; }
     const startsConsuming = available.status === "디개싱 중";
     const recipeId = selectedRecipeId ? Number(selectedRecipeId) : previous && previous.recipe === form.recipe ? previous.recipeId : undefined;
-    const brew: Brew = { id: editingId ?? Date.now(), beanId: nextBeanId, amount: amt, waterAmount: water, method: form.method.trim(), date: form.date, recipe: form.recipe, ...(recipeId !== undefined ? { recipeId } : {}), grindSize: form.grindSize.trim() || undefined, waterTemp: temp, brewTime: brewTime || undefined };
+    const brew: Brew = { id: editingId ?? Date.now(), beanId: nextBeanId, amount: amt, waterAmount: water, method: form.method.trim(), date: form.date, recipe: form.recipe, ...(recipeId !== undefined ? { recipeId } : {}), grindSize: form.grindSize.trim() || undefined, waterTemp: temp, brewTime: brewTime || undefined, filter: form.filter.trim() || undefined, water: form.water.trim() || undefined };
     setBrews(editingId === null ? [...brews, brew] : brews.map(item => item.id === editingId ? brew : item));
     if (brew.method && !drippers.includes(brew.method)) setDrippers([...drippers, brew.method]);
+    if (brew.filter && !filters.includes(brew.filter)) setFilters([...filters, brew.filter]);
+    if (brew.water && !waters.includes(brew.water)) setWaters([...waters, brew.water]);
     const savedGrinder = brew.grindSize ? parseGrind(brew.grindSize, grinders).grinder : "";
     if (savedGrinder && !grinders.includes(savedGrinder)) setGrinders([...grinders, savedGrinder]);
     setBeans(restoredBeans.map(item => item.id === nextBeanId ? { ...item, remaining: Math.round((item.remaining - amt) * 10) / 10, ...(startsConsuming ? { status: "소비 중" as BeanStatus } : {}) } : item));
@@ -237,6 +248,8 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     if (dripper && !drippers.includes(dripper)) setDrippers([...drippers, dripper]);
     setForm(current => ({ ...current, method: dripper }));
   };
+  const pickFilter = (filter: string) => { if (filter && !filters.includes(filter)) setFilters([...filters, filter]); setForm(current => ({ ...current, filter })); };
+  const pickWater = (water: string) => { if (water && !waters.includes(water)) setWaters([...waters, water]); setForm(current => ({ ...current, water })); };
   const pickGrinder = (grinder: string) => { if (grinder && !grinders.includes(grinder)) setGrinders([...grinders, grinder]); };
   const defaultGrinder = defaultGrinderFor(form.beanId);
   const grinderNames = grinders.length ? grinders : GRINDER_SUGGESTIONS;
@@ -245,6 +258,10 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   // An edited brew may use a dripper since removed from the list; keep it pickable.
   const dripperNames = drippers.length ? drippers : DRIPPER_SUGGESTIONS;
   const dripperOptions = (form.method && !dripperNames.includes(form.method) ? [form.method, ...dripperNames] : dripperNames).map(value => ({ value, count: 0 }));
+  // Filters and waters work the same way: the saved list (suggestions until there is one), plus the brew's own value if it left the list.
+  const listOptions = (saved: string[], suggestions: string[], current: string) => { const names = saved.length ? saved : suggestions; return (current && !names.includes(current) ? [current, ...names] : names).map(value => ({ value, count: 0 })); };
+  const filterOptions = listOptions(filters, FILTER_SUGGESTIONS, form.filter);
+  const waterOptions = listOptions(waters, WATER_SUGGESTIONS, form.water);
 
   // Ranked like the bean editor's pickers: the most-used first, by how many beans in the bag use them.
   const rankByUse = (values: string[], key: "origin" | "variety") => {
@@ -259,7 +276,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   const filteredBrews = brews.filter(brew => {
     if (!normalizedQuery) return true;
     const bean = beans.find(b => b.id === brew.beanId);
-    return [bean?.name, bean?.roastery, brew.recipe, brew.method, brew.date, brew.cafe?.name, brew.menu, brew.beanName, brew.roastery, brew.blendName, brew.origin, brew.farm, brew.variety].filter(Boolean).join(" ").toLowerCase().includes(normalizedQuery);
+    return [bean?.name, bean?.roastery, brew.recipe, brew.method, brew.filter, brew.water, brew.date, brew.cafe?.name, brew.menu, brew.beanName, brew.roastery, brew.blendName, brew.origin, brew.farm, brew.variety].filter(Boolean).join(" ").toLowerCase().includes(normalizedQuery);
   });
   const sorted = [...filteredBrews].sort((a, b) => {
     return brewSort === "latest" ? b.date.localeCompare(a.date) || b.id - a.id : a.date.localeCompare(b.date) || a.id - b.id;
@@ -319,10 +336,12 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
       {!show && <button type="button" className="bean-fab brew-fab" onClick={openNew}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>브루잉 추가</button>}
 
       {show && <BrewEditor editing={editingId !== null} form={form} setForm={setForm} recentCafes={recentCafes(brews)} origins={rankByUse(originNames, "origin")} varieties={rankByUse(varietyNames, "variety")}
-        onAddOrigin={origin => { if (!originNames.includes(origin)) setCustomOrigins([...customOrigins, origin]); }} onHideVariety={variety => setHiddenVarieties([...hiddenVarieties, variety])} beans={beanChoices} recipes={recipes} selectedRecipeId={selectedRecipeId} drippers={dripperOptions} grinders={grinderOptions} defaultGrinder={defaultGrinder} lastClicks={lastClicks} note={note} setNote={setNote}
+        onAddOrigin={origin => { if (!originNames.includes(origin)) setCustomOrigins([...customOrigins, origin]); }} onHideVariety={variety => setHiddenVarieties([...hiddenVarieties, variety])} beans={beanChoices} recipes={recipes} selectedRecipeId={selectedRecipeId} drippers={dripperOptions} filters={filterOptions} waters={waterOptions} grinders={grinderOptions} defaultGrinder={defaultGrinder} lastClicks={lastClicks} note={note} setNote={setNote}
         notice={prefill && editingId === null ? { text: prefill.text, onClear: clearPrefill } : null} error={brewError}
         onPickBean={beanId => editingId === null ? startWithBean(beanId) : setForm(current => ({ ...current, beanId }))} onPickRecipe={pickRecipe} onPickDripper={pickDripper}
         onHideDripper={dripper => { setDrippers(drippers.filter(item => item !== dripper)); if (form.method === dripper) setForm(current => ({ ...current, method: "" })); }}
+        onPickFilter={pickFilter} onHideFilter={filter => { setFilters(filters.filter(item => item !== filter)); if (form.filter === filter) setForm(current => ({ ...current, filter: "" })); }}
+        onPickWater={pickWater} onHideWater={water => { setWaters(waters.filter(item => item !== water)); if (form.water === water) setForm(current => ({ ...current, water: "" })); }}
         onPickGrinder={pickGrinder} onHideGrinder={grinder => setGrinders(grinders.filter(item => item !== grinder))}
         onSave={add} onClose={() => { setShow(false); if (editingId !== null) resetForm(); }} />}
       {detailBrew && <BrewDetail brew={detailBrew} beans={beans} brews={brews} notes={notes} onSelect={brew => setDetailId(brew.id)} onAgain={again} onEdit={edit} onClose={() => setDetailId(null)} />}

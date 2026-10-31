@@ -2,7 +2,7 @@ import { blendFields, blendName, isBlend } from "../../lib/blend";
 import { fmt, localDate, parseLocalDate } from "../../lib/format";
 import { type Brew, type BrewForm, type CoffeeValue, isCafeBrew, type TastingNote, type TastingNoteForm } from "../../types";
 
-export const emptyBrewForm = (): BrewForm => ({ beanId: "", amount: "", waterAmount: "", method: "", date: localDate(), recipe: "", grindSize: "", waterTemp: "", brewTime: "", ...emptyCafeFields() });
+export const emptyBrewForm = (): BrewForm => ({ beanId: "", amount: "", waterAmount: "", method: "", date: localDate(), recipe: "", grindSize: "", waterTemp: "", brewTime: "", filter: "", water: "", ...emptyCafeFields() });
 
 export const emptyCafeFields = (): Pick<BrewForm, "kind" | "cafe" | "menu" | "beanName" | "coffee" | "roasteryNotes" | "price"> => ({ kind: "own", cafe: null, menu: "", beanName: "", coffee: { origin: "", process: "" }, roasteryNotes: "", price: "" });
 
@@ -37,7 +37,7 @@ export const brewRatio = (amount: number, waterAmount?: number) => waterAmount &
 // The parts of a brew worth repeating next time: dose, water, recipe and how it was brewed (not the date or the notes).
 // A cafe brew carries its cafe and what was in the cup instead.
 export const brewConditionsForm = (brew: Brew): Omit<BrewForm, "beanId" | "date"> => ({
-  amount: isCafeBrew(brew) ? "" : String(brew.amount), waterAmount: brew.waterAmount ? String(brew.waterAmount) : "", method: brew.method, recipe: brew.recipe, grindSize: brew.grindSize ?? "", waterTemp: brew.waterTemp ? String(brew.waterTemp) : "", brewTime: brew.brewTime ?? "",
+  amount: isCafeBrew(brew) ? "" : String(brew.amount), waterAmount: brew.waterAmount ? String(brew.waterAmount) : "", method: brew.method, recipe: brew.recipe, grindSize: brew.grindSize ?? "", waterTemp: brew.waterTemp ? String(brew.waterTemp) : "", brewTime: brew.brewTime ?? "", filter: brew.filter ?? "", water: brew.water ?? "",
   ...(isCafeBrew(brew) ? { kind: "cafe", cafe: brew.cafe ?? null, ...cafeCup(brew), coffee: brewCoffee(brew), roasteryNotes: brew.roasteryNotes ?? "", price: brew.price ?? "" } : emptyCafeFields())
 });
 

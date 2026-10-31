@@ -43,6 +43,10 @@
 .bw-half { display: flex; align-items: center; gap: 8px; flex: 1 1 0; min-width: 0; min-height: 46px; padding: 0 14px; box-sizing: border-box; }
 .bw-half + .bw-half { border-left: 1px solid var(--c-line); }
 .bw-half input { width: 0; }
+/* 물 · 필터 halves open a picker: the whole half is the button, the value sits right like the other rows. */
+button.bw-half { justify-content: space-between; border: 0; border-left: 0; background: transparent; color: inherit; font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+button.bw-half + button.bw-half { border-left: 1px solid var(--c-line); }
+button.bw-half:hover { background: var(--c-soft); }
 .bw-half.bad { background: var(--bg-fbefed); }
 .bw-half.bad .be-row-name { color: var(--fg-a64f43); font-weight: 600; }
 .be-group-label .bw-ratio { font-weight: 400; }
