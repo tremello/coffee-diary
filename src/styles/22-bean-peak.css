@@ -36,6 +36,32 @@ button.pk-pill:focus-visible { outline: 2px solid var(--c-accent); outline-offse
 .peak-block-why { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--c-ink-3); font-size: 11px; }
 .peak-block-why button { flex: 0 0 auto; min-height: 28px; padding: 0 2px; border: 0; background: transparent; color: var(--c-accent); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
 
+/* PC open card (안1 아래 띠 2칸): info across the full width with the pill (and the manual status chip) at the top right,
+   then a soft band split 1:1: 남은 원두 on the left, 맛있는 시기 on the right, both bars on one line.
+   .stock-main only groups the stock lines here; elsewhere it gives its children back to the stock column. */
+.stock-main { display: contents; }
+@media (min-width: 541px) {
+  .bean-list .density-detail .inventory-card { position: relative; grid-template-columns: minmax(0, 1fr); }
+  .bean-list .density-detail .bean-info { padding: 20px 22px 16px; }
+  .bean-list .density-detail .roastery { padding-right: 260px; }
+  .bean-list .density-detail .bean-stock { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 0; padding: 0; background: var(--c-soft); border-left: 0; border-top: 1px solid var(--c-line); }
+  .bean-list .density-detail .stock-status-row { position: absolute; top: 18px; right: 20px; }
+  .bean-list .density-detail .stock-main { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; gap: 8px; padding: 14px 22px; }
+  .bean-list .density-detail .bean-stock:not(:has(.peak-block)) .stock-main { grid-column: 1 / -1; }
+  .bean-list .density-detail .remaining-label { margin: 0; font-size: 13px; color: var(--c-ink-2); }
+  .bean-list .density-detail .remaining-weight { justify-self: end; font-size: 13px; font-weight: 600; letter-spacing: 0; }
+  .bean-list .density-detail .remaining-weight span { margin-left: 1px; font-size: 13px; }
+  /* Same line height on both sides so the stock bar and the timeline sit on one line. */
+  .bean-list .density-detail .stock-main > p, .bean-list .density-detail .peak-block-row { line-height: 20px; }
+  .bean-list .density-detail .stock-meter { height: 6px; }
+  .bean-list .density-detail .purchased-weight { margin: 0; font-size: 12px; color: var(--c-ink-2); }
+  .bean-list .density-detail .purchased-weight::before { content: "/ "; }
+  .bean-list .density-detail .stock-meter { grid-column: 1 / -1; width: 100%; }
+  .bean-list .density-detail .stock-percent { grid-column: 1 / -1; margin: 0; }
+  .bean-list .density-detail .peak-block { display: grid; gap: 8px; padding: 14px 22px; border-left: 1px solid var(--c-line); }
+  .bean-list .density-detail .peak-block .pk-now { box-shadow: 0 0 0 2px var(--c-soft); }
+}
+
 /* Bean editor rows. */
 .be-value .pk-source { color: var(--c-ink-3); font-size: 11px; font-weight: 400; }
 .be-value.pk-auto { color: var(--c-ink-2); font-size: 13px; }

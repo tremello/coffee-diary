@@ -471,11 +471,13 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
                 const next: BeanStatus = status === "소비 중" ? "디개싱 중" : "소비 중";
                 return <button type="button" data-status={status} className={`stock-status stock-status-toggle ${pct <= 20 ? "low" : ""}`} onClick={() => updateStatus(bean.id, next)} aria-label={`${bean.name} 상태: ${status}. 눌러서 ${next}으로 변경`} title={`눌러서 ${next}으로 변경`}>{status}<span aria-hidden="true">⇄</span></button>;
               })()}</div>
+              <div className="stock-main">
               <p className="remaining-label">남은 원두</p>
               <p className="remaining-weight">{fmt(bean.remaining)}<span>g</span></p>
               <p className="purchased-weight">구매 {fmt(bean.purchased)}g</p>
               <div className="stock-meter" role="progressbar" aria-label={`${bean.name} 잔량`} aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}><div style={{ width: `${pct}%` }} /></div>
               <p className="stock-percent">{Math.round(pct)}% 남음</p>
+              </div>
               {expandedId === bean.id && <PeakBlock peak={peak} onAdjust={adjust} />}
               <div className="compact-stock-donut" style={{ "--stock-progress": `${pct}%` } as CSSProperties}><strong>{fmt(bean.remaining)}<span>g</span></strong><small>남음</small></div>
             </div>
