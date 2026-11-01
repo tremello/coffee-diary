@@ -120,8 +120,8 @@ export const peakPillLabel = (peak: BeanPeak, long = false) => {
 // The stage alone, for the pill in the closed card's right column: "좋은 때", "괜찮음", "21일부터", "지남".
 export const peakStageShort = (peak: BeanPeak) => !peak.stage || !peak.window ? "" : peak.stage === "rest" ? `${peak.window.start}일부터` : SHORT[peak.stage];
 
-// The closed card's date pill: "로스팅 10-14 · 17일째".
-export const roastDateLabel = (roastDate: string | undefined, age: number | null) => !roastDate ? "로스팅 : 날짜 미입력" : `로스팅 ${roastDate.slice(5)}${age !== null && age >= 0 ? ` · ${age}일째` : ""}`;
+// The closed card's date pill: "로스팅 : 26.09.05.".
+export const roastDateLabel = (roastDate: string | undefined) => !roastDate ? "로스팅 : 날짜 미입력" : `로스팅 : ${roastDate.slice(2).replace(/-/g, ".")}.`;
 
 // The value beside "맛있는 시기" on the open card.
 export const peakValueLabel = (peak: BeanPeak) => {
