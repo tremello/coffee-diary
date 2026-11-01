@@ -13,6 +13,9 @@ import { basePeak, beanPeak, type BeanPeak, effectiveStatus, isRoastLevel, roast
 import { PeakBlock, PeakPill } from "../components/peak/PeakParts";
 import { PeakSheet } from "../components/peak/PeakSheet";
 import { DEVICE_KEYS } from "../data/settings";
+import { BeanPanel } from "../components/desk/BeanPanel";
+import { DeskSearch, DeskStart, DeskToolbar, Tile } from "../components/desk/Desk";
+import { type Page } from "../lib/pages";
 
 // 무산소 가공은 직접 입력칸에 적어요. 이미 등록된 무산소 원두는 세부 검색에 그대로 나와요.
 const DEFAULT_PROCESSES = BEAN_PROCESSES;
@@ -49,7 +52,8 @@ const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion:
 
 const emptyBeanForm: BeanForm = { name: "", origin: "", process: "", roastery: "", date: "", purchased: "", consumed: "", price: "", roasteryNotes: "", roastDate: "", farm: "", variety: "", flavor: "", memo: "", status: undefined, quality: undefined, roastLevel: undefined, peak: undefined };
 
-export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, onBrew }: { beans: Bean[]; setBeans: StorageSetter<Bean[]>; brews: Brew[]; setBrews: StorageSetter<Brew[]>; notes: TastingNote[]; setNotes: StorageSetter<TastingNote[]>; userId: string | null; onBrew: (beanId?: number) => void }) {
+export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, onBrew, desk, recipeCount = 0, onGoto }: { beans: Bean[]; setBeans: StorageSetter<Bean[]>; brews: Brew[]; setBrews: StorageSetter<Brew[]>; notes: TastingNote[]; setNotes: StorageSetter<TastingNote[]>; userId: string | null; onBrew: (beanId?: number) => void; desk?: boolean; recipeCount?: number; onGoto?: (page: Page) => void }) {
+  const [pickedId, setPickedId] = useState<number | null>(null);
   const [show, setShow] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<BeanForm>(emptyBeanForm);
@@ -521,16 +525,7 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
     status: (id, status) => latest.current.updateStatus(id, status),
     adjust: id => setAdjustId(id),
   }), []);
-  return (
-    <main className="inventory">
-      <div className="inventory-intro"><div><p>좋아하는 맛을 기록하고, 남은 원두를 한눈에.</p></div>
-        <div className="intro-actions"><button className="secondary-button" onClick={() => onBrew()}>브루잉 추가</button><button className="primary-button intro-add-bean" onClick={openNewBean}>+ 원두 추가</button></div></div>
-      {active.length > 0 && <div className="stats-cards inventory-summary-cards" aria-label="보유 원두 요약">
-        <div><span>보유 원두</span><strong>{active.length}<small>종</small></strong><em>{fmt(Math.round(active.reduce((sum, b) => sum + b.remaining, 0) * 10) / 10)}<small>g</small></em></div>
-        <div><span>소비 중</span><strong>{fmt(Math.round(consumingWeight * 10) / 10)}<small>g</small></strong></div>
-        <div><span>디개싱 중</span><strong>{fmt(Math.round(degassingWeight * 10) / 10)}<small>g</small></strong></div>
-      </div>}
-      {deletedId !== null && <div className="delete-notice" role="status"><span>{deletedBrews.length > 0 ? `원두와 연결된 브루잉 기록 ${deletedBrews.length}개를 삭제했어요.` : "원두를 삭제했어요."}</span><button type="button" onClick={undoRemove}>되돌리기</button></div>}
+  const editorEl = <>
       {show && <BeanEditor
         key={editingId ?? "new"}
         editing={editingId !== null}
@@ -556,10 +551,8 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
         onCancel={close}
         onDelete={editingId !== null ? remove : undefined}
       />}
-      <label className="bean-search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4 4" /></svg><span className="sr-only">원두 검색</span><input type="search" value={beanQuery} onChange={event => setBeanQuery(event.target.value)} placeholder="원산지, 로스터리, 컵노트로 검색" /></label>
-      <div className="inventory-toolbar"><div className="inventory-toolbar-row"><div className="inventory-filters" aria-label="원두 재고 필터">
-        {[["active", "보유 중"], ["finished", "소비 완료"], ["all", "전체"]].map(([value, label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}
-      </div><div className="inventory-toolbar-meta"><label htmlFor="bean-sort">정렬</label><select id="bean-sort" className="inventory-sort" value={sort} onChange={event => setSort(event.target.value as BeanSort)}><option value="registered">등록순</option><option value="latest">최신순</option><option value="roastOldest">로스팅 날짜 빠른 순</option><option value="peakEnding">맛있는 시기 끝나가는 순</option><option value="remaining">재고 적은 순</option><option value="unitPriceDesc">단가 높은 순</option><option value="unitPriceAsc">단가 낮은 순</option></select><button type="button" className="advanced-filter-button" aria-expanded={advancedFiltersOpen} onClick={() => setAdvancedFiltersOpen(!advancedFiltersOpen)}>세부 검색{activeDetailCount > 0 && <b>{activeDetailCount}</b>}</button></div></div></div>
+  </>;
+  const advancedEl = <>
       {advancedFiltersOpen && <section className="advanced-filter-panel" aria-label="원두 세부 검색">
         <div className="advanced-filter-header"><div><strong>세부 검색</strong><span>여러 조건을 함께 고를 수 있어요. 숫자는 해당하는 원두 수예요.</span></div></div>
         <section className="filter-section" aria-label="원두 정보"><h4>원두 정보</h4><div className="facet-grid">{facetGroup("origin", "원산지")}{facetGroup("variety", "품종")}{facetGroup("process", "가공방식")}{facetGroup("roastery", "로스터리")}{facetGroup("note", "컵노트")}</div></section>
@@ -572,12 +565,11 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
         </div></section>
         <div className="advanced-filter-footer"><span role="status">원두 <b>{visible.length}</b>개 찾음</span><div><button type="button" className="quiet-button" onClick={clearDetailFilters} disabled={activeDetailCount === 0}>초기화</button><button type="button" className="primary-button" onClick={() => setAdvancedFiltersOpen(false)}>닫기</button></div></div>
       </section>}
+  </>;
+  const chipsEl = <>
       {!advancedFiltersOpen && activeFilterChips.length > 0 && <div className="active-filter-chips" aria-label="적용된 세부 검색 조건">{activeFilterChips.map(chip => <button type="button" key={chip.key} onClick={chip.clear} aria-label={`${chip.label} 조건 해제`}>{chip.label}<span aria-hidden="true">×</span></button>)}<button type="button" className="active-filter-clear" onClick={clearDetailFilters}>모두 지우기</button></div>}
-      {swipeHint && active.length > 0 && <p className="swipe-hint">카드를 왼쪽으로 밀면 바로 브루잉을 기록할 수 있어요.<button type="button" onClick={dismissSwipeHint} aria-label="안내 닫기">×</button></p>}
-      <div className="bean-list">
-        {listOrder.map(bean => <BeanCard key={bean.id} bean={bean} peak={peakOf(bean)} notes={notesByBean.get(bean.id) ?? NO_NOTES} expanded={expandedId === bean.id} swipeOpen={swipeOpenId === bean.id} today={cardToday} actions={cardActions} />)}
-        {visible.length === 0 && <div className="inventory-empty"><img className="onboarding-logo" src="/coffee-diary-logo-brown-96.png" width="38" height="38" alt="" /><h3>{available.length === 0 ? "첫 원두를 등록해보세요" : "해당하는 원두가 없어요"}</h3><p>{available.length === 0 ? "원두부터 기록하면 나만의 브루잉 흐름이 시작돼요." : "원두 정보와 향미 노트, 남은 양을 한곳에서 관리해요."}</p>{available.length === 0 && <><JourneySteps active="beans" /><button className="primary-button" onClick={() => { close(); setShow(true); }}>첫 원두 등록하기</button></>}</div>}
-      </div>
+  </>;
+  const peakSheetEl = <>
       {(() => {
         const bean = adjustId !== null ? available.find(item => item.id === adjustId) : undefined;
         const base = bean && basePeak(bean, peakSettings);
@@ -596,6 +588,86 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
             setAdjustId(null);
           }} onClose={() => setAdjustId(null)} />;
       })()}
+  </>;
+
+  if (desk) {
+    const pickedBean = sortedVisible.find(bean => bean.id === pickedId) ?? sortedVisible[0];
+    const totalWeight = Math.round(active.reduce((sum, b) => sum + b.remaining, 0) * 10) / 10;
+    return (
+      <main className="inventory desk-page beans-desk">
+        <DeskToolbar
+          search={<DeskSearch value={beanQuery} onChange={setBeanQuery} placeholder="원산지, 로스터리, 컵노트로 검색" label="원두 검색" />}
+          middle={<div className="inventory-filters" aria-label="원두 재고 필터">{[["active", "보유 중"], ["finished", "소비 완료"], ["all", "전체"]].map(([value, label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}</div>}
+          actions={<>
+            <select className="desk-select" aria-label="원두 정렬" value={sort} onChange={event => setSort(event.target.value as BeanSort)}><option value="registered">등록순</option><option value="latest">최신순</option><option value="roastOldest">로스팅 날짜 빠른 순</option><option value="peakEnding">맛있는 시기 끝나가는 순</option><option value="remaining">재고 적은 순</option><option value="unitPriceDesc">단가 높은 순</option><option value="unitPriceAsc">단가 낮은 순</option></select>
+            <button type="button" className="quiet-button advanced-filter-button desk-filter-button" aria-expanded={advancedFiltersOpen} onClick={() => setAdvancedFiltersOpen(!advancedFiltersOpen)}>세부 검색{activeDetailCount > 0 && <b>{activeDetailCount}</b>}</button>
+            <button type="button" className="primary-button desk-add" data-desk-add onClick={openNewBean}>+ 원두 추가</button>
+          </>} />
+        {deletedId !== null && <div className="delete-notice" role="status"><span>{deletedBrews.length > 0 ? `원두와 연결된 브루잉 기록 ${deletedBrews.length}개를 삭제했어요.` : "원두를 삭제했어요."}</span><button type="button" onClick={undoRemove}>되돌리기</button></div>}
+        {editorEl}
+        {advancedEl}
+        {chipsEl}
+        {available.length === 0 ? <DeskStart
+          steps={[
+            { label: "원두 등록", hint: "봉투 사진을 찍으면 이름·로스팅 날짜가 채워져요", done: false, action: { label: "등록하기", onClick: openNewBean } },
+            { label: "레시피 만들기", hint: "자주 쓰는 붓기 순서를 저장해요 (건너뛰어도 돼요)", done: recipeCount > 0, action: { label: "레시피로", onClick: () => onGoto?.("Recipes") } },
+            { label: "첫 브루잉 기록", hint: "원두를 고르면 남은 양이 저절로 줄어요", done: brews.length > 0, action: { label: "브루잉 기록으로", onClick: () => onGoto?.("Brew Log") } }
+          ]}
+          extra={<>카페에서 마신 커피는 원두 없이도 바로 남길 수 있어요. <button type="button" className="desk-link" onClick={() => onGoto?.("Brew Log")}>브루잉 기록으로 →</button></>}
+          example={<>
+            <header className="desk-detail-head"><p className="desk-kicker">로스터리 이름</p><h2>에티오피아 예가체프 워시드</h2><p className="desk-meta"><span>로스팅 26.10.20</span><span>구매가 ₩20,000</span></p></header>
+            <div className="desk-strip is-single"><div className="desk-stock"><div className="peak-block-row"><span>남은 원두</span><strong>200g <small>/ 구매 200g</small></strong></div><div className="stock-meter"><div style={{ width: "100%" }} /></div><div className="peak-block-why"><span>100% 남음</span><span className="desk-cups"><b>약 13잔</b></span></div></div></div>
+            <div className="desk-tiles"><Tile label="원산지" value="에티오피아" /><Tile label="품종" value="헤이룸" /><Tile label="가공" value="워시드" /></div>
+          </>} />
+        : <div className="desk-split">
+          <div className="desk-list-stack">
+            {active.length > 0 && <div className="desk-panel desk-sum" aria-label="보유 원두 요약">
+              <div><span>보유 원두</span><b>{active.length}종 · {fmt(totalWeight)}g</b></div>
+              <div><span>소비 중</span><b>{fmt(Math.round(consumingWeight * 10) / 10)}g</b></div>
+              <div><span>디개싱 중</span><b>{fmt(Math.round(degassingWeight * 10) / 10)}g</b></div>
+            </div>}
+            <div className="desk-list desk-panel" role="list">
+              {sortedVisible.length === 0 ? <p className="empty-state">해당하는 원두가 없어요</p> : sortedVisible.map(bean => {
+                const peak = peakOf(bean);
+                const status = statusOf(bean);
+                return <button type="button" role="listitem" key={bean.id} data-desk-item className="desk-row desk-bean-row" aria-current={bean.id === pickedBean?.id} onClick={() => setPickedId(bean.id)}>
+                  <span className="desk-row-top"><span className="desk-roastery">{bean.roastery || "로스터리 미입력"}</span>{bean.remaining <= 0 ? <span className="stock-status">다 마셨어요</span> : peak.stage ? <PeakPill peak={peak} variant="stage" /> : <span className="stock-status" data-status={status}>{status}</span>}</span>
+                  <span className="desk-row-top"><b>{bean.name}</b></span>
+                  <span className="desk-row-sub">{bean.roastDate && <span className="desk-date-chip">{roastDateLabel(bean.roastDate)}</span>}{isBlend(bean) && <span className="blend-tag">블렌드</span>}<span className="desk-row-amount">{fmt(bean.remaining)}g</span></span>
+                </button>;
+              })}
+            </div>
+          </div>
+          {pickedBean ? <BeanPanel bean={pickedBean} peak={peakOf(pickedBean)} brews={brews} notes={notesByBean.get(pickedBean.id) ?? NO_NOTES} onBrew={() => onBrew(pickedBean.id)} onEdit={() => edit(pickedBean)} onStatus={status => updateStatus(pickedBean.id, status)} onAdjust={() => setAdjustId(pickedBean.id)} onShowBrews={onGoto && (() => onGoto("Brew Log"))} />
+            : <div className="desk-panel desk-detail desk-detail-empty">해당하는 원두가 없어요</div>}
+        </div>}
+        {peakSheetEl}
+      </main>
+    );
+  }
+  return (
+    <main className="inventory">
+      <div className="inventory-intro"><div><p>좋아하는 맛을 기록하고, 남은 원두를 한눈에.</p></div>
+        <div className="intro-actions"><button className="secondary-button" onClick={() => onBrew()}>브루잉 추가</button><button className="primary-button intro-add-bean" onClick={openNewBean}>+ 원두 추가</button></div></div>
+      {active.length > 0 && <div className="stats-cards inventory-summary-cards" aria-label="보유 원두 요약">
+        <div><span>보유 원두</span><strong>{active.length}<small>종</small></strong><em>{fmt(Math.round(active.reduce((sum, b) => sum + b.remaining, 0) * 10) / 10)}<small>g</small></em></div>
+        <div><span>소비 중</span><strong>{fmt(Math.round(consumingWeight * 10) / 10)}<small>g</small></strong></div>
+        <div><span>디개싱 중</span><strong>{fmt(Math.round(degassingWeight * 10) / 10)}<small>g</small></strong></div>
+      </div>}
+      {deletedId !== null && <div className="delete-notice" role="status"><span>{deletedBrews.length > 0 ? `원두와 연결된 브루잉 기록 ${deletedBrews.length}개를 삭제했어요.` : "원두를 삭제했어요."}</span><button type="button" onClick={undoRemove}>되돌리기</button></div>}
+      {editorEl}
+      <label className="bean-search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4 4" /></svg><span className="sr-only">원두 검색</span><input type="search" value={beanQuery} onChange={event => setBeanQuery(event.target.value)} placeholder="원산지, 로스터리, 컵노트로 검색" /></label>
+      <div className="inventory-toolbar"><div className="inventory-toolbar-row"><div className="inventory-filters" aria-label="원두 재고 필터">
+        {[["active", "보유 중"], ["finished", "소비 완료"], ["all", "전체"]].map(([value, label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}
+      </div><div className="inventory-toolbar-meta"><label htmlFor="bean-sort">정렬</label><select id="bean-sort" className="inventory-sort" value={sort} onChange={event => setSort(event.target.value as BeanSort)}><option value="registered">등록순</option><option value="latest">최신순</option><option value="roastOldest">로스팅 날짜 빠른 순</option><option value="peakEnding">맛있는 시기 끝나가는 순</option><option value="remaining">재고 적은 순</option><option value="unitPriceDesc">단가 높은 순</option><option value="unitPriceAsc">단가 낮은 순</option></select><button type="button" className="advanced-filter-button" aria-expanded={advancedFiltersOpen} onClick={() => setAdvancedFiltersOpen(!advancedFiltersOpen)}>세부 검색{activeDetailCount > 0 && <b>{activeDetailCount}</b>}</button></div></div></div>
+      {advancedEl}
+      {chipsEl}
+      {swipeHint && active.length > 0 && <p className="swipe-hint">카드를 왼쪽으로 밀면 바로 브루잉을 기록할 수 있어요.<button type="button" onClick={dismissSwipeHint} aria-label="안내 닫기">×</button></p>}
+      <div className="bean-list">
+        {listOrder.map(bean => <BeanCard key={bean.id} bean={bean} peak={peakOf(bean)} notes={notesByBean.get(bean.id) ?? NO_NOTES} expanded={expandedId === bean.id} swipeOpen={swipeOpenId === bean.id} today={cardToday} actions={cardActions} />)}
+        {visible.length === 0 && <div className="inventory-empty"><img className="onboarding-logo" src="/coffee-diary-logo-brown-96.png" width="38" height="38" alt="" /><h3>{available.length === 0 ? "첫 원두를 등록해보세요" : "해당하는 원두가 없어요"}</h3><p>{available.length === 0 ? "원두부터 기록하면 나만의 브루잉 흐름이 시작돼요." : "원두 정보와 향미 노트, 남은 양을 한곳에서 관리해요."}</p>{available.length === 0 && <><JourneySteps active="beans" /><button className="primary-button" onClick={() => { close(); setShow(true); }}>첫 원두 등록하기</button></>}</div>}
+      </div>
+      {peakSheetEl}
       {!show && <button type="button" className="bean-fab" onClick={openNewBean}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>원두 추가</button>}
     </main>
   );

@@ -10,8 +10,10 @@ export function SettingsRow({ label, hint, children }: { label: ReactNode; hint?
 }
 
 // A row that opens in place to show a list, so there is no second screen to navigate.
-export function SettingsDisclosure({ label, summary, children }: { label: string; summary: string; children: ReactNode }) {
+// With `alwaysOpen` (the PC settings tab) the list is a small card of its own, edited in place with no click to open it.
+export function SettingsDisclosure({ label, summary, children, alwaysOpen }: { label: string; summary: string; children: ReactNode; alwaysOpen?: boolean }) {
   const [open, setOpen] = useState(false);
+  if (alwaysOpen) return <div className="settings-disclosure is-open-card"><div className="settings-row"><span className="settings-label">{label}</span><span className="settings-value">{summary}</span></div><div className="settings-disclosure-body">{children}</div></div>;
   return <div className="settings-disclosure">
     <button type="button" className="settings-row settings-row-button" aria-expanded={open} onClick={() => setOpen(!open)}><span className="settings-label">{label}</span><span className="settings-value">{summary}<span className="settings-chevron" aria-hidden="true">›</span></span></button>
     {open && <div className="settings-disclosure-body">{children}</div>}

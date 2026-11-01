@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { type StorageSetter } from "../../data/sync";
 import { type ExportData } from "../../lib/export";
 import { type Bean } from "../../types";
@@ -36,6 +36,36 @@ export function SettingsPage({ user, data, setBeans }: SettingsProps) {
       <ListsSection userId={user?.id ?? null} />
       <PeakSection userId={user?.id ?? null} beans={data.beans} />
       <AboutSection />
+    </div>
+  </div>;
+}
+
+const DESK_SECTIONS = [
+  { id: "account", title: "계정·동기화", hint: "로그인, 기기 간 동기화" },
+  { id: "display", title: "화면", hint: "밝게·어둡게" },
+  { id: "lists", title: "내 도구·목록", hint: "드리퍼·그라인더·필터·물" },
+  { id: "peak", title: "맛있는 시기", hint: "로스터리별 기준 날짜" },
+  { id: "data", title: "데이터·정보", hint: "내보내기·가져오기, 업데이트 소식" }
+] as const;
+type DeskSection = typeof DESK_SECTIONS[number]["id"];
+
+// Wide PC screens: a category list on the left and only the chosen group on the right, so nothing scrolls far.
+// The tool lists are open cards there, edited in place.
+export function SettingsDesk({ user, data, setBeans }: SettingsProps) {
+  const [section, setSection] = useState<DeskSection>("account");
+  const userId = user?.id ?? null;
+  return <div className="settings-page settings-desk">
+    <nav className="settings-nav" aria-label="설정 분류">
+      {DESK_SECTIONS.map(item => <button type="button" key={item.id} className="settings-nav-item" aria-current={section === item.id ? "true" : undefined} onClick={() => setSection(item.id)}>
+        <strong>{item.title}</strong><small>{item.hint}</small>
+      </button>)}
+    </nav>
+    <div className={`settings-pane settings-pane-${section}`}>
+      {section === "account" && <AccountSection user={user} />}
+      {section === "display" && <DisplaySection />}
+      {section === "lists" && <ListsSection userId={userId} open />}
+      {section === "peak" && <PeakSection userId={userId} beans={data.beans} />}
+      {section === "data" && <><DataSection data={data} setBeans={setBeans} signedIn={Boolean(user)} /><AboutSection /></>}
     </div>
   </div>;
 }

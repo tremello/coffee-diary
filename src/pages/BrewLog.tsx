@@ -5,6 +5,9 @@ import { BrewDetail } from "../components/brew-editor/BrewDetail";
 import { BrewEditor, type BrewNote } from "../components/brew-editor/BrewEditor";
 import { brewConditions, brewConditionsForm, coffeeFields, cafeTitle, recentCafes, composeGrind, parseGrind, brewRatio, dayHeading, emptyBrewForm, emptyNoteForm, latestBrewOf, normalizeBrewTime, noteMemo, shortDate, TASTE_ATTRIBUTES, tasteScore, tasteSummary } from "../components/brew-editor/brewFormat";
 import { RatingStars } from "../components/brew-editor/RatingStars";
+import { BrewPanel } from "../components/desk/BrewPanel";
+import { DeskSearch, DeskStart, DeskToolbar, Tile } from "../components/desk/Desk";
+import { type Page } from "../lib/pages";
 import { LIST_KEYS, STORAGE_KEYS } from "../data/keys";
 import { beanValues } from "../lib/blend";
 import { readLocal, writeLocal } from "../data/storage";
@@ -29,7 +32,7 @@ type Prefill = { kind: "bean" | "again" | "draft"; text: string } | null;
 
 const RepeatIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3" /><path d="M18 3v4h-4M6 21v-4h4" /></svg>;
 
-export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, userId, openInitially, initialBeanId, onOpened }: {
+export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, userId, openInitially, initialBeanId, initialRecipeId, initialCafe, desk, onGoto, onOpened }: {
   beans: Bean[];
   setBeans: StorageSetter<Bean[]>;
   brews: Brew[];
@@ -40,6 +43,10 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   userId: string | null;
   openInitially: boolean;
   initialBeanId: number | null;
+  initialRecipeId?: number | null;
+  initialCafe?: boolean;
+  desk?: boolean;
+  onGoto?: (page: Page) => void;
   onOpened: () => void;
 }) {
   const [show, setShow] = useState(false);
@@ -59,6 +66,8 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   const [selectedRecipeId, setSelectedRecipeId] = useState("");
   const [brewError, setBrewError] = useState("");
   const [detailId, setDetailId] = useState<number | null>(null);
+  // The brew shown in the right pane on wide screens.
+  const [pickedId, setPickedId] = useState<number | null>(null);
   const [deletedBrew, setDeletedBrew] = useState<{ brew: Brew; notes: TastingNote[] } | null>(null);
 
   const activeBeans = beans.filter(b => !b.deleted && b.remaining > 0);
@@ -146,6 +155,8 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   useEffect(() => {
     if (!openInitially) return;
     if (initialBeanId) openWithBean(initialBeanId); else openNew();
+    if (initialRecipeId) pickRecipe(String(initialRecipeId));
+    if (initialCafe) setForm(current => ({ ...current, kind: "cafe" }));
     onOpened();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openInitially]);
@@ -288,6 +299,69 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     return groups;
   }, []);
   const detailBrew = detailId === null ? undefined : brews.find(brew => brew.id === detailId);
+  const pickedBrew = sorted.find(brew => brew.id === pickedId) ?? sorted[0];
+  const thisMonth = today.slice(0, 7);
+  const monthCount = brews.filter(brew => brew.date.startsWith(thisMonth)).length;
+
+  const editorLayers = <>
+    {show && <BrewEditor editing={editingId !== null} form={form} setForm={setForm} recentCafes={recentCafes(brews)} origins={rankByUse(originNames, "origin")} varieties={rankByUse(varietyNames, "variety")}
+      onAddOrigin={origin => { if (!originNames.includes(origin)) setCustomOrigins([...customOrigins, origin]); }} onHideVariety={variety => setHiddenVarieties([...hiddenVarieties, variety])} beans={beanChoices} recipes={recipes} selectedRecipeId={selectedRecipeId} drippers={dripperOptions} filters={filterOptions} waters={waterOptions} grinders={grinderOptions} defaultGrinder={defaultGrinder} lastClicks={lastClicks} note={note} setNote={setNote}
+      notice={prefill && editingId === null ? { text: prefill.text, onClear: clearPrefill } : null} error={brewError}
+      onPickBean={beanId => editingId === null ? startWithBean(beanId) : setForm(current => ({ ...current, beanId }))} onPickRecipe={pickRecipe} onPickDripper={pickDripper}
+      onHideDripper={dripper => { setDrippers(drippers.filter(item => item !== dripper)); if (form.method === dripper) setForm(current => ({ ...current, method: "" })); }}
+      onPickFilter={pickFilter} onHideFilter={filter => { setFilters(filters.filter(item => item !== filter)); if (form.filter === filter) setForm(current => ({ ...current, filter: "" })); }}
+      onPickWater={pickWater} onHideWater={water => { setWaters(waters.filter(item => item !== water)); if (form.water === water) setForm(current => ({ ...current, water: "" })); }}
+      onPickGrinder={pickGrinder} onHideGrinder={grinder => setGrinders(grinders.filter(item => item !== grinder))}
+      onSave={add} onClose={() => { setShow(false); if (editingId !== null) resetForm(); }} />}
+  </>;
+
+  if (desk) {
+    const liveBeans = beans.filter(bean => !bean.deleted);
+    const openCafe = () => { openNew(); setForm(current => ({ ...current, kind: "cafe" })); };
+    return (
+      <div className="brew-log desk-page">
+        <DeskToolbar
+          search={<DeskSearch value={query} onChange={setQuery} placeholder="원두, 로스터리, 레시피, 카페로 검색" label="브루잉 기록 검색" />}
+          middle={brews.length > 0 && <p className="desk-summary">총 <b>{brews.length}잔</b>을 기록했어요 · 이번 달 <b>{monthCount}잔</b></p>}
+          actions={<>
+            <select className="desk-select" aria-label="브루잉 기록 정렬" value={brewSort} onChange={event => setBrewSort(event.target.value as "latest" | "oldest")}><option value="latest">최신순</option><option value="oldest">오래된 순</option></select>
+            <button type="button" className="primary-button desk-add" data-desk-add onClick={openNew}>+ 브루잉 추가</button>
+          </>} />
+        {deletedBrew && <div className="delete-notice" role="status"><span>브루잉 기록을 삭제했어요.</span><button type="button" onClick={undoRemove}>되돌리기</button></div>}
+        {brews.length === 0 ? <DeskStart
+          steps={[
+            { label: "원두 등록", hint: "봉투 사진을 찍으면 이름·로스팅 날짜가 채워져요", done: liveBeans.length > 0, action: { label: "원두 재고로", onClick: () => onGoto?.("Beans") } },
+            { label: "레시피 만들기", hint: "자주 쓰는 붓기 순서를 저장해요 (건너뛰어도 돼요)", done: recipes.length > 0, action: { label: "레시피로", onClick: () => onGoto?.("Recipes") } },
+            { label: "첫 브루잉 기록", hint: "원두를 고르면 남은 양이 저절로 줄어요", done: false, action: { label: "기록하기", onClick: openNew } }
+          ]}
+          extra={<>카페에서 마신 커피는 원두 없이도 바로 남길 수 있어요. <button type="button" className="desk-link" onClick={openCafe}>카페 커피 기록하기 →</button></>}
+          example={<>
+            <header className="desk-detail-head"><p className="desk-kicker">로스터리 · 오늘 · 로스팅 12일째</p><h2>에티오피아 예가체프 워시드</h2><RatingStars value={4} /></header>
+            <div className="desk-tiles"><Tile label="원두 · 물" value="15g · 250g" /><Tile label="비율" value="1:16.7" /><Tile label="드리퍼" value="V60" /><Tile label="분쇄도" value="24클릭" /><Tile label="물 온도" value="92℃" /><Tile label="추출 시간" value="2:45" /></div>
+            <div className="desk-notes"><div><h3 className="desk-label">맛 노트</h3><p className="desk-note">복숭아, 홍차 · 산미 밝음</p></div><div><h3 className="desk-label">메모</h3><p className="desk-note">식을수록 단맛이 올라와요</p></div></div>
+          </>} />
+        : <div className="desk-split">
+          <div className="desk-list desk-panel" role="list">
+            {sorted.length === 0 ? <Empty text="검색 결과가 없어요" /> : days.map(day => <Fragment key={day.date}>
+              <h3 className="desk-group">{dayHeading(day.date, today)}</h3>
+              {day.brews.map(brew => {
+                const cafe = isCafeBrew(brew);
+                const bean = cafe ? undefined : beans.find(b => b.id === brew.beanId);
+                const title = cafe ? cafeTitle(brew) : bean?.name || "삭제된 원두";
+                const line = cafe ? null : [bean?.roastery, `${fmt(brew.amount)}g`, brewRatio(brew.amount, brew.waterAmount), brew.method, brew.grindSize].filter(Boolean).join(" · ");
+                return <button type="button" role="listitem" key={brew.id} data-desk-item className="desk-row" aria-current={brew.id === pickedBrew?.id} onClick={() => setPickedId(brew.id)}>
+                  <span className="desk-row-top"><b>{title}</b><RatingStars value={noteOf(brew)?.rating ?? 0} /></span>
+                  <span className="desk-row-sub">{cafe ? <><span className="bw-cafe-chip">카페</span>{brew.cafe?.name}</> : line}</span>
+                </button>;
+              })}
+            </Fragment>)}
+          </div>
+          {pickedBrew ? <BrewPanel brew={pickedBrew} beans={beans} brews={brews} notes={notes} onSelect={brew => setPickedId(brew.id)} onAgain={again} onEdit={edit} onRemove={remove} /> : <div className="desk-panel desk-detail desk-detail-empty">검색 결과가 없어요</div>}
+        </div>}
+        {editorLayers}
+      </div>
+    );
+  }
 
   return (
     <div className="brew-log">
@@ -335,15 +409,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
       </Fragment>)}
       {!show && <button type="button" className="bean-fab brew-fab" onClick={openNew}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>브루잉 추가</button>}
 
-      {show && <BrewEditor editing={editingId !== null} form={form} setForm={setForm} recentCafes={recentCafes(brews)} origins={rankByUse(originNames, "origin")} varieties={rankByUse(varietyNames, "variety")}
-        onAddOrigin={origin => { if (!originNames.includes(origin)) setCustomOrigins([...customOrigins, origin]); }} onHideVariety={variety => setHiddenVarieties([...hiddenVarieties, variety])} beans={beanChoices} recipes={recipes} selectedRecipeId={selectedRecipeId} drippers={dripperOptions} filters={filterOptions} waters={waterOptions} grinders={grinderOptions} defaultGrinder={defaultGrinder} lastClicks={lastClicks} note={note} setNote={setNote}
-        notice={prefill && editingId === null ? { text: prefill.text, onClear: clearPrefill } : null} error={brewError}
-        onPickBean={beanId => editingId === null ? startWithBean(beanId) : setForm(current => ({ ...current, beanId }))} onPickRecipe={pickRecipe} onPickDripper={pickDripper}
-        onHideDripper={dripper => { setDrippers(drippers.filter(item => item !== dripper)); if (form.method === dripper) setForm(current => ({ ...current, method: "" })); }}
-        onPickFilter={pickFilter} onHideFilter={filter => { setFilters(filters.filter(item => item !== filter)); if (form.filter === filter) setForm(current => ({ ...current, filter: "" })); }}
-        onPickWater={pickWater} onHideWater={water => { setWaters(waters.filter(item => item !== water)); if (form.water === water) setForm(current => ({ ...current, water: "" })); }}
-        onPickGrinder={pickGrinder} onHideGrinder={grinder => setGrinders(grinders.filter(item => item !== grinder))}
-        onSave={add} onClose={() => { setShow(false); if (editingId !== null) resetForm(); }} />}
+      {editorLayers}
       {detailBrew && <BrewDetail brew={detailBrew} beans={beans} brews={brews} notes={notes} onSelect={brew => setDetailId(brew.id)} onAgain={again} onEdit={edit} onClose={() => setDetailId(null)} />}
     </div>
   );

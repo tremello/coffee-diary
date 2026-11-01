@@ -3,7 +3,7 @@ import { useAuth } from "./data/auth";
 import { retryFailedSync, useStorage, useSyncFailed } from "./data/sync";
 import { readLocal } from "./data/storage";
 import { Header } from "./components/Header";
-import { SettingsPage, SettingsSheet } from "./components/settings/SettingsSheet";
+import { SettingsDesk, SettingsPage, SettingsSheet } from "./components/settings/SettingsSheet";
 import { PEAK_KEY, STORAGE_KEYS } from "./data/keys";
 import { readStartPage } from "./data/settings";
 import { FONT } from "./lib/format";
@@ -12,6 +12,7 @@ import { BeansPage } from "./pages/BeansPage";
 import { BrewLog } from "./pages/BrewLog";
 import { BrewStats } from "./pages/BrewStats";
 import { RecipePage } from "./pages/RecipePage";
+import { useDesk, useDeskKeys } from "./components/desk/Desk";
 import { type Bean, type BeanStatus, type Brew, type PeakSettings, type SavedRecipe, type TastingNote } from "./types";
 
 // "배송 중" was retired (shipping is brief and always ends in degassing); older records read as "디개싱 중" and are saved that way on their next edit.
@@ -33,7 +34,11 @@ export default function App() {
     query.addEventListener("change", onChange);
     return () => query.removeEventListener("change", onChange);
   }, []);
+  const desk = useDesk();
+  useDeskKeys(desk && !settingsOpen);
   const [openBrewForm, setOpenBrewForm] = useState(false);
+  const [brewRecipeId, setBrewRecipeId] = useState<number | null>(null);
+  const [brewCafe, setBrewCafe] = useState(false);
   const [brewBeanId, setBrewBeanId] = useState<number | null>(null);
   const { user, loading: authLoading } = useAuth();
   const [storedBeans, setBeans] = useStorage<Bean[]>(STORAGE_KEYS.beans, [], user?.id ?? null);
@@ -68,15 +73,15 @@ export default function App() {
   const settingsProps = { user, data: { beans, brews, notes, recipes, drippers: readLocal<string[]>(STORAGE_KEYS.drippers) ?? [], filters: readLocal<string[]>(STORAGE_KEYS.filters) ?? [], waters: readLocal<string[]>(STORAGE_KEYS.waters) ?? [], peak: readLocal<PeakSettings>(PEAK_KEY) ?? {} }, setBeans };
 
   return (
-    <div style={{ fontFamily: FONT, maxWidth: 960, margin: "0 auto", padding: "0 0 3rem" }}>
+    <div className={`app-shell${desk ? " is-desk" : ""}`} style={{ fontFamily: FONT, margin: "0 auto", padding: "0 0 3rem" }}>
       <Header page={page} setPage={navigate} user={user} authLoading={authLoading} settingsOpen={settingsOpen && wide} onOpenSettings={() => setSettingsOpen(true)} />
       {syncFailed && <div className="sync-alert" role="alert"><span>최근 변경을 서버에 저장하지 못했어요. 이 기기에는 남아 있어요.</span><button type="button" onClick={retryFailedSync}>다시 시도</button></div>}
-      {settingsOpen && (wide ? <SettingsPage {...settingsProps} /> : <SettingsSheet {...settingsProps} onClose={closeSettings} />)}
+      {settingsOpen && (desk ? <SettingsDesk {...settingsProps} /> : wide ? <SettingsPage {...settingsProps} /> : <SettingsSheet {...settingsProps} onClose={closeSettings} />)}
       {/* Pages step aside while settings is open so the lists it edits have a single owner; they remount with the new values. */}
       {!settingsOpen && <div className="page-transition" key={page}>
-        {page === "Beans" && <BeansPage beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} userId={user?.id ?? null} onBrew={beanId => { setBrewBeanId(beanId ?? null); setOpenBrewForm(true); navigate("Brew Log"); }} />}
-        {page === "Brew Log" && <BrewLog beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} recipes={recipes} userId={user?.id ?? null} openInitially={openBrewForm} initialBeanId={brewBeanId} onOpened={() => { setOpenBrewForm(false); setBrewBeanId(null); }} />}
-        {page === "Recipes" && <RecipePage recipes={recipes} setRecipes={setRecipes} brews={brews} setBrews={setBrews} userId={user?.id ?? null} />}
+        {page === "Beans" && <BeansPage beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} userId={user?.id ?? null} desk={desk} recipeCount={recipes.length} onGoto={navigate} onBrew={beanId => { setBrewBeanId(beanId ?? null); setOpenBrewForm(true); navigate("Brew Log"); }} />}
+        {page === "Brew Log" && <BrewLog beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} recipes={recipes} userId={user?.id ?? null} openInitially={openBrewForm} initialBeanId={brewBeanId} initialRecipeId={brewRecipeId} initialCafe={brewCafe} desk={desk} onGoto={navigate} onOpened={() => { setOpenBrewForm(false); setBrewBeanId(null); setBrewRecipeId(null); setBrewCafe(false); }} />}
+        {page === "Recipes" && <RecipePage recipes={recipes} setRecipes={setRecipes} brews={brews} setBrews={setBrews} notes={notes} beans={beans} userId={user?.id ?? null} desk={desk} onGoto={navigate} onBrewWith={recipeId => { setBrewRecipeId(recipeId); setOpenBrewForm(true); navigate("Brew Log"); }} onCafe={() => { setBrewCafe(true); setOpenBrewForm(true); navigate("Brew Log"); }} />}
         {page === "Brew Stats" && <BrewStats beans={beans} brews={brews} notes={notes} />}
       </div>}
     </div>
