@@ -11,9 +11,13 @@ button.pk-pill:focus-visible { outline: 2px solid var(--c-accent); outline-offse
 .pk-dot { width: 6px; height: 6px; flex: 0 0 auto; border-radius: 50%; background: currentColor; opacity: .8; }
 .stock-status-row .pk-pill { padding: 4px 9px; }
 /* Closed card: the stage sits where the status chip was, at the chip's size; the date pill on the left stays neutral.
-   A long roastery name is cut short instead of wrapping under the date pill. */
+   The roastery and date pill share the first line while they fit; a long roastery name keeps its full name and the
+   date pill drops to its own line under it. */
 .bean-list .density-compact .stock-status-row .pk-pill { padding: 4px 8px; font-size: 11px; }
-.bean-list .density-compact .compact-summary strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bean-list .density-compact .compact-summary { display: flex; flex-wrap: wrap; align-items: flex-start; }
+.bean-list .density-compact .compact-summary > * { flex: 0 0 100%; min-width: 0; }
+.bean-list .density-compact .compact-summary > strong { flex: 1 1 auto; width: auto; overflow-wrap: anywhere; }
+.bean-list .density-compact .compact-summary > .compact-roast { flex: 0 0 auto; margin-left: auto; }
 
 /* The timeline bar: rest, best and ok segments over the past colour, with today's mark. */
 .pk-bar { position: relative; display: flex; height: 6px; border-radius: 3px; background: var(--pk-past-bar); }
