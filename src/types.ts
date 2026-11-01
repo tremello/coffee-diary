@@ -12,6 +12,19 @@ export const BEAN_QUALITIES = ["특식", "준특식", "사료"] as const;
 
 export type BeanQuality = (typeof BEAN_QUALITIES)[number];
 
+export const ROAST_LEVELS = ["울트라라이트", "라이트", "미디엄", "다크"] as const;
+
+export type RoastLevel = (typeof ROAST_LEVELS)[number];
+
+// When a bean tastes best, in days since roasting: drinkable from start, best until best, still fine until ok.
+export type PeakWindow = { start: number; best: number; ok: number };
+
+// One roastery's own window for a roast level, set from the adjust sheet or settings.
+export type RoasteryPeak = PeakWindow & { roastery: string; roastLevel: RoastLevel };
+
+// Synced per account (cf_peak). Anything left out falls back to the research defaults in lib/peak.
+export type PeakSettings = { defaults?: Partial<Record<RoastLevel, PeakWindow>>; espresso?: { light: number; dark: number }; roasteries?: RoasteryPeak[] };
+
 // One coffee in a blend. Only the origin is required; labels often leave out the rest.
 export type BlendPart = { origin: string; process?: string; variety?: string; ratio?: number };
 
@@ -39,6 +52,10 @@ export type Bean = {
   kind?: "blend";
   blendName?: string;
   parts?: BlendPart[];
+  // With a roast level the card shows the peak stage and the status follows it; without one the status stays manual.
+  roastLevel?: RoastLevel;
+  // This bean's own window, overriding the roastery and settings defaults.
+  peak?: PeakWindow;
 };
 
 export type BeanForm = Omit<Bean, "id" | "purchased" | "remaining" | "consumed"> & {
@@ -58,6 +75,9 @@ export type RecognizedBeanFields = {
   price?: number | string;
   blendName?: string;
   blendParts?: { origin?: string; process?: string; variety?: string; ratio?: number | string }[];
+  roastLevel?: string;
+  // The roaster's "로스팅 후 N일부터" advice.
+  restDays?: number | string;
 };
 
 export type Brew = {

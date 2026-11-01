@@ -7,8 +7,11 @@ import { BeanEditor } from "../components/bean-editor/BeanEditor";
 import { beanValues, blendFields, blendSummary, isBlend, MAX_BLEND_PARTS, ratioTotal, usedParts } from "../lib/blend";
 import { beanName, fmt, handleNumericInput, localDate, splitCupNotes, withCommas } from "../lib/format";
 import { localizedPhotoField, PHOTO_ORIGIN_LABELS, PHOTO_PROCESS_LABELS, photoMimeType, photoProblem, preparePhoto } from "../lib/photo";
-import { type Bean, BEAN_ORIGINS, BEAN_PROCESSES, BEAN_QUALITIES, BEAN_STATUSES, type BeanForm, type BeanQuality, type BeanStatus, type Brew, type RecognizedBeanFields, type TastingNote } from "../types";
-import { LIST_KEYS } from "../data/keys";
+import { type Bean, BEAN_ORIGINS, BEAN_PROCESSES, BEAN_QUALITIES, BEAN_STATUSES, type BeanForm, type BeanQuality, type BeanStatus, type Brew, type PeakSettings, type RecognizedBeanFields, type TastingNote } from "../types";
+import { LIST_KEYS, PEAK_KEY } from "../data/keys";
+import { basePeak, beanPeak, type BeanPeak, effectiveStatus, isRoastLevel, levelPeak, peakSortKey, RESEARCH_PEAK, shiftPeak, withRoasteryPeak } from "../lib/peak";
+import { PeakBlock, PeakPill } from "../components/peak/PeakParts";
+import { PeakSheet } from "../components/peak/PeakSheet";
 import { DEVICE_KEYS } from "../data/settings";
 
 // 무산소 가공은 직접 입력칸에 적어요. 이미 등록된 무산소 원두는 세부 검색에 그대로 나와요.
@@ -16,7 +19,7 @@ const DEFAULT_PROCESSES = BEAN_PROCESSES;
 
 const DEFAULT_ORIGINS = BEAN_ORIGINS;
 
-type BeanSort = "registered" | "latest" | "roastOldest" | "remaining" | "unitPriceDesc" | "unitPriceAsc";
+type BeanSort = "registered" | "latest" | "roastOldest" | "peakEnding" | "remaining" | "unitPriceDesc" | "unitPriceAsc";
 
 type BeanFacetKey = "origin" | "roastery" | "variety" | "process" | "note" | "status" | "remaining" | "age";
 
@@ -37,7 +40,7 @@ const SWIPE_HINT_KEY = DEVICE_KEYS.swipeHint;
 const CARD_CONTROLS = "button, a, summary, details, input, select, textarea, .flavor-tags, .compact-cup-notes";
 const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
-const emptyBeanForm: BeanForm = { name: "", origin: "", process: "", roastery: "", date: "", purchased: "", consumed: "", price: "", roasteryNotes: "", roastDate: "", farm: "", variety: "", flavor: "", memo: "", status: undefined, quality: undefined };
+const emptyBeanForm: BeanForm = { name: "", origin: "", process: "", roastery: "", date: "", purchased: "", consumed: "", price: "", roasteryNotes: "", roastDate: "", farm: "", variety: "", flavor: "", memo: "", status: undefined, quality: undefined, roastLevel: undefined, peak: undefined };
 
 export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, onBrew }: { beans: Bean[]; setBeans: StorageSetter<Bean[]>; brews: Brew[]; setBrews: StorageSetter<Brew[]>; notes: TastingNote[]; setNotes: StorageSetter<TastingNote[]>; userId: string | null; onBrew: (beanId?: number) => void }) {
   const [show, setShow] = useState(false);
@@ -144,15 +147,21 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
     const timer = window.setInterval(() => setCardToday(localDate()), 60_000);
     return () => window.clearInterval(timer);
   }, []);
+  const [peakSettings, setPeakSettings] = useStorage<PeakSettings>(PEAK_KEY, {}, userId);
+  // The bean whose 맛있는 시기 sheet is open from its card.
+  const [adjustId, setAdjustId] = useState<number | null>(null);
   const [deletedBrews, setDeletedBrews] = useState<Brew[]>([]);
   const [deletedNotes, setDeletedNotes] = useState<TastingNote[]>([]);
   const available = beans.filter(b => !b.deleted);
   const active = available.filter(b => b.remaining > 0);
-  const degassingWeight = active.filter(bean => bean.status === "디개싱 중").reduce((sum, bean) => sum + bean.remaining, 0);
-  const consumingWeight = active.filter(bean => (bean.status ?? "소비 중") === "소비 중").reduce((sum, bean) => sum + bean.remaining, 0);
+  const peaks = new Map(available.map(bean => [bean.id, beanPeak(bean, peakSettings, brews, cardToday)]));
+  const peakOf = (bean: Bean): BeanPeak => peaks.get(bean.id) ?? { age: null, espresso: 0 };
+  const statusOf = (bean: Bean) => effectiveStatus(bean, peakOf(bean));
+  const degassingWeight = active.filter(bean => statusOf(bean) === "디개싱 중").reduce((sum, bean) => sum + bean.remaining, 0);
+  const consumingWeight = active.filter(bean => statusOf(bean) === "소비 중").reduce((sum, bean) => sum + bean.remaining, 0);
   const today = localDate();
   const beanFacetValues = (bean: Bean, key: BeanFacetKey): string[] => {
-    if (key === "status") return [bean.status ?? "소비 중"];
+    if (key === "status") return [statusOf(bean)];
     if (key === "note") return splitCupNotes(bean.roasteryNotes);
     if (key === "remaining") return [bean.remaining <= 100 ? REMAINING_OPTIONS[0] : bean.remaining <= 200 ? REMAINING_OPTIONS[1] : REMAINING_OPTIONS[2]];
     if (key === "age") {
@@ -225,6 +234,10 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
       if (bUnit === null) return -1;
       return (sort === "unitPriceDesc" ? bUnit - aUnit : aUnit - bUnit) || b.id - a.id;
     }
+    if (sort === "peakEnding") {
+      const [aGroup, aDays] = peakSortKey(peakOf(a)), [bGroup, bDays] = peakSortKey(peakOf(b));
+      return aGroup - bGroup || aDays - bDays || a.id - b.id;
+    }
     if (sort === "roastOldest") {
       if (!a.roastDate && !b.roastDate) return a.id - b.id;
       if (!a.roastDate) return 1;
@@ -279,8 +292,14 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
       const newOrigins = [...new Set([origin, ...parts.map(part => part.origin)])].filter(value => value && !origins.includes(value) && !customOrigins.includes(value));
       if (newOrigins.length) setCustomOrigins([...customOrigins, ...newOrigins]);
       // A new photo replaces what an earlier photo (or typing) put in these fields.
+      const roastLevel = isRoastLevel(text(result.roastLevel)) ? text(result.roastLevel) as Bean["roastLevel"] : undefined;
+      const restDays = Number(result.restDays);
+      // The roaster's "로스팅 후 N일부터" moves the start; the rest of the window keeps its length from the roast level default.
+      const restBase = roastLevel ? levelPeak(roastLevel, peakSettings).window : RESEARCH_PEAK.라이트;
+      const peak = Number.isFinite(restDays) && restDays > 0 && restDays < 120 ? shiftPeak(restBase, Math.round(restDays) - restBase.start) : undefined;
       setForm(current => ({
         ...current,
+        roastLevel, peak,
         origin: "", farm: "", variety: "", process: "", roastery: "", roasteryNotes: "", purchased: "", price: "",
         roastDate: current.date,
         ...(blend ? { kind: "blend" as const, parts, blendName: text(result.blendName) } : { kind: undefined, parts: undefined, blendName: undefined }),
@@ -299,7 +318,8 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
         ...(origin ? ["origin"] : []), ...(process ? ["process"] : []),
         ...(blend ? ["parts", ...(text(result.blendName) ? ["blendName"] : [])] : []),
         ...(["farm", "variety", "roastery", "roasteryNotes", "roastDate"] as const).filter(field => !(blend && field === "variety") && text(result[field])),
-        ...(["purchased", "price"] as const).filter(field => result[field] !== undefined && String(result[field]).trim())
+        ...(["purchased", "price"] as const).filter(field => result[field] !== undefined && String(result[field]).trim()),
+        ...(roastLevel ? ["roastLevel"] : []), ...(peak ? ["peak"] : [])
       ]);
       setReadFields(read); setPhotoReadCount(read.size);
     } catch (photoRecognitionError) {
@@ -352,7 +372,7 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
   };
   // Buying the same bean again: copy what describes the bean, leave the amount, dates and status for this bag.
   const rebuy = (bean: Bean) => {
-    setForm(current => ({ ...current, origin: bean.origin, farm: bean.farm ?? "", variety: bean.variety ?? "", process: bean.process, roastery: bean.roastery, roasteryNotes: bean.roasteryNotes ?? "", price: bean.price, quality: bean.quality, kind: bean.kind, blendName: bean.blendName, parts: bean.parts?.map(part => ({ ...part })) }));
+    setForm(current => ({ ...current, origin: bean.origin, farm: bean.farm ?? "", variety: bean.variety ?? "", process: bean.process, roastery: bean.roastery, roasteryNotes: bean.roasteryNotes ?? "", price: bean.price, quality: bean.quality, roastLevel: bean.roastLevel, peak: bean.peak, kind: bean.kind, blendName: bean.blendName, parts: bean.parts?.map(part => ({ ...part })) }));
     setReadFields(new Set());
   };
   const save = (event: React.FormEvent) => {
@@ -390,6 +410,8 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
         editing={editingId !== null}
         form={form}
         setForm={setForm}
+        peakSettings={peakSettings}
+        setPeakSettings={setPeakSettings}
         processes={DEFAULT_PROCESSES}
         origins={rankByUse(origins, bean => beanValues(bean, "origin"))}
         roasteries={rankByUse(roasteries, bean => bean.roastery)}
@@ -411,7 +433,7 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
       <label className="bean-search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4 4" /></svg><span className="sr-only">원두 검색</span><input type="search" value={beanQuery} onChange={event => setBeanQuery(event.target.value)} placeholder="원산지, 로스터리, 컵노트로 검색" /></label>
       <div className="inventory-toolbar"><div className="inventory-toolbar-row"><div className="inventory-filters" aria-label="원두 재고 필터">
         {[["active", "보유 중"], ["finished", "소비 완료"], ["all", "전체"]].map(([value, label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}
-      </div><div className="inventory-toolbar-meta"><label htmlFor="bean-sort">정렬</label><select id="bean-sort" className="inventory-sort" value={sort} onChange={event => setSort(event.target.value as BeanSort)}><option value="registered">등록순</option><option value="latest">최신순</option><option value="roastOldest">로스팅 날짜 빠른 순</option><option value="remaining">재고 적은 순</option><option value="unitPriceDesc">단가 높은 순</option><option value="unitPriceAsc">단가 낮은 순</option></select><button type="button" className="advanced-filter-button" aria-expanded={advancedFiltersOpen} onClick={() => setAdvancedFiltersOpen(!advancedFiltersOpen)}>세부 검색{activeDetailCount > 0 && <b>{activeDetailCount}</b>}</button></div></div></div>
+      </div><div className="inventory-toolbar-meta"><label htmlFor="bean-sort">정렬</label><select id="bean-sort" className="inventory-sort" value={sort} onChange={event => setSort(event.target.value as BeanSort)}><option value="registered">등록순</option><option value="latest">최신순</option><option value="roastOldest">로스팅 날짜 빠른 순</option><option value="peakEnding">맛있는 시기 끝나가는 순</option><option value="remaining">재고 적은 순</option><option value="unitPriceDesc">단가 높은 순</option><option value="unitPriceAsc">단가 낮은 순</option></select><button type="button" className="advanced-filter-button" aria-expanded={advancedFiltersOpen} onClick={() => setAdvancedFiltersOpen(!advancedFiltersOpen)}>세부 검색{activeDetailCount > 0 && <b>{activeDetailCount}</b>}</button></div></div></div>
       {advancedFiltersOpen && <section className="advanced-filter-panel" aria-label="원두 세부 검색">
         <div className="advanced-filter-header"><div><strong>세부 검색</strong><span>여러 조건을 함께 고를 수 있어요. 숫자는 해당하는 원두 수예요.</span></div></div>
         <section className="filter-section" aria-label="원두 정보"><h4>원두 정보</h4><div className="facet-grid">{facetGroup("origin", "원산지")}{facetGroup("variety", "품종")}{facetGroup("process", "가공방식")}{facetGroup("roastery", "로스터리")}{facetGroup("note", "컵노트")}</div></section>
@@ -429,18 +451,22 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
       <div className="bean-list">
         {listOrder.map(bean => {
           const pct = bean.purchased > 0 ? Math.max(0, Math.min(100, bean.remaining / bean.purchased * 100)) : 0;
+          const peak = peakOf(bean);
+          const adjust = () => setAdjustId(bean.id);
           return <SwipeToBrew key={bean.id} className={expandedId === bean.id ? "density-detail is-expanded" : "density-compact"} beanId={bean.id} beanName={bean.name} disabled={bean.remaining <= 0} open={swipeOpenId === bean.id} onOpenChange={open => { setSwipeOpenId(open ? bean.id : null); if (open) dismissSwipeHint(); }} onBrew={() => onBrew(bean.id)}><article className="inventory-card" tabIndex={0} aria-expanded={expandedId === bean.id} aria-label={`${bean.name}, 눌러서 ${expandedId === bean.id ? "접기" : "자세히 보기"}`} onClick={event => onCardClick(event, bean.id)} onKeyDown={event => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); toggleExpanded(bean.id); } }}>
             <div className="bean-info">
               <p className="roastery"><span>{bean.roastery || "로스터리 미입력"}</span></p>
               <h3>{bean.name}</h3>
               {isBlend(bean) && <div className="blend-line"><span className="blend-tag">블렌드</span><span>{blendSummary(bean.parts)}</span></div>}
               <BeanDates bean={bean} />
-              <div className="compact-summary"><strong>{bean.roastery || "로스터리 미입력"}</strong><time className="compact-roast" dateTime={bean.roastDate}>로스팅 : {bean.roastDate || "날짜 미입력"}</time><b>{bean.name}</b>{isBlend(bean) && <span className="blend-line"><span className="blend-tag">블렌드</span><span>{blendSummary(bean.parts)}</span></span>}{bean.roasteryNotes && <span className="compact-cup-notes">{splitCupNotes(bean.roasteryNotes).map((note, index) => <i key={index}>{note}</i>)}</span>}</div>
+              <div className="compact-summary"><strong>{bean.roastery || "로스터리 미입력"}</strong>{peak.age === null ? <time className="compact-roast" dateTime={bean.roastDate}>로스팅 : {bean.roastDate || "날짜 미입력"}</time> : <PeakPill peak={peak} onClick={adjust} />}<b>{bean.name}</b>{isBlend(bean) && <span className="blend-line"><span className="blend-tag">블렌드</span><span>{blendSummary(bean.parts)}</span></span>}{bean.roasteryNotes && <span className="compact-cup-notes">{splitCupNotes(bean.roasteryNotes).map((note, index) => <i key={index}>{note}</i>)}</span>}</div>
               {bean.roasteryNotes && <div className="roastery-cup-notes"><span className="detail-label">로스터리 컵노트</span><div className="flavor-tags">{splitCupNotes(bean.roasteryNotes).map((note, index) => <span key={index}>{note}</span>)}</div></div>}
               <div className="bean-card-actions"><button className="edit-bean" onClick={() => edit(bean)} aria-label={`${bean.name} 원두 정보 수정`}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16v4Z" /><path d="M13.5 6.5l4 4" /></svg>원두 정보 수정</button>{expandedId === bean.id && <details className="record-details"><summary>내 메모 보기</summary><BeanComments bean={bean} notes={notes.filter(note => note.beanId === bean.id)} /></details>}</div>
             </div>
             <div className="bean-stock">
-              <div className="stock-status-row"><RoastAge bean={bean} today={cardToday} />{bean.remaining <= 0 ? <span data-status="finished" className={`stock-status ${pct <= 20 ? "low" : ""}`}>다 마셨어요</span> : (() => {
+              <div className="stock-status-row">{peak.stage ? <PeakPill peak={peak} long onClick={adjust} /> : <RoastAge bean={bean} today={cardToday} />}{bean.remaining <= 0 ? <span data-status="finished" className={`stock-status ${pct <= 20 ? "low" : ""}`}>다 마셨어요</span> : (() => {
+                // A bean with a roast level gets its status from the peak stage, so there is nothing to switch.
+                if (bean.roastLevel) return null;
                 const status = bean.status ?? "소비 중";
                 const next: BeanStatus = status === "소비 중" ? "디개싱 중" : "소비 중";
                 return <button type="button" data-status={status} className={`stock-status stock-status-toggle ${pct <= 20 ? "low" : ""}`} onClick={() => updateStatus(bean.id, next)} aria-label={`${bean.name} 상태: ${status}. 눌러서 ${next}으로 변경`} title={`눌러서 ${next}으로 변경`}>{status}<span aria-hidden="true">⇄</span></button>;
@@ -450,12 +476,31 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
               <p className="purchased-weight">구매 {fmt(bean.purchased)}g</p>
               <div className="stock-meter" role="progressbar" aria-label={`${bean.name} 잔량`} aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}><div style={{ width: `${pct}%` }} /></div>
               <p className="stock-percent">{Math.round(pct)}% 남음</p>
+              {expandedId === bean.id && <PeakBlock peak={peak} onAdjust={adjust} />}
               <div className="compact-stock-donut" style={{ "--stock-progress": `${pct}%` } as CSSProperties}><strong>{fmt(bean.remaining)}<span>g</span></strong><small>남음</small></div>
             </div>
           </article></SwipeToBrew>;
         })}
         {visible.length === 0 && <div className="inventory-empty"><img className="onboarding-logo" src="/coffee-diary-logo-brown-96.png" width="38" height="38" alt="" /><h3>{available.length === 0 ? "첫 원두를 등록해보세요" : "해당하는 원두가 없어요"}</h3><p>{available.length === 0 ? "원두부터 기록하면 나만의 브루잉 흐름이 시작돼요." : "원두 정보와 향미 노트, 남은 양을 한곳에서 관리해요."}</p>{available.length === 0 && <><JourneySteps active="beans" /><button className="primary-button" onClick={() => { close(); setShow(true); }}>첫 원두 등록하기</button></>}</div>}
       </div>
+      {(() => {
+        const bean = adjustId !== null ? available.find(item => item.id === adjustId) : undefined;
+        const base = bean && basePeak(bean, peakSettings);
+        if (!bean?.roastLevel || !base) return null;
+        const level = bean.roastLevel, roastery = bean.roastery?.trim();
+        const peak = peakOf(bean);
+        // The dashed default already includes espresso days when this bean is mostly brewed as espresso.
+        const shown = shiftPeak(base.window, peak.espresso && !bean.peak ? peak.espresso : 0);
+        return <PeakSheet title="맛있는 시기" note={`${bean.name} · ${level}`} value={peak.window ?? shown} base={shown} age={peak.age}
+          roasteryLabel={roastery ? `${roastery} ${level}` : undefined}
+          onSave={({ window, applyRoastery }) => {
+            if (applyRoastery && window && roastery) {
+              setPeakSettings(withRoasteryPeak(peakSettings, roastery, level, shiftPeak(window, -(peak.espresso && !bean.peak ? peak.espresso : 0))));
+              setBeans(beans.map(item => item.id === bean.id ? { ...item, peak: undefined } : item));
+            } else setBeans(beans.map(item => item.id === bean.id ? { ...item, peak: window ?? undefined } : item));
+            setAdjustId(null);
+          }} onClose={() => setAdjustId(null)} />;
+      })()}
       {!show && <button type="button" className="bean-fab" onClick={openNewBean}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>원두 추가</button>}
     </main>
   );

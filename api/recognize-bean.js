@@ -44,6 +44,10 @@ beanSchema.properties.blendParts = {
     }
   }
 };
+// Roast level and the roaster's rest advice: also kept out of BEAN_FIELDS, since most labels show neither.
+const ROAST_LEVELS = ["울트라라이트", "라이트", "미디엄", "다크"];
+beanSchema.properties.roastLevel = { type: "string", enum: ROAST_LEVELS, description: "라벨에 로스팅 정도가 적혀 있을 때만: 울트라라이트, 라이트, 미디엄, 다크 중 하나" };
+beanSchema.properties.restDays = { type: "number", description: "라벨에 '로스팅 후 N일부터 드세요' 같은 안내가 있을 때만: N(일) 숫자만. 예: 14" };
 const MAX_BLEND_PARTS = 5;
 // A blend's origin, process and variety live in blendParts, so those empty fields are expected.
 const BLEND_FIELDS = new Set(["origin", "process", "variety"]);
@@ -104,7 +108,11 @@ const PROMPT = `# 원두 봉투 라벨 읽기 가이드
 - 라벨에 BLEND, 블렌드라고 적혀 있거나, 원산지가 둘 이상 적혀 있으면(예: "Ethiopia 60% / Brazil 40%") 블렌드입니다.
 - 블렌드면 blendParts에 섞인 원두마다 한 줄씩 origin, process, variety, ratio를 씁니다. 라벨에 없는 값은 비웁니다. 각 값의 작성법은 위 항목과 같습니다.
 - 블렌드면 origin, variety, process 칸은 비우고 farm도 비웁니다. blendName에는 상품 이름(예: "Fall Blend", "모모스 시그니처 블렌드")을 씁니다.
-- 싱글 오리진이면 blendParts는 빈 배열, blendName은 비웁니다.`;
+- 싱글 오리진이면 blendParts는 빈 배열, blendName은 비웁니다.
+
+## 로스팅 정도와 쉬는 기간 (적혀 있을 때만)
+- roastLevel: ROAST LEVEL, ROAST, 로스팅 포인트, 배전도 같은 표시를 보고 넷 중 하나로 씁니다. Nordic, Ultra Light, Very Light, 극약배전 → 울트라라이트. Light, Light-Medium, 약배전 → 라이트. Medium, Medium-Dark, 중배전 → 미디엄. Dark, French, Italian, 강배전 → 다크. "Filter roast"는 라이트, "Espresso roast"는 미디엄으로 씁니다. 표시가 없으면 비웁니다(맛 설명만으로 짐작하지 않습니다).
+- restDays: "로스팅 후 2주부터", "Best after 10 days", "Rest 7-14 days" 같은 안내가 있으면 마시기 시작하는 날을 일 수로 씁니다. 2주 → 14, 1주 → 7, 범위면 앞의 숫자(7-14 → 7). 유통기한이나 "로스팅 후 N일 이내"는 쓰지 않습니다.`;
 
 async function verifyUser(request) {
   const header = request.headers?.authorization ?? "";
@@ -154,7 +162,7 @@ function labelFields(bean) {
 // Keep the first read's values and only fill in fields it left empty.
 function mergeBeans(first, second) {
   const merged = { ...first };
-  for (const field of BEAN_FIELDS) {
+  for (const field of [...BEAN_FIELDS, "roastLevel", "restDays"]) {
     if (!filledValue(merged[field]) && filledValue(second[field])) merged[field] = second[field];
   }
   return merged;
@@ -212,6 +220,9 @@ function cleanBean(bean) {
       ...(Number(part.ratio) > 0 && Number(part.ratio) <= 100 ? { ratio: Math.round(Number(part.ratio)) } : {})
     }));
   if (!isBlend(cleaned)) { delete cleaned.blendParts; delete cleaned.blendName; }
+  if (!ROAST_LEVELS.includes(cleaned.roastLevel)) delete cleaned.roastLevel;
+  const restDays = Math.round(Number(cleaned.restDays));
+  if (Number.isFinite(restDays) && restDays > 0 && restDays < 120) cleaned.restDays = restDays; else delete cleaned.restDays;
   return cleaned;
 }
 

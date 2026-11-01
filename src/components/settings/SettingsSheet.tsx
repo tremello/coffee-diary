@@ -7,6 +7,7 @@ import { AccountSection } from "./AccountSection";
 import { DataSection } from "./DataSection";
 import { DisplaySection } from "./DisplaySection";
 import { ListsSection } from "./ListsSection";
+import { PeakSection } from "./PeakSection";
 import { useSheetDrag } from "./useSheetDrag";
 
 type SettingsProps = { user: { id: string; email?: string } | null; data: ExportData; setBeans: StorageSetter<Bean[]> };
@@ -16,6 +17,7 @@ function SettingsSections({ user, data, setBeans }: SettingsProps) {
     <AccountSection user={user} />
     <DisplaySection />
     <ListsSection userId={user?.id ?? null} />
+    <PeakSection userId={user?.id ?? null} beans={data.beans} />
     <DataSection data={data} setBeans={setBeans} signedIn={Boolean(user)} />
     <AboutSection />
   </>;
@@ -32,6 +34,7 @@ export function SettingsPage({ user, data, setBeans }: SettingsProps) {
     </div>
     <div className="settings-column">
       <ListsSection userId={user?.id ?? null} />
+      <PeakSection userId={user?.id ?? null} beans={data.beans} />
       <AboutSection />
     </div>
   </div>;

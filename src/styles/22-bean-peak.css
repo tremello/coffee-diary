@@ -1,0 +1,95 @@
+/* 맛있는 시기: the stage pill on bean cards, the timeline on the open card (phones), the roast level and adjust sheets,
+   and the settings rows. Colours are the 시기 색 tokens (--pk-*). */
+.pk-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 0; border-radius: var(--r-pill); background: var(--c-soft-2); color: var(--c-ink-2); font: inherit; font-size: 11px; font-weight: 600; line-height: 1.3; white-space: nowrap; }
+button.pk-pill { cursor: pointer; }
+button.pk-pill:hover { filter: brightness(.97); }
+button.pk-pill:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 1px; }
+.pk-pill[data-stage="rest"] { background: var(--pk-rest-bg); color: var(--pk-rest-fg); }
+.pk-pill[data-stage="best"] { background: var(--pk-best-bg); color: var(--pk-best-fg); }
+.pk-pill[data-stage="ok"] { background: var(--pk-ok-bg); color: var(--pk-ok-fg); }
+.pk-pill[data-stage="past"] { background: var(--pk-past-bg); color: var(--pk-past-fg); }
+.pk-dot { width: 6px; height: 6px; flex: 0 0 auto; border-radius: 50%; background: currentColor; opacity: .8; }
+.bean-list .density-compact .compact-summary .pk-pill { align-self: start; justify-self: end; }
+.stock-status-row .pk-pill { padding: 4px 9px; }
+
+/* The timeline bar: rest, best and ok segments over the past colour, with today's mark. */
+.pk-bar { position: relative; display: flex; height: 6px; border-radius: 3px; background: var(--pk-past-bar); }
+.pk-seg { display: block; height: 100%; flex: 0 0 auto; }
+.pk-seg:first-child { border-radius: 3px 0 0 3px; }
+.pk-seg.rest { background: var(--pk-rest-bar); }
+.pk-seg.best { background: var(--pk-best-bar); }
+.pk-seg.ok { background: var(--pk-ok-bar); }
+.pk-now { position: absolute; top: -5px; width: 3px; height: 16px; margin-left: -1.5px; border-radius: 2px; background: var(--c-ink); box-shadow: 0 0 0 2px var(--c-surface); }
+.pk-marks { display: flex; justify-content: space-between; color: var(--c-ink-3); font-size: 11px; font-variant-numeric: tabular-nums; }
+
+/* Open card: under 남은 원두 on phones. PC keeps its side panel as it is for now. */
+.peak-block { display: none; }
+@media (max-width: 540px) {
+  .bean-list .density-detail .peak-block { grid-column: 1 / -1; display: grid; gap: 8px; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--c-line); }
+}
+.peak-block-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13px; }
+.peak-block-row span { color: var(--c-ink-2); }
+.peak-block-row strong { color: var(--c-ink); font-weight: 600; text-align: right; }
+.peak-block-why { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--c-ink-3); font-size: 11px; }
+.peak-block-why button { flex: 0 0 auto; min-height: 28px; padding: 0 2px; border: 0; background: transparent; color: var(--c-accent); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+
+/* Bean editor rows. */
+.be-value .pk-source { color: var(--c-ink-3); font-size: 11px; font-weight: 400; }
+.be-value.pk-auto { color: var(--c-ink-2); font-size: 13px; }
+
+/* Roast level sheet: each level with its range and a small bar. */
+.be-pick-item > button.pk-level { gap: 8px; padding: 10px 14px; }
+.pk-level-top { display: flex; flex-direction: column; gap: 2px; }
+.pk-level .pk-bar { height: 5px; }
+
+/* Adjust sheet: sized to its content; its own layer so the card, editor and settings can all open it. */
+.pk-layer { position: fixed; inset: 0; z-index: 120; }
+.be-pick.pk-sheet { height: auto; max-height: calc(100% - 8px - env(safe-area-inset-top)); overflow-y: auto; overscroll-behavior: contain; }
+.pk-sheet .be-pick-note { margin-top: -8px; }
+.pk-range { display: grid; gap: 6px; padding: 0 2px; }
+.pk-range-bar { position: relative; padding: 8px 0; }
+.pk-ghost { position: absolute; top: 2px; height: 18px; box-sizing: border-box; border: 1.5px dashed var(--c-ink-3); border-radius: 6px; }
+.pk-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 2px 0 0; color: var(--c-ink-3); font-size: 11px; }
+.pk-key { display: inline-block; width: 10px; height: 10px; margin-right: -6px; border-radius: 3px; vertical-align: -1px; }
+.pk-key.rest { background: var(--pk-rest-bar); }
+.pk-key.best { background: var(--pk-best-bar); }
+.pk-key.ok { background: var(--pk-ok-bar); }
+.pk-key.ghost { box-sizing: border-box; border: 1.5px dashed var(--c-ink-3); }
+.pk-steps .be-row { padding-right: 8px; }
+.pk-stepper { display: inline-flex; align-items: stretch; flex: 0 0 auto; overflow: hidden; border: 1px solid var(--c-line-strong); border-radius: var(--r-sm); background: var(--c-surface); }
+.pk-stepper button { width: 36px; min-height: 34px; padding: 0; border: 0; background: transparent; color: var(--c-ink-2); font: inherit; font-size: 16px; cursor: pointer; }
+.pk-stepper button:active { background: var(--c-soft-2); }
+.pk-stepper b { display: grid; place-items: center; min-width: 56px; padding: 0 4px; border-inline: 1px solid var(--c-line-strong); color: var(--c-ink); font-size: 13px; font-weight: 600; }
+.pk-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pk-chips button { min-height: 32px; padding: 0 11px; border: 0; border-radius: var(--r-pill); background: var(--c-soft-2); color: var(--c-ink-strong); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.pk-chips button:disabled { opacity: .45; cursor: default; }
+.pk-apply { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 46px; padding: 0 14px; border: 1px solid var(--c-line); border-radius: var(--r-sm); background: var(--c-surface); color: var(--c-ink); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.pk-check { display: grid; place-items: center; width: 18px; height: 18px; flex: 0 0 auto; box-sizing: border-box; border: 1.5px solid var(--c-line-strong); border-radius: 5px; color: var(--fg-ffffff); font-size: 11px; font-weight: 700; }
+.pk-apply[aria-pressed="true"] .pk-check { border-color: var(--bd-7a5733); background: var(--bg-7a5733); }
+.pk-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.pk-actions button { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+@media (min-width: 760px) {
+  .be-pick.pk-sheet { height: auto; max-height: calc(100% - 48px); }
+}
+
+/* Settings: 맛있는 시기 group. */
+.settings-sublabel.pk-settings-label { margin: 0; padding: 12px 14px 4px; }
+.settings-card > .pk-settings-label + .settings-row { border-top: 0; }
+.settings-value.pk-mine { color: var(--c-accent); }
+.settings-value small { color: var(--c-ink-3); font-size: 11px; }
+.pk-roastery-row { display: flex; align-items: stretch; border-top: 1px solid var(--c-line); }
+.pk-roastery-row .settings-row { flex: 1 1 auto; min-width: 0; border-top: 0; }
+.pk-roastery-row .settings-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pk-remove { width: 44px; flex: 0 0 auto; border: 0; background: transparent; color: var(--c-ink-2); font-size: 18px; cursor: pointer; }
+.settings-card > .settings-empty { padding: 0 14px 10px; }
+.pk-add { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--c-line); }
+.pk-add input { flex: 1 1 auto; min-width: 0; min-height: 34px; box-sizing: border-box; padding: 5px 10px; border: 1px solid var(--c-line-strong); border-radius: var(--r-sm); background: var(--c-surface); color: var(--c-ink); font: inherit; font-size: 13px; }
+.pk-add .primary-button { padding: 8px 12px; }
+.pk-add .primary-button:disabled { opacity: .45; }
+.pk-add-row .settings-label { color: var(--c-accent); font-weight: 600; }
+.pk-reset { display: flex; justify-content: center; padding: 8px 14px 12px; border-top: 1px solid var(--c-line); }
+.pk-reset .quiet-button { border: 0; font-weight: 600; }
+.pk-reset .quiet-button:disabled { opacity: .45; }
+@media (max-width: 759px) {
+  .pk-add input { font-size: 16px; }
+}

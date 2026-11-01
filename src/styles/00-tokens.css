@@ -74,6 +74,20 @@
   --sh-4a341e: 74, 52, 30;
   --sh-5c442a: 92, 68, 42;
   --sh-806444: 128, 100, 68;
+  /* 시기 색: 맛있는 시기 stages. Rest and best reuse the 디개싱 and 소비 중 chip colours; past is the plain soft fill.
+     The aliases follow the dark palette by themselves; the new values below are set in every palette. */
+  --pk-rest-bg: var(--bg-f6e7cf);
+  --pk-rest-fg: var(--fg-7a4e12);
+  --pk-best-bg: var(--bg-e3eedf);
+  --pk-best-fg: var(--fg-2f5a2a);
+  --pk-past-bg: var(--c-soft-2);
+  --pk-past-fg: var(--c-ink-2);
+  --pk-past-bar: var(--c-fill);
+  --pk-ok-bg: #ededde;
+  --pk-ok-fg: #5d5e31;
+  --pk-rest-bar: #e4c28b;
+  --pk-best-bar: #689f56;
+  --pk-ok-bar: #b6b785;
 }
 
 /* Dark palette: follows the system setting unless the user picked light, or forced by data-theme="dark". */
@@ -136,6 +150,11 @@
     --sh-4a341e: 0, 0, 0;
     --sh-5c442a: 0, 0, 0;
     --sh-806444: 0, 0, 0;
+  --pk-ok-bg: #29291e;
+  --pk-ok-fg: #c3c497;
+  --pk-rest-bar: #967540;
+  --pk-best-bar: #76a267;
+  --pk-ok-bar: #777854;
   }
 }
 
@@ -197,4 +216,9 @@
   --sh-4a341e: 0, 0, 0;
   --sh-5c442a: 0, 0, 0;
   --sh-806444: 0, 0, 0;
+  --pk-ok-bg: #29291e;
+  --pk-ok-fg: #c3c497;
+  --pk-rest-bar: #967540;
+  --pk-best-bar: #76a267;
+  --pk-ok-bar: #777854;
 }

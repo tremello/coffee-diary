@@ -4,7 +4,7 @@ import { retryFailedSync, useStorage, useSyncFailed } from "./data/sync";
 import { readLocal } from "./data/storage";
 import { Header } from "./components/Header";
 import { SettingsPage, SettingsSheet } from "./components/settings/SettingsSheet";
-import { STORAGE_KEYS } from "./data/keys";
+import { PEAK_KEY, STORAGE_KEYS } from "./data/keys";
 import { readStartPage } from "./data/settings";
 import { FONT } from "./lib/format";
 import { type Page, PAGE_HASHES, pageFromHash } from "./lib/pages";
@@ -12,7 +12,7 @@ import { BeansPage } from "./pages/BeansPage";
 import { BrewLog } from "./pages/BrewLog";
 import { BrewStats } from "./pages/BrewStats";
 import { RecipePage } from "./pages/RecipePage";
-import { type Bean, type BeanStatus, type Brew, type SavedRecipe, type TastingNote } from "./types";
+import { type Bean, type BeanStatus, type Brew, type PeakSettings, type SavedRecipe, type TastingNote } from "./types";
 
 // "배송 중" was retired (shipping is brief and always ends in degassing); older records read as "디개싱 중" and are saved that way on their next edit.
 const LEGACY_SHIPPING_STATUS = "배송 중";
@@ -65,7 +65,7 @@ export default function App() {
     };
   }, []);
 
-  const settingsProps = { user, data: { beans, brews, notes, recipes, drippers: readLocal<string[]>(STORAGE_KEYS.drippers) ?? [], filters: readLocal<string[]>(STORAGE_KEYS.filters) ?? [], waters: readLocal<string[]>(STORAGE_KEYS.waters) ?? [] }, setBeans };
+  const settingsProps = { user, data: { beans, brews, notes, recipes, drippers: readLocal<string[]>(STORAGE_KEYS.drippers) ?? [], filters: readLocal<string[]>(STORAGE_KEYS.filters) ?? [], waters: readLocal<string[]>(STORAGE_KEYS.waters) ?? [], peak: readLocal<PeakSettings>(PEAK_KEY) ?? {} }, setBeans };
 
   return (
     <div style={{ fontFamily: FONT, maxWidth: 960, margin: "0 auto", padding: "0 0 3rem" }}>

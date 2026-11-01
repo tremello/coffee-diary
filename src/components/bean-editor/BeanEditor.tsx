@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState, type Dispatch, type FormEvent, type PointerEvent, type SetStateAction } from "react";
 import { beanName, handleNumericInput, withCommas } from "../../lib/format";
 import { PHOTO_ACCEPT } from "../../lib/photo";
-import { type Bean, BEAN_QUALITIES, BEAN_STATUSES, type BeanForm } from "../../types";
+import { basePeak, peakRange, peakSourceLabel, withRoasteryPeak } from "../../lib/peak";
+import { type Bean, BEAN_QUALITIES, BEAN_STATUSES, type BeanForm, type PeakSettings } from "../../types";
+import { PeakSheet } from "../peak/PeakSheet";
+import { RoastLevelSheet } from "../peak/RoastLevelSheet";
 import { type CoffeeSheet, CoffeeRows } from "./CoffeeRows";
 import { type PickOption, PickSheet } from "./PickSheet";
 import { RebuySheet } from "./RebuySheet";
@@ -18,17 +21,19 @@ export type BeanPhoto = {
   onClear: () => void;
 };
 
-type Picker = "roastery" | "rebuy" | null;
+type Picker = "roastery" | "rebuy" | "roastLevel" | "peak" | null;
 
 export const CameraIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>;
 const RepeatIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3" /><path d="M18 3v4h-4M6 21v-4h4" /></svg>;
 
 // The bean form as "name · value" rows: full screen on phones, a dialog on wider screens. BeansPage keeps the form
 // state, saving and photo reading; this only lays the fields out and opens the pickers.
-export function BeanEditor({ editing, form, setForm, processes, origins, roasteries, varieties, pastBeans, readFields, photo, error, onAddOrigin, onHideRoastery, onHideVariety, onRebuy, onRoastDate, onPurchaseDate, onSave, onCancel, onDelete }: {
+export function BeanEditor({ editing, form, setForm, peakSettings, setPeakSettings, processes, origins, roasteries, varieties, pastBeans, readFields, photo, error, onAddOrigin, onHideRoastery, onHideVariety, onRebuy, onRoastDate, onPurchaseDate, onSave, onCancel, onDelete }: {
   editing: boolean;
   form: BeanForm;
   setForm: Dispatch<SetStateAction<BeanForm>>;
+  peakSettings: PeakSettings;
+  setPeakSettings: (settings: PeakSettings) => void;
   processes: readonly string[];
   origins: PickOption[];
   roasteries: PickOption[];
@@ -114,6 +119,8 @@ export function BeanEditor({ editing, form, setForm, processes, origins, roaster
       <span className={`be-value${value ? "" : " empty"}`}><span>{value || "선택"}</span><span className="be-chev" aria-hidden="true">›</span></span>
     </button>;
   };
+  const peakBase = basePeak(form, peakSettings);
+  const peakShown = form.peak ?? peakBase?.window;
   const pick = (field: "roastery") => (value: string) => {
     set(field, value);
     setPicker(null);
@@ -171,10 +178,21 @@ export function BeanEditor({ editing, form, setForm, processes, origins, roaster
               {pickRow("roastery", "로스터리")}
               <label className={rowClass("purchased", missingAmount)}>{rowName("purchased", "구매량", true)}<input type="number" inputMode="decimal" min="0.1" step="0.1" value={form.purchased} placeholder="입력" onChange={event => set("purchased", event.target.value)} /><span className="be-unit">g</span></label>
               <label className={rowClass("roastDate")}>{rowName("roastDate", "로스팅 날짜")}<input type="date" value={form.roastDate ?? ""} onChange={event => onRoastDate(event.target.value)} /></label>
-              <div className="be-row seg-row">
+              <button type="button" className={rowClass("roastLevel")} onClick={() => setPicker("roastLevel")}>
+                {rowName("roastLevel", "로스팅 정도")}
+                <span className={`be-value${form.roastLevel ? "" : " empty"}`}><span>{form.roastLevel || "선택"}</span><span className="be-chev" aria-hidden="true">›</span></span>
+              </button>
+              <button type="button" className={rowClass("peak")} onClick={() => setPicker(form.roastLevel ? "peak" : "roastLevel")}>
+                {rowName("peak", "맛있는 시기")}
+                <span className={`be-value${peakShown ? "" : " empty"}`}>{peakShown ? <span>{peakRange(peakShown)} <small className="pk-source">{form.peak ? "이 원두만" : peakSourceLabel(peakBase?.source)}</small></span> : <span>로스팅 정도를 고르면 보여요</span>}<span className="be-chev" aria-hidden="true">›</span></span>
+              </button>
+              {form.roastLevel ? <div className="be-row">
+                {rowName("status", "상태")}
+                <span className="be-value pk-auto">맛있는 시기를 따라가요</span>
+              </div> : <div className="be-row seg-row">
                 {rowName("status", "상태")}
                 <div className="be-seg" role="group" aria-label="원두 상태">{BEAN_STATUSES.map(status => <button type="button" key={status} aria-pressed={form.status === status} onClick={() => set("status", status)}>{status}</button>)}</div>
-              </div>
+              </div>}
             </div>
           </section>
         </div>
@@ -201,6 +219,14 @@ export function BeanEditor({ editing, form, setForm, processes, origins, roaster
       </div></div>
 
       {picker === "roastery" && <PickSheet title="로스터리" layout="list" value={form.roastery} options={roasteries} placeholder="로스터리 이름" onPick={pick("roastery")} onHide={onHideRoastery} onClose={() => setPicker(null)} />}
+      {picker === "roastLevel" && <RoastLevelSheet value={form.roastLevel} settings={peakSettings} onPick={roastLevel => { set("roastLevel", roastLevel); setPicker(null); }} onClose={() => setPicker(null)} />}
+      {picker === "peak" && peakBase && form.roastLevel && <PeakSheet title="맛있는 시기" note={`${form.roastLevel} · 로스팅 후 며칠째인지로 정해요`} value={form.peak ?? peakBase.window} base={peakBase.window}
+        roasteryLabel={form.roastery?.trim() ? `${form.roastery.trim()} ${form.roastLevel}` : undefined}
+        onSave={({ window, applyRoastery }) => {
+          if (applyRoastery && window && form.roastLevel) { setPeakSettings(withRoasteryPeak(peakSettings, form.roastery.trim(), form.roastLevel, window)); set("peak", undefined); }
+          else set("peak", window ?? undefined);
+          setPicker(null);
+        }} onClose={() => setPicker(null)} />}
       {picker === "rebuy" && <RebuySheet beans={pastBeans} onPick={bean => { onRebuy(bean); setPicker(null); }} onClose={() => setPicker(null)} />}
     </form>
   </div>;

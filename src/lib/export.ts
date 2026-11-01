@@ -1,8 +1,8 @@
 import { cafeCup } from "../components/brew-editor/brewFormat";
 import { blendDetail, isBlend } from "./blend";
-import { type Bean, type Brew, isCafeBrew, type SavedRecipe, type TastingNote } from "../types";
+import { type Bean, type Brew, isCafeBrew, type PeakSettings, type SavedRecipe, type TastingNote } from "../types";
 
-export type ExportData = { beans: Bean[]; brews: Brew[]; notes: TastingNote[]; recipes: SavedRecipe[]; drippers: string[]; filters?: string[]; waters?: string[] };
+export type ExportData = { beans: Bean[]; brews: Brew[]; notes: TastingNote[]; recipes: SavedRecipe[]; drippers: string[]; filters?: string[]; waters?: string[]; peak?: PeakSettings };
 
 const download = (name: string, type: string, text: string) => {
   const url = URL.createObjectURL(new Blob([text], { type }));
@@ -23,8 +23,8 @@ const toCsv = (header: string[], rows: unknown[][]) => [header, ...rows].map(row
 export const downloadCsv = ({ beans, brews }: ExportData) => {
   const live = beans.filter(bean => !bean.deleted);
   const byId = new Map(beans.map(bean => [bean.id, bean]));
-  const beanTable = toCsv(["원두", "로스터리", "원산지", "농장", "품종", "가공", "구매일", "로스팅일", "구매량(g)", "남은 양(g)", "가격", "상태", "등급", "컵노트", "메모", "블렌드 구성"],
-    live.map(b => [b.name, b.roastery, b.origin, b.farm, b.variety, b.process, b.date, b.roastDate, b.purchased, b.remaining, b.price, b.status, b.quality, b.roasteryNotes, b.memo, isBlend(b) ? blendDetail(b.parts) : ""]));
+  const beanTable = toCsv(["원두", "로스터리", "원산지", "농장", "품종", "가공", "구매일", "로스팅일", "구매량(g)", "남은 양(g)", "가격", "상태", "등급", "컵노트", "메모", "블렌드 구성", "로스팅 정도", "맛있는 시기(이 원두만)"],
+    live.map(b => [b.name, b.roastery, b.origin, b.farm, b.variety, b.process, b.date, b.roastDate, b.purchased, b.remaining, b.price, b.status, b.quality, b.roasteryNotes, b.memo, isBlend(b) ? blendDetail(b.parts) : "", b.roastLevel, b.peak ? `${b.peak.start}~${b.peak.best}일 (괜찮음 ${b.peak.ok}일까지)` : ""]));
   // Cafe brews put their coffee in the 원두 column, leave the grams empty, and fill the cafe columns at the end.
   const brewTable = toCsv(["날짜", "원두", "원두량(g)", "물(g)", "드리퍼", "레시피", "분쇄도", "물 온도(℃)", "추출 시간", "물 종류", "필터", "카페", "카페 주소", "메뉴", "원산지", "가공", "가격", "로스터리 컵노트"],
     [...brews].sort((a, b) => b.date.localeCompare(a.date)).map(b => isCafeBrew(b)

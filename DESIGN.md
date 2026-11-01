@@ -22,6 +22,16 @@ Use the role tokens. Each has a light value and a dark value, so dark mode follo
 
 State colours (green 소비 중, amber 디개싱, red delete/error), the calendar heat scale and the glass tab bar keep their own values. If a new colour is really needed, add it as a role token with both light and dark values.
 
+### 시기 색 (맛있는 시기 stages)
+A ripening order: amber (resting) → green (best) → olive (still fine) → plain brown-grey (past, never a warning red). Pills use `-bg` with `-fg`; timeline bars use `-bar`. Always show the stage words next to the colour.
+
+| Token | Use |
+| --- | --- |
+| `--pk-rest-bg`, `--pk-rest-fg`, `--pk-rest-bar` | 쉬는 중 (same as the 디개싱 chip) |
+| `--pk-best-bg`, `--pk-best-fg`, `--pk-best-bar` | 가장 좋은 때 (same as the 소비 중 chip) |
+| `--pk-ok-bg`, `--pk-ok-fg`, `--pk-ok-bar` | 아직 괜찮음 |
+| `--pk-past-bg`, `--pk-past-fg`, `--pk-past-bar` | 지남 (`--c-soft-2`, `--c-ink-2`, `--c-fill`) |
+
 ## Corners
 - `--r-sm` (10px): buttons, inputs, search fields, segmented controls, blocks inside a card. Segment buttons inside use `calc(var(--r-sm) - 3px)`.
 - `--r-md` (14px): cards.
