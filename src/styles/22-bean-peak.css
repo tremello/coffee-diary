@@ -11,6 +11,9 @@ button.pk-pill:focus-visible { outline: 2px solid var(--c-accent); outline-offse
 .pk-dot { width: 6px; height: 6px; flex: 0 0 auto; border-radius: 50%; background: currentColor; opacity: .8; }
 .bean-list .density-compact .compact-summary .pk-pill { align-self: start; justify-self: end; }
 .stock-status-row .pk-pill { padding: 4px 9px; }
+/* The compact card already shows the short pill on the left, like the hidden D+ chip. */
+.bean-list .density-compact .stock-status-row .pk-pill { display: none; }
+.bean-list .density-compact .stock-status-row:empty, .bean-list .density-compact .stock-status-row:has(> .pk-pill:only-child) { display: none; }
 
 /* The timeline bar: rest, best and ok segments over the past colour, with today's mark. */
 .pk-bar { position: relative; display: flex; height: 6px; border-radius: 3px; background: var(--pk-past-bar); }
