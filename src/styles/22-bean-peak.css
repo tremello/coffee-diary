@@ -9,11 +9,11 @@ button.pk-pill:focus-visible { outline: 2px solid var(--c-accent); outline-offse
 .pk-pill[data-stage="ok"] { background: var(--pk-ok-bg); color: var(--pk-ok-fg); }
 .pk-pill[data-stage="past"] { background: var(--pk-past-bg); color: var(--pk-past-fg); }
 .pk-dot { width: 6px; height: 6px; flex: 0 0 auto; border-radius: 50%; background: currentColor; opacity: .8; }
-.bean-list .density-compact .compact-summary .pk-pill { align-self: start; justify-self: end; }
 .stock-status-row .pk-pill { padding: 4px 9px; }
-/* The compact card already shows the short pill on the left, like the hidden D+ chip. */
-.bean-list .density-compact .stock-status-row .pk-pill { display: none; }
-.bean-list .density-compact .stock-status-row:empty, .bean-list .density-compact .stock-status-row:has(> .pk-pill:only-child) { display: none; }
+/* Closed card: the stage sits where the status chip was, at the chip's size; the date pill on the left stays neutral.
+   A long roastery name is cut short instead of wrapping under the date pill. */
+.bean-list .density-compact .stock-status-row .pk-pill { padding: 4px 8px; font-size: 11px; }
+.bean-list .density-compact .compact-summary strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* The timeline bar: rest, best and ok segments over the past colour, with today's mark. */
 .pk-bar { position: relative; display: flex; height: 6px; border-radius: 3px; background: var(--pk-past-bar); }

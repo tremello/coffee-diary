@@ -1,4 +1,4 @@
-import { type BeanPeak, type PeakStage, peakPillLabel, peakSourceLabel, peakValueLabel } from "../../lib/peak";
+import { type BeanPeak, type PeakStage, peakPillLabel, peakSourceLabel, peakStageShort, peakValueLabel } from "../../lib/peak";
 import { type PeakWindow } from "../../types";
 
 const pct = (days: number, max: number) => `${Math.max(0, Math.min(100, days / max * 100))}%`;
@@ -16,9 +16,10 @@ export function PeakBar({ window, max, age, className = "" }: { window: PeakWind
   </div>;
 }
 
-// The stage pill on the bean card. Without a stage it shows only the days.
-export function PeakPill({ peak, long = false, onClick }: { peak: BeanPeak; long?: boolean; onClick?: () => void }) {
-  const label = peakPillLabel(peak, long);
+// The stage pill on the bean card: the stage alone on a closed card ("stage"), days and the full stage name on an open one ("long").
+// Without a stage it shows only the days.
+export function PeakPill({ peak, variant = "short", onClick }: { peak: BeanPeak; variant?: "short" | "long" | "stage"; onClick?: () => void }) {
+  const label = variant === "stage" ? peakStageShort(peak) : peakPillLabel(peak, variant === "long");
   if (!label) return null;
   const stage: PeakStage | "none" = peak.stage ?? "none";
   const content = <>{stage !== "none" && <span className="pk-dot" aria-hidden="true" />}{label}</>;

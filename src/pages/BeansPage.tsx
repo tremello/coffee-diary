@@ -9,7 +9,7 @@ import { beanName, fmt, handleNumericInput, localDate, splitCupNotes, withCommas
 import { localizedPhotoField, PHOTO_ORIGIN_LABELS, PHOTO_PROCESS_LABELS, photoMimeType, photoProblem, preparePhoto } from "../lib/photo";
 import { type Bean, BEAN_ORIGINS, BEAN_PROCESSES, BEAN_QUALITIES, BEAN_STATUSES, type BeanForm, type BeanQuality, type BeanStatus, type Brew, type PeakSettings, type RecognizedBeanFields, type TastingNote } from "../types";
 import { LIST_KEYS, PEAK_KEY } from "../data/keys";
-import { basePeak, beanPeak, type BeanPeak, effectiveStatus, isRoastLevel, levelPeak, peakSortKey, RESEARCH_PEAK, shiftPeak, withRoasteryPeak } from "../lib/peak";
+import { basePeak, beanPeak, type BeanPeak, effectiveStatus, isRoastLevel, roastDateLabel, levelPeak, peakSortKey, RESEARCH_PEAK, shiftPeak, withRoasteryPeak } from "../lib/peak";
 import { PeakBlock, PeakPill } from "../components/peak/PeakParts";
 import { PeakSheet } from "../components/peak/PeakSheet";
 import { DEVICE_KEYS } from "../data/settings";
@@ -459,12 +459,12 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
               <h3>{bean.name}</h3>
               {isBlend(bean) && <div className="blend-line"><span className="blend-tag">블렌드</span><span>{blendSummary(bean.parts)}</span></div>}
               <BeanDates bean={bean} />
-              <div className="compact-summary"><strong>{bean.roastery || "로스터리 미입력"}</strong>{peak.age === null ? <time className="compact-roast" dateTime={bean.roastDate}>로스팅 : {bean.roastDate || "날짜 미입력"}</time> : <PeakPill peak={peak} onClick={adjust} />}<b>{bean.name}</b>{isBlend(bean) && <span className="blend-line"><span className="blend-tag">블렌드</span><span>{blendSummary(bean.parts)}</span></span>}{bean.roasteryNotes && <span className="compact-cup-notes">{splitCupNotes(bean.roasteryNotes).map((note, index) => <i key={index}>{note}</i>)}</span>}</div>
+              <div className="compact-summary"><strong>{bean.roastery || "로스터리 미입력"}</strong><time className="compact-roast" dateTime={bean.roastDate}>{roastDateLabel(bean.roastDate, peak.age)}</time><b>{bean.name}</b>{isBlend(bean) && <span className="blend-line"><span className="blend-tag">블렌드</span><span>{blendSummary(bean.parts)}</span></span>}{bean.roasteryNotes && <span className="compact-cup-notes">{splitCupNotes(bean.roasteryNotes).map((note, index) => <i key={index}>{note}</i>)}</span>}</div>
               {bean.roasteryNotes && <div className="roastery-cup-notes"><span className="detail-label">로스터리 컵노트</span><div className="flavor-tags">{splitCupNotes(bean.roasteryNotes).map((note, index) => <span key={index}>{note}</span>)}</div></div>}
               <div className="bean-card-actions"><button className="edit-bean" onClick={() => edit(bean)} aria-label={`${bean.name} 원두 정보 수정`}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16v4Z" /><path d="M13.5 6.5l4 4" /></svg>원두 정보 수정</button>{expandedId === bean.id && <details className="record-details"><summary>내 메모 보기</summary><BeanComments bean={bean} notes={notes.filter(note => note.beanId === bean.id)} /></details>}</div>
             </div>
             <div className="bean-stock">
-              <div className="stock-status-row">{peak.stage ? <PeakPill peak={peak} long onClick={adjust} /> : <RoastAge bean={bean} today={cardToday} />}{bean.remaining <= 0 ? <span data-status="finished" className={`stock-status ${pct <= 20 ? "low" : ""}`}>다 마셨어요</span> : (() => {
+              <div className="stock-status-row">{peak.stage ? <PeakPill peak={peak} variant={expandedId === bean.id ? "long" : "stage"} onClick={adjust} /> : <RoastAge bean={bean} today={cardToday} />}{bean.remaining <= 0 ? <span data-status="finished" className={`stock-status ${pct <= 20 ? "low" : ""}`}>다 마셨어요</span> : (() => {
                 // A bean with a roast level gets its status from the peak stage, so there is nothing to switch.
                 if (bean.roastLevel) return null;
                 const status = bean.status ?? "소비 중";
