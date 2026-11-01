@@ -13,3 +13,11 @@
   .inventory-toolbar-meta .inventory-sort { width: 92px; max-width: 92px; }
   .inventory-toolbar-meta .advanced-filter-button { flex: 0 0 auto; padding: 0 9px; white-space: nowrap; }
 }
+/* Open/close cross-fade: a still copy of the card's old look laid over the list while the card changes. */
+.bean-list { position: relative; }
+.bean-list > .bean-ghost { position: absolute; z-index: 2; margin: 0; pointer-events: none; }
+.bean-list > .bean-ghost.on-top { z-index: 4; }
+/* While closing, the copy underneath draws the card's frame; the real card only shows its contents on top. */
+.bean-list > .swipe-card.is-morphing { z-index: 3; }
+.bean-list > .swipe-card.is-morphing .inventory-card { background: transparent; border-color: transparent; box-shadow: none; transition: none; }
+.bean-list > .bean-ghost > .inventory-card { height: 100%; box-sizing: border-box; }

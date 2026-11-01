@@ -42,6 +42,7 @@ const CARD_CONTROLS = "button, a, summary, details, input, select, textarea, .fl
 const CARD_MOTION: KeyframeAnimationOptions = { duration: 240, easing: "cubic-bezier(.2, .8, .2, 1)" };
 // Cards that change column or come into view wait until the moving cards have mostly passed, then fade in.
 const FADE_IN: Keyframe[] = [{ opacity: 0 }, { opacity: 0, offset: 0.4 }, { opacity: 1 }];
+const FADE_OUT: Keyframe[] = [{ opacity: 1 }, { opacity: 0, offset: 0.4 }, { opacity: 0 }];
 // Letters the opened card can show (labels, stage names, units), used to fetch their font pieces ahead of time.
 const CARD_TEXT = "가값개게경고괜구기까끝나날남났내노눌는다단대더두뒤드디딕때라량러레렌력로록루르른를리마만맛매메면모미바변보볶본부분브블비상서세셜셨소수순쉬스시싱아약어엄에여요용울원으은음의이일입있잉자잔장저전절접정조좋주준중지직진짜째찮치커컵크태터트티팅페프피필하한히0123456789.,:·+-%g›₩~";
 const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -86,30 +87,11 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
     return () => { if (window.cancelIdleCallback) window.cancelIdleCallback(idle); else window.clearTimeout(idle); };
   }, []);
   const cardOf = (id: number) => document.querySelector<HTMLElement>(`[data-swipe-id="${id}"] .inventory-card`);
-  // Each card's closed height, noted when it opens, so closing can play before the content switches back.
-  const closedHeights = useRef(new Map<number, number>());
-  const closing = useRef<Animation[] | null>(null);
+  // A still copy of the tapped card as it looked before the change; it fades out over the new look (cross-fade).
+  const ghosts = useRef(new Map<number, { node: HTMLElement; top: number; left: number; width: number; height: number }>());
+  const clearGhosts = useRef<() => void>(() => undefined);
   const toggleExpanded = (id: number) => {
-    if (closing.current) return;
-    // Phones (one column): shrink the open card and pull the cards below up first, then show the short card.
-    const node = document.querySelector<HTMLElement>(`.bean-list > [data-swipe-id="${id}"]`);
-    const closedHeight = closedHeights.current.get(id);
-    if (expandedId === id && !twoColumns && node && closedHeight && !prefersReducedMotion()) {
-      const rect = node.getBoundingClientRect();
-      const lift = rect.height - closedHeight;
-      if (lift > 1) {
-        const radius = getComputedStyle(document.documentElement).getPropertyValue("--r-md").trim() || "0px";
-        const options: KeyframeAnimationOptions = { ...CARD_MOTION, fill: "forwards" };
-        const below: HTMLElement[] = [];
-        for (let next = node.nextElementSibling as HTMLElement | null; next && next.getBoundingClientRect().top < window.innerHeight * 2; next = next.nextElementSibling as HTMLElement | null) if (next.dataset.swipeId) below.push(next);
-        const moves = [node.animate([{ clipPath: `inset(0px 0px 0px 0px round ${radius})` }, { clipPath: `inset(0px 0px ${lift}px 0px round ${radius})` }], options)];
-        below.forEach(next => moves.push(next.animate([{ transform: "none" }, { transform: `translateY(${-lift}px)` }], options)));
-        closing.current = moves;
-        setSwipeOpenId(null);
-        moves[0].finished.catch(() => undefined).then(() => setExpandedId(current => current === id ? null : current));
-        return;
-      }
-    }
+    clearGhosts.current();
     const rects = new Map<number, DOMRect>();
     // Only cards on or near the screen are measured and moved; the rest just take their new place.
     const reach = window.innerHeight;
@@ -117,7 +99,25 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
       const rect = node.getBoundingClientRect();
       if (rect.bottom > -reach && rect.top < reach * 2) rects.set(Number(node.dataset.swipeId), rect);
     });
-    if (expandedId !== id) { const closed = rects.get(id); if (closed) closedHeights.current.set(id, closed.height); }
+    // Still copies of the cards that change (the tapped one and the one that was open), as they look now.
+    ghosts.current = new Map();
+    const list = document.querySelector<HTMLElement>(".bean-list");
+    if (list && !prefersReducedMotion()) {
+      const listRect = list.getBoundingClientRect();
+      [id, expandedId].forEach(cardId => {
+        const wrapper = cardId === null ? null : list.querySelector<HTMLElement>(`:scope > [data-swipe-id="${cardId}"]`);
+        const rect = cardId === null ? undefined : rects.get(cardId);
+        const card = wrapper?.querySelector(".inventory-card");
+        if (cardId === null || !wrapper || !rect || !card || ghosts.current.has(cardId)) return;
+        // Keep the old density class on the copy so it keeps its old look outside the real card.
+        const copy = document.createElement("div");
+        copy.className = `swipe-card bean-ghost ${wrapper.classList.contains("density-detail") ? "density-detail is-expanded" : "density-compact"}`;
+        copy.setAttribute("aria-hidden", "true");
+        copy.inert = true;
+        copy.appendChild(card.cloneNode(true));
+        ghosts.current.set(cardId, { node: copy, top: rect.top - listRect.top, left: rect.left - listRect.left, width: rect.width, height: rect.height });
+      });
+    }
     expandAnchor.current = { id, rects };
     setSwipeOpenId(null);
     setExpandedId(expandedId === id ? null : id);
@@ -128,8 +128,6 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
     toggleExpanded(id);
   };
   useLayoutEffect(() => {
-    // A phone close has already played; drop its held end frames now that the short card is in place.
-    if (closing.current) { closing.current.forEach(move => move.cancel()); closing.current = null; }
     const anchor = expandAnchor.current;
     expandAnchor.current = null;
     if (!anchor) return;
@@ -147,7 +145,57 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
     const radius = getComputedStyle(document.documentElement).getPropertyValue("--r-md").trim() || "0px";
     // Read every position first, then start the moves, so the browser lays the page out only once.
     const nodes = [...document.querySelectorAll<HTMLElement>(".bean-list > [data-swipe-id]")].map(node => ({ node, before: anchor.rects.get(Number(node.dataset.swipeId)), after: node.getBoundingClientRect() }));
+    // Cards that change look cross-fade: a still copy of the old look sits where the card was. When the card opens,
+    // the copy lies on top and fades away as the full contents come in. When it closes in place, the copy is the
+    // card's frame and shrinks to the closed size while the short contents fade in on top of it.
+    const copies = ghosts.current;
+    ghosts.current = new Map();
+    const list = card.closest(".bean-list");
+    const parts = (root: Element) => [...root.querySelectorAll<HTMLElement>(":scope > .inventory-card > .bean-info, :scope > .inventory-card > .bean-stock")];
+    const shrinking = new Set<HTMLElement>();
+    const moves: Animation[] = [];
+    const morphing: HTMLElement[] = [];
+    const copyNodes: HTMLElement[] = [];
+    if (list) nodes.forEach(({ node, before, after }) => {
+      const copy = copies.get(Number(node.dataset.swipeId));
+      if (!copy || !before) return;
+      const grew = after.width - before.width > 1 || after.height - before.height > 1;
+      // Closing in place: the new box fits inside the old one (on PC the card may move away; then it just fades in).
+      const inside = after.top >= before.top - 1 && after.left >= before.left - 1 && after.right <= before.right + 1 && after.bottom <= before.bottom + 1;
+      if (!grew && !inside) return;
+      Object.assign(copy.node.style, { top: `${copy.top}px`, left: `${copy.left}px`, width: `${copy.width}px`, height: `${copy.height}px` });
+      if (grew) {
+        copy.node.classList.add("on-top");
+        moves.push(copy.node.animate(FADE_OUT, CARD_MOTION));
+      } else {
+        node.classList.add("is-morphing");
+        morphing.push(node);
+        shrinking.add(node);
+        const edges = [after.top - before.top, before.right - after.right, before.bottom - after.bottom, after.left - before.left].map(value => `${Math.max(0, value)}px`).join(" ");
+        moves.push(copy.node.animate([{ clipPath: `inset(0px 0px 0px 0px round ${radius})` }, { clipPath: `inset(${edges} round ${radius})` }], CARD_MOTION));
+        parts(copy.node).forEach(part => moves.push(part.animate(FADE_OUT, CARD_MOTION)));
+      }
+      list.appendChild(copy.node);
+      copyNodes.push(copy.node);
+      parts(node.querySelector(".swipe-card-body") ?? node).forEach(part => moves.push(part.animate(FADE_IN, CARD_MOTION)));
+    });
+    if (moves.length) {
+      const done = () => {
+        moves.forEach(move => move.cancel());
+        copyNodes.forEach(copy => copy.remove());
+        // Put the frames back at once (no border/shadow transition), in the same frame the copies go away.
+        const cards = morphing.map(node => node.querySelector<HTMLElement>(".inventory-card")).filter((item): item is HTMLElement => !!item);
+        cards.forEach(item => { item.style.transition = "none"; });
+        morphing.forEach(node => node.classList.remove("is-morphing"));
+        cards.forEach(item => { void item.offsetWidth; item.style.transition = ""; });
+        clearGhosts.current = () => undefined;
+      };
+      clearGhosts.current = done;
+      moves[0].finished.then(done, done);
+    }
     nodes.forEach(({ node, before, after }) => {
+      // A card closing in place stays put under its shrinking copy.
+      if (shrinking.has(node)) return;
       if (!before) {
         // A card that was off screen before and is now in view just fades in.
         if (after.bottom > 0 && after.top < window.innerHeight) node.animate(FADE_IN, CARD_MOTION);
@@ -157,8 +205,9 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
       if (after.width - before.width > 1 || after.height - before.height > 1) {
         const edges = [0, after.right - before.right, after.height - before.height, before.left - after.left].map(value => `${Math.max(0, value)}px`).join(" ");
         node.animate([{ transform: `translateY(${dy}px)`, clipPath: `inset(${edges} round ${radius})` }, { transform: "none", clipPath: `inset(0px 0px 0px 0px round ${radius})` }], CARD_MOTION);
-      } else if (Math.abs(dx) > 1) {
-        // On two columns a card that changed column fades in at its new place instead of flying across the list.
+      } else if (Math.abs(dx) > 1 || before.height - after.height > 1 || before.width - after.width > 1) {
+        // A card that changed column, or the other card that just closed, fades in at its new place instead of
+        // flying across the list over the card that is opening.
         node.animate(FADE_IN, CARD_MOTION);
       } else if (Math.abs(dy) > 0.5) {
         node.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }], CARD_MOTION);
