@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { supabase } from "../supabase";
 import { type StorageSetter, useStorage } from "../data/sync";
 import { SwipeToBrew } from "../components/SwipeToBrew";
@@ -38,6 +38,12 @@ const SWIPE_HINT_KEY = DEVICE_KEYS.swipeHint;
 // Cards show the short summary; tapping one opens it in place into the full card, one at a time.
 // Taps on the card's own controls (status chip, edit, memo, cup-note scroller) never toggle it.
 const CARD_CONTROLS = "button, a, summary, details, input, select, textarea, .flavor-tags, .compact-cup-notes";
+// Same speed and curve as the app's sheets (bean editor, settings).
+const CARD_MOTION: KeyframeAnimationOptions = { duration: 240, easing: "cubic-bezier(.2, .8, .2, 1)" };
+// Cards that change column or come into view wait until the moving cards have mostly passed, then fade in.
+const FADE_IN: Keyframe[] = [{ opacity: 0 }, { opacity: 0, offset: 0.4 }, { opacity: 1 }];
+// Letters the opened card can show (labels, stage names, units), used to fetch their font pieces ahead of time.
+const CARD_TEXT = "가값개게경고괜구기까끝나날남났내노눌는다단대더두뒤드디딕때라량러레렌력로록루르른를리마만맛매메면모미바변보볶본부분브블비상서세셜셨소수순쉬스시싱아약어엄에여요용울원으은음의이일입있잉자잔장저전절접정조좋주준중지직진짜째찮치커컵크태터트티팅페프피필하한히0123456789.,:·+-%g›₩~";
 const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
 const emptyBeanForm: BeanForm = { name: "", origin: "", process: "", roastery: "", date: "", purchased: "", consumed: "", price: "", roasteryNotes: "", roastDate: "", farm: "", variety: "", flavor: "", memo: "", status: undefined, quality: undefined, roastLevel: undefined, peak: undefined };
@@ -58,8 +64,8 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
     query.addEventListener("change", update);
     return () => query.removeEventListener("change", update);
   }, []);
-  // Before/after measurements for the cards that change size, so the tapped card stays put and grows smoothly.
-  const expandAnchor = useRef<{ id: number; top: number; heights: Map<number, number> } | null>(null);
+  // Where every card sat before a card opened or closed, so the change can be played as one smooth move.
+  const expandAnchor = useRef<{ id: number; rects: Map<number, DOMRect> } | null>(null);
   const [swipeOpenId, setSwipeOpenId] = useState<number | null>(null);
   const [swipeHint, setSwipeHint] = useState(() => { try { return window.matchMedia?.("(pointer: coarse)").matches && !localStorage.getItem(SWIPE_HINT_KEY); } catch { return false; } });
   const dismissSwipeHint = () => { setSwipeHint(false); try { localStorage.setItem(SWIPE_HINT_KEY, "1"); } catch {} };
@@ -69,11 +75,50 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
     document.addEventListener("pointerdown", closeOutside);
     return () => document.removeEventListener("pointerdown", closeOutside);
   }, [swipeOpenId]);
+  // Korean web fonts arrive in small pieces as new letters appear. Fetch the pieces the opened card needs while the
+  // page is idle, so the first open does not stall and re-layout when they land.
+  useEffect(() => {
+    const fonts = document.fonts;
+    if (!fonts?.load) return;
+    const family = getComputedStyle(document.body).fontFamily;
+    const warm = () => ["400", "500", "600", "700"].forEach(weight => { fonts.load(`${weight} 16px ${family}`, CARD_TEXT).catch(() => undefined); });
+    const idle = window.requestIdleCallback ? window.requestIdleCallback(warm, { timeout: 2000 }) : window.setTimeout(warm, 1200);
+    return () => { if (window.cancelIdleCallback) window.cancelIdleCallback(idle); else window.clearTimeout(idle); };
+  }, []);
   const cardOf = (id: number) => document.querySelector<HTMLElement>(`[data-swipe-id="${id}"] .inventory-card`);
+  // Each card's closed height, noted when it opens, so closing can play before the content switches back.
+  const closedHeights = useRef(new Map<number, number>());
+  const closing = useRef<Animation[] | null>(null);
   const toggleExpanded = (id: number) => {
-    const changing = [expandedId, id].filter((value): value is number => value !== null);
-    const heights = new Map(changing.map(cardId => [cardId, cardOf(cardId)?.offsetHeight ?? 0]));
-    expandAnchor.current = { id, top: cardOf(id)?.getBoundingClientRect().top ?? 0, heights };
+    if (closing.current) return;
+    // Phones (one column): shrink the open card and pull the cards below up first, then show the short card.
+    const node = document.querySelector<HTMLElement>(`.bean-list > [data-swipe-id="${id}"]`);
+    const closedHeight = closedHeights.current.get(id);
+    if (expandedId === id && !twoColumns && node && closedHeight && !prefersReducedMotion()) {
+      const rect = node.getBoundingClientRect();
+      const lift = rect.height - closedHeight;
+      if (lift > 1) {
+        const radius = getComputedStyle(document.documentElement).getPropertyValue("--r-md").trim() || "0px";
+        const options: KeyframeAnimationOptions = { ...CARD_MOTION, fill: "forwards" };
+        const below: HTMLElement[] = [];
+        for (let next = node.nextElementSibling as HTMLElement | null; next && next.getBoundingClientRect().top < window.innerHeight * 2; next = next.nextElementSibling as HTMLElement | null) if (next.dataset.swipeId) below.push(next);
+        const moves = [node.animate([{ clipPath: `inset(0px 0px 0px 0px round ${radius})` }, { clipPath: `inset(0px 0px ${lift}px 0px round ${radius})` }], options)];
+        below.forEach(next => moves.push(next.animate([{ transform: "none" }, { transform: `translateY(${-lift}px)` }], options)));
+        closing.current = moves;
+        setSwipeOpenId(null);
+        moves[0].finished.catch(() => undefined).then(() => setExpandedId(current => current === id ? null : current));
+        return;
+      }
+    }
+    const rects = new Map<number, DOMRect>();
+    // Only cards on or near the screen are measured and moved; the rest just take their new place.
+    const reach = window.innerHeight;
+    document.querySelectorAll<HTMLElement>(".bean-list > [data-swipe-id]").forEach(node => {
+      const rect = node.getBoundingClientRect();
+      if (rect.bottom > -reach && rect.top < reach * 2) rects.set(Number(node.dataset.swipeId), rect);
+    });
+    if (expandedId !== id) { const closed = rects.get(id); if (closed) closedHeights.current.set(id, closed.height); }
+    expandAnchor.current = { id, rects };
     setSwipeOpenId(null);
     setExpandedId(expandedId === id ? null : id);
   };
@@ -83,28 +128,42 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
     toggleExpanded(id);
   };
   useLayoutEffect(() => {
+    // A phone close has already played; drop its held end frames now that the short card is in place.
+    if (closing.current) { closing.current.forEach(move => move.cancel()); closing.current = null; }
     const anchor = expandAnchor.current;
     expandAnchor.current = null;
     if (!anchor) return;
     const card = cardOf(anchor.id);
     if (!card) return;
-    // Keep the tapped card where the finger was even if a card above it just closed.
-    const shift = card.getBoundingClientRect().top - anchor.top;
-    if (shift) window.scrollBy(0, shift);
-    if (!prefersReducedMotion()) anchor.heights.forEach((from, cardId) => {
-      const target = cardOf(cardId);
-      const to = target?.offsetHeight ?? 0;
-      if (!target || !from || from === to) return;
-      target.animate([{ height: `${from}px` }, { height: `${to}px` }], { duration: 220, easing: "cubic-bezier(.2, .8, .2, 1)" });
-      target.querySelectorAll(".bean-info, .bean-stock").forEach(part => part.animate([{ opacity: 0.35 }, { opacity: 1 }], { duration: 220, easing: "ease-out" }));
+    // Bring the tapped card into view only when needed, with one smooth scroll that runs alongside the card move below.
+    // (Jumping the scroll to hold the card under the finger made everything outside the list jerk, then scroll back.)
+    const rect = card.getBoundingClientRect();
+    const bottomLimit = window.innerHeight - (window.matchMedia?.("(max-width: 540px)").matches ? 110 : 24);
+    const scroll = rect.top < 16 ? rect.top - 16 : expandedId === anchor.id && rect.bottom > bottomLimit ? Math.min(rect.bottom - bottomLimit, rect.top - 16) : 0;
+    if (scroll) window.scrollBy({ top: scroll, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+    if (prefersReducedMotion()) return;
+    // Play the change without re-laying out the page every frame (FLIP): every card is drawn where it was and slides to
+    // its new place with transform; the card that grew also opens out from its old outline with clip-path.
+    const radius = getComputedStyle(document.documentElement).getPropertyValue("--r-md").trim() || "0px";
+    // Read every position first, then start the moves, so the browser lays the page out only once.
+    const nodes = [...document.querySelectorAll<HTMLElement>(".bean-list > [data-swipe-id]")].map(node => ({ node, before: anchor.rects.get(Number(node.dataset.swipeId)), after: node.getBoundingClientRect() }));
+    nodes.forEach(({ node, before, after }) => {
+      if (!before) {
+        // A card that was off screen before and is now in view just fades in.
+        if (after.bottom > 0 && after.top < window.innerHeight) node.animate(FADE_IN, CARD_MOTION);
+        return;
+      }
+      const dx = before.left - after.left, dy = before.top - after.top;
+      if (after.width - before.width > 1 || after.height - before.height > 1) {
+        const edges = [0, after.right - before.right, after.height - before.height, before.left - after.left].map(value => `${Math.max(0, value)}px`).join(" ");
+        node.animate([{ transform: `translateY(${dy}px)`, clipPath: `inset(${edges} round ${radius})` }, { transform: "none", clipPath: `inset(0px 0px 0px 0px round ${radius})` }], CARD_MOTION);
+      } else if (Math.abs(dx) > 1) {
+        // On two columns a card that changed column fades in at its new place instead of flying across the list.
+        node.animate(FADE_IN, CARD_MOTION);
+      } else if (Math.abs(dy) > 0.5) {
+        node.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }], CARD_MOTION);
+      }
     });
-    // If the opened card runs under the bottom tab bar, bring its end into view.
-    if (expandedId === anchor.id) {
-      const rect = card.getBoundingClientRect();
-      const bottomLimit = window.innerHeight - (window.matchMedia?.("(max-width: 540px)").matches ? 110 : 24);
-      const overflow = Math.min(rect.bottom - bottomLimit, rect.top - 16);
-      if (overflow > 0) window.scrollBy({ top: overflow, behavior: prefersReducedMotion() ? "auto" : "smooth" });
-    }
   }, [expandedId]);
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [facetFilters, setFacetFilters] = useState<BeanFacetFilters>(emptyBeanFacetFilters);
@@ -154,7 +213,13 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
   const [deletedNotes, setDeletedNotes] = useState<TastingNote[]>([]);
   const available = beans.filter(b => !b.deleted);
   const active = available.filter(b => b.remaining > 0);
-  const peaks = new Map(available.map(bean => [bean.id, beanPeak(bean, peakSettings, brews, cardToday)]));
+  // Kept between renders so a card's props stay the same unless that bean really changed (BeanCard is memoised).
+  const peaks = useMemo(() => new Map(beans.filter(b => !b.deleted).map(bean => [bean.id, beanPeak(bean, peakSettings, brews, cardToday)])), [beans, peakSettings, brews, cardToday]);
+  const notesByBean = useMemo(() => {
+    const map = new Map<number, TastingNote[]>();
+    notes.forEach(note => { const list = map.get(note.beanId); if (list) list.push(note); else map.set(note.beanId, [note]); });
+    return map;
+  }, [notes]);
   const peakOf = (bean: Bean): BeanPeak => peaks.get(bean.id) ?? { age: null, espresso: 0 };
   const statusOf = (bean: Bean) => effectiveStatus(bean, peakOf(bean));
   const degassingWeight = active.filter(bean => statusOf(bean) === "디개싱 중").reduce((sum, bean) => sum + bean.remaining, 0);
@@ -395,6 +460,18 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
     setBeans(editingId === null ? [...beans, bean] : beans.map(b => b.id === editingId ? bean : b));
     close();
   };
+  // Cards get one unchanging set of actions that always call this render's handlers.
+  const latest = useRef({ toggleExpanded, onCardClick, edit, updateStatus, onBrew, dismissSwipeHint });
+  latest.current = { toggleExpanded, onCardClick, edit, updateStatus, onBrew, dismissSwipeHint };
+  const cardActions = useMemo<CardActions>(() => ({
+    toggle: id => latest.current.toggleExpanded(id),
+    cardClick: (event, id) => latest.current.onCardClick(event, id),
+    swipeChange: (id, open) => { setSwipeOpenId(open ? id : null); if (open) latest.current.dismissSwipeHint(); },
+    brew: id => latest.current.onBrew(id),
+    edit: bean => latest.current.edit(bean),
+    status: (id, status) => latest.current.updateStatus(id, status),
+    adjust: id => setAdjustId(id),
+  }), []);
   return (
     <main className="inventory">
       <div className="inventory-intro"><div><p>좋아하는 맛을 기록하고, 남은 원두를 한눈에.</p></div>
@@ -449,40 +526,7 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
       {!advancedFiltersOpen && activeFilterChips.length > 0 && <div className="active-filter-chips" aria-label="적용된 세부 검색 조건">{activeFilterChips.map(chip => <button type="button" key={chip.key} onClick={chip.clear} aria-label={`${chip.label} 조건 해제`}>{chip.label}<span aria-hidden="true">×</span></button>)}<button type="button" className="active-filter-clear" onClick={clearDetailFilters}>모두 지우기</button></div>}
       {swipeHint && active.length > 0 && <p className="swipe-hint">카드를 왼쪽으로 밀면 바로 브루잉을 기록할 수 있어요.<button type="button" onClick={dismissSwipeHint} aria-label="안내 닫기">×</button></p>}
       <div className="bean-list">
-        {listOrder.map(bean => {
-          const pct = bean.purchased > 0 ? Math.max(0, Math.min(100, bean.remaining / bean.purchased * 100)) : 0;
-          const peak = peakOf(bean);
-          const adjust = () => setAdjustId(bean.id);
-          return <SwipeToBrew key={bean.id} className={expandedId === bean.id ? "density-detail is-expanded" : "density-compact"} beanId={bean.id} beanName={bean.name} disabled={bean.remaining <= 0} open={swipeOpenId === bean.id} onOpenChange={open => { setSwipeOpenId(open ? bean.id : null); if (open) dismissSwipeHint(); }} onBrew={() => onBrew(bean.id)}><article className="inventory-card" tabIndex={0} aria-expanded={expandedId === bean.id} aria-label={`${bean.name}, 눌러서 ${expandedId === bean.id ? "접기" : "자세히 보기"}`} onClick={event => onCardClick(event, bean.id)} onKeyDown={event => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); toggleExpanded(bean.id); } }}>
-            <div className="bean-info">
-              <p className="roastery"><span>{bean.roastery || "로스터리 미입력"}</span></p>
-              <h3>{bean.name}</h3>
-              {isBlend(bean) && <div className="blend-line"><span className="blend-tag">블렌드</span><span>{blendSummary(bean.parts)}</span></div>}
-              <BeanDates bean={bean} />
-              <div className="compact-summary"><strong>{bean.roastery || "로스터리 미입력"}</strong><time className="compact-roast" dateTime={bean.roastDate}>{roastDateLabel(bean.roastDate)}</time><b>{bean.name}</b>{isBlend(bean) && <span className="blend-line"><span className="blend-tag">블렌드</span><span>{blendSummary(bean.parts)}</span></span>}{bean.roasteryNotes && <span className="compact-cup-notes">{splitCupNotes(bean.roasteryNotes).map((note, index) => <i key={index}>{note}</i>)}</span>}</div>
-              {bean.roasteryNotes && <div className="roastery-cup-notes"><span className="detail-label">로스터리 컵노트</span><div className="flavor-tags">{splitCupNotes(bean.roasteryNotes).map((note, index) => <span key={index}>{note}</span>)}</div></div>}
-              <div className="bean-card-actions"><button className="edit-bean" onClick={() => edit(bean)} aria-label={`${bean.name} 원두 정보 수정`}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16v4Z" /><path d="M13.5 6.5l4 4" /></svg>원두 정보 수정</button>{expandedId === bean.id && <details className="record-details"><summary>내 메모 보기</summary><BeanComments bean={bean} notes={notes.filter(note => note.beanId === bean.id)} /></details>}</div>
-            </div>
-            <div className="bean-stock">
-              <div className="stock-status-row">{peak.stage ? <PeakPill peak={peak} variant={expandedId === bean.id ? "long" : "stage"} onClick={adjust} /> : <RoastAge bean={bean} today={cardToday} />}{bean.remaining <= 0 ? <span data-status="finished" className={`stock-status ${pct <= 20 ? "low" : ""}`}>다 마셨어요</span> : (() => {
-                // A bean with a roast level gets its status from the peak stage, so there is nothing to switch.
-                if (peak.level) return null;
-                const status = bean.status ?? "소비 중";
-                const next: BeanStatus = status === "소비 중" ? "디개싱 중" : "소비 중";
-                return <button type="button" data-status={status} className={`stock-status stock-status-toggle ${pct <= 20 ? "low" : ""}`} onClick={() => updateStatus(bean.id, next)} aria-label={`${bean.name} 상태: ${status}. 눌러서 ${next}으로 변경`} title={`눌러서 ${next}으로 변경`}>{status}<span aria-hidden="true">⇄</span></button>;
-              })()}</div>
-              <div className="stock-main">
-              <p className="remaining-label">남은 원두</p>
-              <p className="remaining-weight">{fmt(bean.remaining)}<span>g</span></p>
-              <p className="purchased-weight">구매 {fmt(bean.purchased)}g</p>
-              <div className="stock-meter" role="progressbar" aria-label={`${bean.name} 잔량`} aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}><div style={{ width: `${pct}%` }} /></div>
-              <p className="stock-percent">{Math.round(pct)}% 남음</p>
-              </div>
-              {expandedId === bean.id && <PeakBlock peak={peak} onAdjust={adjust} />}
-              <div className="compact-stock-donut" style={{ "--stock-progress": `${pct}%` } as CSSProperties}><strong>{fmt(bean.remaining)}<span>g</span></strong><small>남음</small></div>
-            </div>
-          </article></SwipeToBrew>;
-        })}
+        {listOrder.map(bean => <BeanCard key={bean.id} bean={bean} peak={peakOf(bean)} notes={notesByBean.get(bean.id) ?? NO_NOTES} expanded={expandedId === bean.id} swipeOpen={swipeOpenId === bean.id} today={cardToday} actions={cardActions} />)}
         {visible.length === 0 && <div className="inventory-empty"><img className="onboarding-logo" src="/coffee-diary-logo-brown-96.png" width="38" height="38" alt="" /><h3>{available.length === 0 ? "첫 원두를 등록해보세요" : "해당하는 원두가 없어요"}</h3><p>{available.length === 0 ? "원두부터 기록하면 나만의 브루잉 흐름이 시작돼요." : "원두 정보와 향미 노트, 남은 양을 한곳에서 관리해요."}</p>{available.length === 0 && <><JourneySteps active="beans" /><button className="primary-button" onClick={() => { close(); setShow(true); }}>첫 원두 등록하기</button></>}</div>}
       </div>
       {(() => {
@@ -517,6 +561,44 @@ function RoastAge({ bean, today }: { bean: Bean; today: string }) {
 }
 
 // The purchase date stays in the form only.
+type CardActions = { toggle: (id: number) => void; cardClick: (event: MouseEvent<HTMLElement>, id: number) => void; swipeChange: (id: number, open: boolean) => void; brew: (id: number) => void; edit: (bean: Bean) => void; status: (id: number, status: BeanStatus) => void; adjust: (id: number) => void };
+const NO_NOTES: TastingNote[] = [];
+
+// One bean card. Memoised so opening or closing a card re-renders only the cards that change, not the whole list.
+const BeanCard = memo(function BeanCard({ bean, peak, notes, expanded, swipeOpen, today, actions }: { bean: Bean; peak: BeanPeak; notes: TastingNote[]; expanded: boolean; swipeOpen: boolean; today: string; actions: CardActions }) {
+  const pct = bean.purchased > 0 ? Math.max(0, Math.min(100, bean.remaining / bean.purchased * 100)) : 0;
+  const adjust = () => actions.adjust(bean.id);
+  return <SwipeToBrew className={expanded ? "density-detail is-expanded" : "density-compact"} beanId={bean.id} beanName={bean.name} disabled={bean.remaining <= 0} open={swipeOpen} onOpenChange={open => actions.swipeChange(bean.id, open)} onBrew={() => actions.brew(bean.id)}><article className="inventory-card" tabIndex={0} aria-expanded={expanded} aria-label={`${bean.name}, 눌러서 ${expanded ? "접기" : "자세히 보기"}`} onClick={event => actions.cardClick(event, bean.id)} onKeyDown={event => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); actions.toggle(bean.id); } }}>
+    <div className="bean-info">
+      <p className="roastery"><span>{bean.roastery || "로스터리 미입력"}</span></p>
+      <h3>{bean.name}</h3>
+      {isBlend(bean) && <div className="blend-line"><span className="blend-tag">블렌드</span><span>{blendSummary(bean.parts)}</span></div>}
+      <BeanDates bean={bean} />
+      <div className="compact-summary"><strong>{bean.roastery || "로스터리 미입력"}</strong><time className="compact-roast" dateTime={bean.roastDate}>{roastDateLabel(bean.roastDate)}</time><b>{bean.name}</b>{isBlend(bean) && <span className="blend-line"><span className="blend-tag">블렌드</span><span>{blendSummary(bean.parts)}</span></span>}{bean.roasteryNotes && <span className="compact-cup-notes">{splitCupNotes(bean.roasteryNotes).map((note, index) => <i key={index}>{note}</i>)}</span>}</div>
+      {bean.roasteryNotes && <div className="roastery-cup-notes"><span className="detail-label">로스터리 컵노트</span><div className="flavor-tags">{splitCupNotes(bean.roasteryNotes).map((note, index) => <span key={index}>{note}</span>)}</div></div>}
+      <div className="bean-card-actions"><button className="edit-bean" onClick={() => actions.edit(bean)} aria-label={`${bean.name} 원두 정보 수정`}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16v4Z" /><path d="M13.5 6.5l4 4" /></svg>원두 정보 수정</button>{expanded && <details className="record-details"><summary>내 메모 보기</summary><BeanComments bean={bean} notes={notes} /></details>}</div>
+    </div>
+    <div className="bean-stock">
+      <div className="stock-status-row">{peak.stage ? <PeakPill peak={peak} variant={expanded ? "long" : "stage"} onClick={adjust} /> : <RoastAge bean={bean} today={today} />}{bean.remaining <= 0 ? <span data-status="finished" className={`stock-status ${pct <= 20 ? "low" : ""}`}>다 마셨어요</span> : (() => {
+        // A bean with a roast level gets its status from the peak stage, so there is nothing to switch.
+        if (peak.level) return null;
+        const status = bean.status ?? "소비 중";
+        const next: BeanStatus = status === "소비 중" ? "디개싱 중" : "소비 중";
+        return <button type="button" data-status={status} className={`stock-status stock-status-toggle ${pct <= 20 ? "low" : ""}`} onClick={() => actions.status(bean.id, next)} aria-label={`${bean.name} 상태: ${status}. 눌러서 ${next}으로 변경`} title={`눌러서 ${next}으로 변경`}>{status}<span aria-hidden="true">⇄</span></button>;
+      })()}</div>
+      <div className="stock-main">
+      <p className="remaining-label">남은 원두</p>
+      <p className="remaining-weight">{fmt(bean.remaining)}<span>g</span></p>
+      <p className="purchased-weight">구매 {fmt(bean.purchased)}g</p>
+      <div className="stock-meter" role="progressbar" aria-label={`${bean.name} 잔량`} aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}><div style={{ width: `${pct}%` }} /></div>
+      <p className="stock-percent">{Math.round(pct)}% 남음</p>
+      </div>
+      {expanded && <PeakBlock peak={peak} onAdjust={adjust} />}
+      <div className="compact-stock-donut" style={{ "--stock-progress": `${pct}%` } as CSSProperties}><strong>{fmt(bean.remaining)}<span>g</span></strong><small>남음</small></div>
+    </div>
+          </article></SwipeToBrew>;
+});
+
 function BeanDates({ bean }: { bean: Bean }) {
   const priceLabel = bean.price ? (Number.isFinite(Number(bean.price)) ? `₩${fmt(bean.price)}` : bean.price) : null;
   if (!bean.roastDate && !priceLabel && !bean.quality) return null;
