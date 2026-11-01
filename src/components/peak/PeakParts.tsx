@@ -37,6 +37,6 @@ export function PeakBlock({ peak, onAdjust }: { peak: BeanPeak; onAdjust: () => 
     <div className="peak-block-row"><span>맛있는 시기</span><strong>{peakValueLabel(peak)}</strong></div>
     <PeakBar window={window} max={max} age={age} />
     <div className="pk-marks" aria-hidden="true">{marks.map((label, index) => <span key={index}>{label}</span>)}</div>
-    <div className="peak-block-why"><span>기준: {level} · {peakSourceLabel(peak.source)}{peak.espresso > 0 ? ` + 에스프레소 ${peak.espresso}일` : ""}</span><button type="button" onClick={event => { event.stopPropagation(); onAdjust(); }}>조절 ›</button></div>
+    <div className="peak-block-why"><span>기준: {peak.source === "roastery" && peak.roastery ? `${peak.roastery} 기본값 · ${level}` : `${level} · ${peakSourceLabel(peak.source)}`}{peak.espresso > 0 ? ` + 에스프레소 ${peak.espresso}일` : ""}</span><button type="button" onClick={event => { event.stopPropagation(); onAdjust(); }}>조절 ›</button></div>
   </div>;
 }

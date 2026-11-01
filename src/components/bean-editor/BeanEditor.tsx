@@ -180,13 +180,13 @@ export function BeanEditor({ editing, form, setForm, peakSettings, setPeakSettin
               <label className={rowClass("roastDate")}>{rowName("roastDate", "로스팅 날짜")}<input type="date" value={form.roastDate ?? ""} onChange={event => onRoastDate(event.target.value)} /></label>
               <button type="button" className={rowClass("roastLevel")} onClick={() => setPicker("roastLevel")}>
                 {rowName("roastLevel", "로스팅 정도")}
-                <span className={`be-value${form.roastLevel ? "" : " empty"}`}><span>{form.roastLevel || "선택"}</span><span className="be-chev" aria-hidden="true">›</span></span>
+                <span className={`be-value${form.roastLevel ? "" : " empty"}`}><span>{form.roastLevel || (peakBase ? `${peakBase.level} · 로스터리 값` : "선택")}</span><span className="be-chev" aria-hidden="true">›</span></span>
               </button>
-              <button type="button" className={rowClass("peak")} onClick={() => setPicker(form.roastLevel ? "peak" : "roastLevel")}>
+              <button type="button" className={rowClass("peak")} onClick={() => setPicker(peakBase ? "peak" : "roastLevel")}>
                 {rowName("peak", "맛있는 시기")}
                 <span className={`be-value${peakShown ? "" : " empty"}`}>{peakShown ? <span>{peakRange(peakShown)} <small className="pk-source">{form.peak ? "이 원두만" : peakSourceLabel(peakBase?.source)}</small></span> : <span>로스팅 정도를 고르면 보여요</span>}<span className="be-chev" aria-hidden="true">›</span></span>
               </button>
-              {form.roastLevel ? <div className="be-row">
+              {peakBase ? <div className="be-row">
                 {rowName("status", "상태")}
                 <span className="be-value pk-auto">맛있는 시기를 따라가요</span>
               </div> : <div className="be-row seg-row">
@@ -220,10 +220,10 @@ export function BeanEditor({ editing, form, setForm, peakSettings, setPeakSettin
 
       {picker === "roastery" && <PickSheet title="로스터리" layout="list" value={form.roastery} options={roasteries} placeholder="로스터리 이름" onPick={pick("roastery")} onHide={onHideRoastery} onClose={() => setPicker(null)} />}
       {picker === "roastLevel" && <RoastLevelSheet value={form.roastLevel} settings={peakSettings} onPick={roastLevel => { set("roastLevel", roastLevel); setPicker(null); }} onClose={() => setPicker(null)} />}
-      {picker === "peak" && peakBase && form.roastLevel && <PeakSheet title="맛있는 시기" note={`${form.roastLevel} · 로스팅 후 며칠째인지로 정해요`} value={form.peak ?? peakBase.window} base={peakBase.window}
-        roasteryLabel={form.roastery?.trim() ? `${form.roastery.trim()} ${form.roastLevel}` : undefined}
+      {picker === "peak" && peakBase && <PeakSheet title="맛있는 시기" note={`${peakBase.level} · 로스팅 후 며칠째인지로 정해요`} value={form.peak ?? peakBase.window} base={peakBase.window}
+        roasteryLabel={form.roastery?.trim() ? `${form.roastery.trim()} ${peakBase.level}` : undefined}
         onSave={({ window, applyRoastery }) => {
-          if (applyRoastery && window && form.roastLevel) { setPeakSettings(withRoasteryPeak(peakSettings, form.roastery.trim(), form.roastLevel, window)); set("peak", undefined); }
+          if (applyRoastery && window) { setPeakSettings(withRoasteryPeak(peakSettings, form.roastery.trim(), peakBase.level, window)); set("peak", undefined); }
           else set("peak", window ?? undefined);
           setPicker(null);
         }} onClose={() => setPicker(null)} />}

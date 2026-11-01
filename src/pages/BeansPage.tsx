@@ -466,7 +466,7 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
             <div className="bean-stock">
               <div className="stock-status-row">{peak.stage ? <PeakPill peak={peak} variant={expandedId === bean.id ? "long" : "stage"} onClick={adjust} /> : <RoastAge bean={bean} today={cardToday} />}{bean.remaining <= 0 ? <span data-status="finished" className={`stock-status ${pct <= 20 ? "low" : ""}`}>다 마셨어요</span> : (() => {
                 // A bean with a roast level gets its status from the peak stage, so there is nothing to switch.
-                if (bean.roastLevel) return null;
+                if (peak.level) return null;
                 const status = bean.status ?? "소비 중";
                 const next: BeanStatus = status === "소비 중" ? "디개싱 중" : "소비 중";
                 return <button type="button" data-status={status} className={`stock-status stock-status-toggle ${pct <= 20 ? "low" : ""}`} onClick={() => updateStatus(bean.id, next)} aria-label={`${bean.name} 상태: ${status}. 눌러서 ${next}으로 변경`} title={`눌러서 ${next}으로 변경`}>{status}<span aria-hidden="true">⇄</span></button>;
@@ -488,8 +488,8 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
       {(() => {
         const bean = adjustId !== null ? available.find(item => item.id === adjustId) : undefined;
         const base = bean && basePeak(bean, peakSettings);
-        if (!bean?.roastLevel || !base) return null;
-        const level = bean.roastLevel, roastery = bean.roastery?.trim();
+        if (!bean || !base) return null;
+        const level = base.level, roastery = bean.roastery?.trim();
         const peak = peakOf(bean);
         // The dashed default already includes espresso days when this bean is mostly brewed as espresso.
         const shown = shiftPeak(base.window, peak.espresso && !bean.peak ? peak.espresso : 0);

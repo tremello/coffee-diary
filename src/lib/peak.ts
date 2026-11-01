@@ -50,17 +50,27 @@ export const levelPeak = (level: RoastLevel, settings: PeakSettings): { window: 
   return mine ? { window: mine, source: "mine" } : { window: RESEARCH_PEAK[level], source: "research" };
 };
 
-export const roasteryPeak = (settings: PeakSettings, roastery: string | undefined, level: RoastLevel) => {
-  const name = roastery?.trim();
-  return name ? settings.roasteries?.find(item => item.roastery === name && item.roastLevel === level) : undefined;
+// Roastery names match ignoring spaces and case: "모모스 커피" is "모모스커피", "SEY" is "Sey".
+export const sameRoastery = (a: string | undefined, b: string | undefined) => {
+  const key = (name?: string) => (name ?? "").replace(/\s+/g, "").toLowerCase();
+  return Boolean(key(a)) && key(a) === key(b);
+};
+
+export const roasteryPeak = (settings: PeakSettings, roastery: string | undefined, level: RoastLevel) =>
+  settings.roasteries?.find(item => item.roastLevel === level && sameRoastery(item.roastery, roastery));
+
+// A bean with no roast level still uses its roastery's window when that roastery has exactly one; with several levels it can't tell which.
+export const roasteryOnlyPeak = (settings: PeakSettings, roastery: string | undefined) => {
+  const found = settings.roasteries?.filter(item => sameRoastery(item.roastery, roastery)) ?? [];
+  return found.length === 1 ? found[0] : undefined;
 };
 
 // The window a bean would get without its own override: roastery, then settings, then research.
-export const basePeak = (bean: Pick<Bean, "roastery" | "roastLevel">, settings: PeakSettings): { window: PeakWindow; source: PeakSource } | null => {
-  if (!bean.roastLevel) return null;
-  const roastery = roasteryPeak(settings, bean.roastery, bean.roastLevel);
-  if (roastery) return { window: { start: roastery.start, best: roastery.best, ok: roastery.ok }, source: "roastery" };
-  return levelPeak(bean.roastLevel, settings);
+// level is the bean's roast level, or the roastery window's level when the bean has none.
+export const basePeak = (bean: Pick<Bean, "roastery" | "roastLevel">, settings: PeakSettings): { window: PeakWindow; source: PeakSource; level: RoastLevel; roastery?: string } | null => {
+  const roastery = bean.roastLevel ? roasteryPeak(settings, bean.roastery, bean.roastLevel) : roasteryOnlyPeak(settings, bean.roastery);
+  if (roastery) return { window: { start: roastery.start, best: roastery.best, ok: roastery.ok }, source: "roastery", level: roastery.roastLevel, roastery: roastery.roastery };
+  return bean.roastLevel ? { ...levelPeak(bean.roastLevel, settings), level: bean.roastLevel } : null;
 };
 
 const ESPRESSO_METHOD = /에스프레소|espresso/i;
@@ -75,6 +85,8 @@ export type BeanPeak = {
   // Days since roasting, or null without a roast date.
   age: number | null;
   level?: RoastLevel;
+  // The roastery window's name when source is "roastery".
+  roastery?: string;
   window?: PeakWindow;
   source?: PeakSource;
   // Espresso days already added to window.
@@ -94,17 +106,15 @@ export const stageAt = (age: number, window: PeakWindow): PeakStage => age < win
 export const beanPeak = (bean: Bean, settings: PeakSettings, brews: Brew[], today: string): BeanPeak => {
   const age = roastAge(bean.roastDate, today);
   const base = basePeak(bean, settings);
-  if (!bean.roastLevel || !base) return { age, espresso: 0 };
+  if (!base) return { age, espresso: 0 };
   const own = bean.peak;
-  const espresso = !own && brewsMostlyEspresso(bean.id, brews) ? espressoExtra(bean.roastLevel, settings) : 0;
+  const espresso = !own && brewsMostlyEspresso(bean.id, brews) ? espressoExtra(base.level, settings) : 0;
   const window = own ?? shiftPeak(base.window, espresso);
-  return { age, level: bean.roastLevel, window, source: own ? "bean" : base.source, espresso, stage: age === null || age < 0 ? undefined : stageAt(age, window) };
+  return { age, level: base.level, roastery: base.roastery, window, source: own ? "bean" : base.source, espresso, stage: age === null || age < 0 ? undefined : stageAt(age, window) };
 };
 
-// Beans with a roast level follow their stage; the rest keep the status chip the user sets.
-export const effectiveStatus = (bean: Bean, peak: BeanPeak): BeanStatus => bean.roastLevel ? (peak.stage === "rest" ? "디개싱 중" : "소비 중") : bean.status ?? "소비 중";
-
-export const autoStatus = (bean: Pick<Bean, "roastLevel">) => Boolean(bean.roastLevel);
+// Beans with a peak window (their own roast level, or their roastery's only window) follow their stage; the rest keep the status chip the user sets.
+export const effectiveStatus = (bean: Bean, peak: BeanPeak): BeanStatus => peak.level ? (peak.stage === "rest" ? "디개싱 중" : "소비 중") : bean.status ?? "소비 중";
 
 const SHORT: Record<PeakStage, string> = { rest: "", best: "좋은 때", ok: "괜찮음", past: "지남" };
 
@@ -149,6 +159,6 @@ export const peakSortKey = (peak: BeanPeak): [number, number] => {
 
 // Settings with this roastery's window for a roast level set (or removed with null).
 export const withRoasteryPeak = (settings: PeakSettings, roastery: string, level: RoastLevel, window: PeakWindow | null): PeakSettings => {
-  const others = (settings.roasteries ?? []).filter(item => !(item.roastery === roastery && item.roastLevel === level));
+  const others = (settings.roasteries ?? []).filter(item => !(sameRoastery(item.roastery, roastery) && item.roastLevel === level));
   return { ...settings, roasteries: window ? [...others, { roastery, roastLevel: level, ...window }] : others };
 };
