@@ -91,10 +91,10 @@
 .brew-card-actions { display: flex; gap: 8px; align-items: flex-start; }
 .brew-edit-button, .brew-delete-button { font-size: 12px; border: none; background: none; cursor: pointer; padding: 0; font-family: inherit; }
 .brew-edit-button { color: var(--c-accent); }
-.brew-delete-button { color: var(--fg-d85a30); }
+.brew-delete-button { color: var(--fg-a64f43); }
 .note-actions { display: flex; gap: 8px; align-self: flex-start; }
 .note-edit-button, .note-delete-button { font-size: 12px; border: none; background: none; cursor: pointer; padding: 0; font-family: inherit; }
 .note-edit-button { color: var(--c-accent); }
-.note-delete-button { color: var(--fg-d85a30); }
+.note-delete-button { color: var(--fg-a64f43); }
 .brew-stats { padding-top: 10px; }
 .stats-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin: 14px 0 24px; }

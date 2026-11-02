@@ -24,3 +24,4 @@
 @import "./22-bean-peak.css"; /* 맛있는 시기: stage pill, open-card timeline, roast level and adjust sheets, settings rows. */
 @import "./23-desk.css"; /* Wide desktop windows: two panes per tab (list | picked item), toolbar row, first-run steps. */
 @import "./24-home.css"; /* Home tab: today's bean, quick save, beans left, this week and the latest brews. */
+@import "./25-touch.css"; /* Bigger invisible tap areas around small text buttons (44px tall). */

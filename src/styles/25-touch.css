@@ -1,0 +1,17 @@
+/* Bigger tap areas for small buttons: the look stays the same, an invisible layer around each button
+   catches the finger (44px tall). Sideways it only reaches into the gap next to it, so neighbours never overlap. */
+.saved-recipe-actions, .brew-card-actions, .hm-label button, .refresh-button, .google-button, .stock-status-toggle { position: relative; }
+.saved-recipe-actions button, .brew-card-actions button { position: relative; }
+.saved-recipe-actions button::after, .brew-card-actions button::after,
+.hm-label button::after, .hm-link::after, .refresh-button::after, .google-button::after, .stock-status-toggle::after {
+  content: ""; position: absolute; top: 50%; left: 50%; height: max(100%, 44px); transform: translate(-50%, -50%);
+}
+.saved-recipe-actions { gap: 16px; }
+.saved-recipe-actions button::after { width: calc(100% + 16px); }
+.brew-card-actions button::after { width: calc(100% + 8px); }
+.bw-card-foot .brew-card-actions button::after { width: calc(100% + 14px); }
+.hm-link { position: relative; }
+.hm-label button::after, .hm-link::after { width: calc(100% + 16px); }
+.google-button::after { width: 100%; }
+.refresh-button::after { width: calc(100% + 6px); }
+.stock-status-toggle::after { width: 100%; }

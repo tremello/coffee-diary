@@ -58,7 +58,7 @@
 .saved-recipe-actions { display: flex; gap: 8px; }
 .saved-recipe-actions button { padding: 3px 0; border: 0; background: transparent; font-size: 11px; }
 .saved-recipe-actions button:first-child { color: var(--c-accent); }
-.saved-recipe-actions button:last-child { color: var(--fg-b65f50); }
+.saved-recipe-actions button:last-child { color: var(--fg-a64f43); }
 .saved-recipe-timeline { display: grid; margin-top: 12px; }
 .saved-recipe-step { display: grid; grid-template-columns: 45px 13px minmax(0, 1fr); gap: 7px; min-height: 29px; align-items: start; }
 .saved-recipe-step > span { color: var(--c-ink-2); font-size: 11px; font-variant-numeric: tabular-nums; text-align: right; }
