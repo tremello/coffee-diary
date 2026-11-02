@@ -14,8 +14,10 @@ import { PeakBlock, PeakPill } from "../components/peak/PeakParts";
 import { PeakSheet } from "../components/peak/PeakSheet";
 import { DEVICE_KEYS } from "../data/settings";
 import { BeanPanel } from "../components/desk/BeanPanel";
-import { DeskSearch, DeskStart, DeskToolbar, Tile } from "../components/desk/Desk";
+import { capListRows, DeskSearch, DeskStart, DeskToolbar, Tile } from "../components/desk/Desk";
 import { type Page } from "../lib/pages";
+
+const capBeanList = capListRows(8);
 
 // 무산소 가공은 직접 입력칸에 적어요. 이미 등록된 무산소 원두는 세부 검색에 그대로 나와요.
 const DEFAULT_PROCESSES = BEAN_PROCESSES;
@@ -631,7 +633,7 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
               <div><span>소비 중</span><b>{fmt(Math.round(consumingWeight * 10) / 10)}g</b></div>
               <div><span>디개싱 중</span><b>{fmt(Math.round(degassingWeight * 10) / 10)}g</b></div>
             </div>}
-            <div className="desk-list desk-panel" role="list">
+            <div ref={capBeanList} className="desk-list desk-panel" role="list">
               {sortedVisible.length === 0 ? <p className="empty-state">해당하는 원두가 없어요</p> : sortedVisible.map(bean => {
                 const peak = peakOf(bean);
                 const status = statusOf(bean);

@@ -100,3 +100,25 @@ export function DeskStart({ steps, extra, example }: { steps: StartStep[]; extra
 export function Tile({ label, value }: { label: string; value: ReactNode }) {
   return <div className="desk-tile"><small>{label}</small><b>{value}</b></div>;
 }
+
+/* Ref callback: keep a desk list to `count` rows tall (rest scrolls inside). Sets --desk-list-cap on the list; CSS still caps it to the window. */
+export function capListRows(count: number) {
+  return (list: HTMLElement | null) => {
+    if (!list) return;
+    const fit = () => {
+      const rows = list.querySelectorAll<HTMLElement>("[data-desk-item]");
+      rows.forEach(row => resize.observe(row)); // rows can grow after fonts load while the capped list keeps its size
+      if (rows.length <= count) { list.style.removeProperty("--desk-list-cap"); return; }
+      const style = getComputedStyle(list);
+      const edge = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) + list.offsetHeight - list.clientHeight;
+      const last = rows[count - 1];
+      list.style.setProperty("--desk-list-cap", `${Math.ceil(last.offsetTop + last.offsetHeight - rows[0].offsetTop + edge)}px`);
+    };
+    const resize = new ResizeObserver(() => fit());
+    resize.observe(list);
+    fit();
+    const mutate = new MutationObserver(fit);
+    mutate.observe(list, { childList: true });
+    return () => { resize.disconnect(); mutate.disconnect(); };
+  };
+}

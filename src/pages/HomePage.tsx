@@ -16,6 +16,9 @@ import { beanPeak } from "../lib/peak";
 import { type Page } from "../lib/pages";
 import { type Bean, type Brew, isCafeBrew, type PeakSettings, type TastingNote } from "../types";
 
+// Home lists at most this many beans; the rest are one tap away in 원두 재고.
+const HOME_BEANS = 10;
+
 const readPick = (): HomePick | null => { try { return JSON.parse(localStorage.getItem(HOME_PICK_KEY) ?? "null"); } catch { return null; } };
 const writePick = (pick: HomePick) => { try { localStorage.setItem(HOME_PICK_KEY, JSON.stringify(pick)); } catch {} };
 
@@ -179,7 +182,7 @@ export function HomePage({ beans, setBeans, brews, setBrews, notes, setNotes, us
               <header className="hm-plan-head"><h3 id="hm-plan-title">원두 일정표</h3><span>오늘부터 4주 · 맛있는 시기 끝나가는 순</span></header>
               {rows.length ? <div className="hm-gantt">
                 <div className="hm-gantt-axis" aria-hidden="true"><span /><div className="hm-gantt-ticks">{ticks.map(day => <span key={day} style={{ left: at(day) }}>{day === 0 ? "" : shortDay(dateAfter(today, day))}</span>)}<b style={{ left: at(0) }}>오늘</b></div><span /></div>
-                {rows.map(row => {
+                {rows.slice(0, HOME_BEANS).map(row => {
                   const { item, segments, runOut } = row;
                   const { bean } = item;
                   return <button type="button" key={bean.id} className={`hm-gantt-row${bean.id === picked?.bean.id ? " is-picked" : ""}`} title={rowTitle(row)} onClick={() => onOpenBean(bean.id)}>
@@ -193,6 +196,7 @@ export function HomePage({ beans, setBeans, brews, setBrews, notes, setNotes, us
                     <span className="hm-gantt-amount">{fmt(bean.remaining)}g / {runOut === null ? "—" : `약 ${runOut}일`}</span>
                   </button>;
                 })}
+                {rows.length > HOME_BEANS && <button type="button" className="hm-gantt-more" onClick={() => onNavigate("Beans")}>전체 {rows.length}종 보기 ›</button>}
               </div> : <p className="desk-note desk-muted">남은 원두가 없어요.</p>}
               <div className="hm-legend" aria-hidden="true"><span><i data-stage="rest" />쉬는 중</span><span><i data-stage="best" />가장 좋은 때</span><span><i data-stage="ok" />아직 괜찮음</span><span><i className="hm-legend-runout" />다 떨어질 날(지금 속도로)</span><span><i className="hm-legend-today" />오늘</span></div>
               <p className="desk-foot">다 떨어질 날은 최근 2주 동안 이 원두를 내린 양으로 셈해요. 요즘 안 내린 원두는 '—'로 보여요.</p>
@@ -246,7 +250,7 @@ export function HomePage({ beans, setBeans, brews, setBrews, notes, setNotes, us
         {stock.length > 0 && <section className="hm-stock" aria-labelledby="hm-stock-title">
           <h3 className="hm-label" id="hm-stock-title"><span>남은 원두 · <span className="hm-phone">끝나가는 순</span><span className="hm-wide">맛있는 시기 끝나가는 순</span></span><button type="button" onClick={() => onNavigate("Beans")}><span className="hm-phone">원두 탭</span><span className="hm-wide">원두 재고</span> ›</button></h3>
           <div className="hm-stock-list">
-            {stock.map(item => {
+            {stock.slice(0, HOME_BEANS).map(item => {
               const { bean, peak, cups } = item;
               const sub = [bean.roastery, bean.roastLevel ?? "로스팅 정도 모름"].filter(Boolean).join(" · ");
               return <button type="button" key={bean.id} className={`hm-bean${hero?.bean.id === bean.id ? " is-picked" : ""}`} onClick={() => onOpenBean(bean.id)}>
@@ -259,6 +263,10 @@ export function HomePage({ beans, setBeans, brews, setBrews, notes, setNotes, us
                 </span>
               </button>;
             })}
+            {stock.length > HOME_BEANS && <button type="button" className="hm-bean hm-bean-more" onClick={() => onNavigate("Beans")}>
+              <span className="hm-bean-title">나머지 {stock.length - HOME_BEANS}종</span>
+              <span className="hm-link">전체 {stock.length}종 보기 ›</span>
+            </button>}
           </div>
         </section>}
 
