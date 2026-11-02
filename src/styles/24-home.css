@@ -97,7 +97,7 @@
   .hm-hero { flex-direction: row; align-items: center; gap: 24px; padding: 22px 24px; }
   .hm-hero-main { flex: 1 1 auto; }
   .hm-hero-actions { display: flex; flex-direction: column; flex: 0 0 190px; }
-  .hm-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); align-items: start; gap: 20px; }
+  /* Up to 1099px the home stays one column, like the other tabs; wider windows get the two panes below. */
   /* Beans left: rows in one card */
   .hm-stock-list { display: block; margin: 0; padding: 0; overflow: hidden; border: 1px solid var(--c-line); border-radius: var(--r-md); background: var(--c-surface); }
   .hm-bean { display: grid; grid-template-columns: minmax(0, 1fr) 150px auto; align-items: center; gap: 14px; width: 100%; padding: 12px 16px; border: 0; border-top: 1px solid var(--c-line); border-radius: 0; background: transparent; }
@@ -111,3 +111,27 @@
   .hm-recent-row:nth-child(n + 3) { display: flex; }
   .hm-week-count { font-size: 15px; }
 }
+
+/* PC (1100px and up): the desk layout of the other tabs. Beans left on the left, the picked bean on the right. */
+.hm-desk-title { font-size: 12px; font-weight: 600; padding-left: 4px; }
+.hm-week-line { display: inline-flex; align-items: center; gap: 12px; min-width: 0; padding: 0; border: 0; background: none; color: var(--c-ink-2); font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.hm-week-line b { color: var(--c-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.hm-week-line:hover > span:first-child { color: var(--c-ink); }
+.hm-week-line .hm-heat { margin: 0; }
+.hm-week-line .hm-heat i { width: 12px; height: 12px; border-radius: 3px; }
+.hm-tag { flex: none; padding: 2px 8px; border-radius: var(--r-pill); background: var(--bg-7a5733); color: var(--fg-ffffff); font-size: 11px; font-weight: 600; }
+.hm-desk-row .desk-row-sub { gap: 10px; }
+.hm-desk-row .hm-track { flex: 1; max-width: 120px; height: 4px; }
+.hm-desk-row .desk-row-amount { font-size: 12px; font-weight: 500; color: var(--c-ink-2); }
+.hm-desk-row .desk-row-amount.hm-low { color: var(--c-accent); font-weight: 600; }
+.hm-desk-row.is-waiting { opacity: .6; }
+.hm-desk-row.is-waiting[aria-current="true"] { opacity: 1; }
+.home-desk .desk-kicker.hm-reason { color: var(--c-accent); }
+.hm-desk-actions { align-items: center; }
+.hm-desk-actions .primary-button { padding: 11px 22px; }
+.hm-desk-actions .primary-button:disabled, .hm-desk-actions .quiet-button:disabled { opacity: .5; cursor: not-allowed; }
+.hm-desk-bean-link { margin-left: auto; font-size: 13px; }
+.hm-desk-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.hm-desk-recent { display: grid; padding: 4px; border: 1px solid var(--c-line); border-radius: var(--r-sm); }
+.hm-desk-none { display: grid; gap: 8px; justify-items: center; padding: 24px 12px; }
+.hm-desk-none p { margin: 0; }

@@ -107,3 +107,17 @@ test("남은 원두: ready beans first, resting last", () => {
   const items = home.homeBeans([bean({ name: "쉬는 중", status: "디개싱 중" }), bean({ name: "괜찮음", roastLevel: "라이트", roastDate: daysAgo(40) }), bean({ name: "모름" })], [], b => peak.beanPeak(b, {}, [], TODAY));
   assert.deepEqual(home.sortHomeBeans(items).map(item => item.bean.name), ["괜찮음", "모름", "쉬는 중"]);
 });
+
+test("a selected row overrides the recommendation on PC", () => {
+  const low = bean({ name: "한 잔", remaining: 20 });
+  const other = bean({ name: "다른 원두", remaining: 180 });
+  const resting = bean({ name: "쉬는 중", roastLevel: "라이트", roastDate: daysAgo(3) });
+  const items = home.homeBeans([low, other, resting], [], b => peak.beanPeak(b, {}, [], TODAY));
+  assert.equal(home.selectedBean(items, [], TODAY, null, null).item.bean.name, "한 잔");
+  assert.equal(home.selectedBean(items, [], TODAY, null, low.id).reason, "1잔 남아서 먼저");
+  assert.equal(home.selectedBean(items, [], TODAY, { id: low.id, date: TODAY }, low.id).reason, "1잔 남아서 먼저");
+  const picked = home.selectedBean(items, [], TODAY, null, other.id);
+  assert.equal(picked.item.bean.name, "다른 원두");
+  assert.equal(picked.reason, "직접 고른 원두");
+  assert.equal(home.selectedBean(items, [], TODAY, null, resting.id).reason, "아직 쉬는 중 · 4일 뒤부터");
+});
