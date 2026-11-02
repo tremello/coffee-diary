@@ -91,22 +91,3 @@ export const relativeDay = (date: string, today: string) => date === today ? "�
 
 export const homeDateLine = (today: string) => { const day = parseLocalDate(today); return `${day.getMonth() + 1}월 ${day.getDate()}일 ${"일월화수목금토"[day.getDay()]}요일`; };
 
-// Why a bean that can't be brewed now is shown: still resting (and for how long), or not a full cup left.
-const waitReason = (item: HomeBean) => {
-  if (!item.resting) return "한 잔도 안 남음";
-  const { window, age } = item.peak;
-  return window && age !== null && age < window.start ? `아직 쉬는 중 · ${window.start - age}일 뒤부터` : "아직 쉬는 중";
-};
-
-// The PC home's right pane: the row the user selected, else today's pick. A ready bean picked by hand reads "직접 고른 원두"
-// unless it is the one the rule would have picked anyway.
-export const selectedBean = (items: HomeBean[], brews: Brew[], today: string, pick: HomePick | null | undefined, selectedId: number | null): Recommendation | null => {
-  const top = recommend(items, brews, today, pick);
-  const id = selectedId ?? top?.item.bean.id;
-  const item = items.find(entry => entry.bean.id === id);
-  if (!item) return top;
-  const auto = recommend(items, brews, today, null);
-  if (auto?.item.bean.id === id) return auto;
-  if (top?.item.bean.id === id) return top;
-  return { item, reason: item.candidate ? "직접 고른 원두" : waitReason(item) };
-};
