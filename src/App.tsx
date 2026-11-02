@@ -9,7 +9,8 @@ import { readStartPage } from "./data/settings";
 import { FONT } from "./lib/format";
 import { type Page, PAGE_HASHES, pageFromHash } from "./lib/pages";
 import { BeansPage } from "./pages/BeansPage";
-import { BrewLog } from "./pages/BrewLog";
+import { type BrewIntent, BrewLog } from "./pages/BrewLog";
+import { HomePage } from "./pages/HomePage";
 import { BrewStats } from "./pages/BrewStats";
 import { RecipePage } from "./pages/RecipePage";
 import { useDesk, useDeskKeys } from "./components/desk/Desk";
@@ -40,6 +41,9 @@ export default function App() {
   const [brewRecipeId, setBrewRecipeId] = useState<number | null>(null);
   const [brewCafe, setBrewCafe] = useState(false);
   const [brewBeanId, setBrewBeanId] = useState<number | null>(null);
+  const [brewIntent, setBrewIntent] = useState<BrewIntent | null>(null);
+  // The bean the home tab tapped, opened when the bean tab mounts.
+  const [openBeanId, setOpenBeanId] = useState<number | null>(null);
   const { user, loading: authLoading } = useAuth();
   const [storedBeans, setBeans] = useStorage<Bean[]>(STORAGE_KEYS.beans, [], user?.id ?? null);
   const beans = useMemo(() => normalizeBeans(storedBeans), [storedBeans]);
@@ -79,8 +83,10 @@ export default function App() {
       {settingsOpen && (desk ? <SettingsDesk {...settingsProps} /> : wide ? <SettingsPage {...settingsProps} /> : <SettingsSheet {...settingsProps} onClose={closeSettings} />)}
       {/* Pages step aside while settings is open so the lists it edits have a single owner; they remount with the new values. */}
       {!settingsOpen && <div className="page-transition" key={page}>
-        {page === "Beans" && <BeansPage beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} userId={user?.id ?? null} desk={desk} recipeCount={recipes.length} onGoto={navigate} onBrew={beanId => { setBrewBeanId(beanId ?? null); setOpenBrewForm(true); navigate("Brew Log"); }} />}
-        {page === "Brew Log" && <BrewLog beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} recipes={recipes} userId={user?.id ?? null} openInitially={openBrewForm} initialBeanId={brewBeanId} initialRecipeId={brewRecipeId} initialCafe={brewCafe} desk={desk} onGoto={navigate} onOpened={() => { setOpenBrewForm(false); setBrewBeanId(null); setBrewRecipeId(null); setBrewCafe(false); }} />}
+        {page === "Home" && <HomePage beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} userId={user?.id ?? null} onNavigate={navigate}
+          onOpenBrew={(beanId, intent) => { setBrewBeanId(beanId); setBrewIntent(intent ?? null); setOpenBrewForm(true); navigate("Brew Log"); }} onOpenBean={beanId => { setOpenBeanId(beanId); navigate("Beans"); }} />}
+        {page === "Beans" && <BeansPage initialOpenId={openBeanId} beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} userId={user?.id ?? null} desk={desk} recipeCount={recipes.length} onGoto={navigate} onBrew={beanId => { setBrewBeanId(beanId ?? null); setOpenBrewForm(true); navigate("Brew Log"); }} />}
+        {page === "Brew Log" && <BrewLog beans={beans} setBeans={setBeans} brews={brews} setBrews={setBrews} notes={notes} setNotes={setNotes} recipes={recipes} userId={user?.id ?? null} openInitially={openBrewForm} initialBeanId={brewBeanId} initialRecipeId={brewRecipeId} initialCafe={brewCafe} intent={brewIntent} desk={desk} onGoto={navigate} onOpened={() => { setOpenBrewForm(false); setBrewBeanId(null); setBrewRecipeId(null); setBrewCafe(false); setBrewIntent(null); }} />}
         {page === "Recipes" && <RecipePage recipes={recipes} setRecipes={setRecipes} brews={brews} setBrews={setBrews} notes={notes} beans={beans} userId={user?.id ?? null} desk={desk} onGoto={navigate} onBrewWith={recipeId => { setBrewRecipeId(recipeId); setOpenBrewForm(true); navigate("Brew Log"); }} onCafe={() => { setBrewCafe(true); setOpenBrewForm(true); navigate("Brew Log"); }} />}
         {page === "Brew Stats" && <BrewStats beans={beans} brews={brews} notes={notes} />}
       </div>}

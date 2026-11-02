@@ -1,0 +1,113 @@
+/* Home tab: today's bean with "그대로 내리기", the beans left, this week in one line and the latest brews. */
+.hm-date { margin: 0; color: var(--c-ink-3); font-size: 12px; font-weight: 600; }
+.home { display: flex; flex-direction: column; gap: 18px; }
+.hm-wide { display: none; }
+
+/* Today's bean */
+.hm-hero { display: flex; flex-direction: column; gap: 14px; padding: 18px; border: 1px solid var(--c-line); border-radius: var(--r-md); background: var(--c-surface); }
+.hm-hero-main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.hm-reason { display: inline-flex; align-items: center; gap: 6px; margin: 0; color: var(--c-accent); font-size: 12px; font-weight: 600; }
+.hm-reason i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.hm-bean-name { margin: 0; color: var(--c-ink); font-size: 17px; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
+.hm-bean-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 0; }
+.hm-roastery { color: var(--c-accent); font-size: 12px; }
+.hm-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.hm-chips span { padding: 4px 10px; border-radius: var(--r-pill); background: var(--c-soft); color: var(--c-ink-strong); font-size: 12px; white-space: nowrap; }
+.hm-hero-actions { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; }
+.hm-hero-actions button { min-height: 44px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.hm-hero-actions .quiet-button { border-color: var(--c-line-strong); }
+.hm-hero-empty { align-items: flex-start; gap: 8px; }
+.hm-link { padding: 0; border: 0; background: none; color: var(--c-accent); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+/* Section labels with a link on the right */
+.hm-grid { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.hm-side { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.hm-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; padding: 0 4px; color: var(--c-ink-2); font-size: 12px; font-weight: 600; }
+.hm-label button { min-height: 28px; padding: 0; border: 0; background: none; color: var(--c-accent); font: inherit; cursor: pointer; white-space: nowrap; }
+
+/* Beans left: a sideways row of small cards on phones */
+.hm-stock { min-width: 0; }
+.hm-stock-list { display: flex; gap: 10px; margin: 0 -16px; padding: 2px 16px 6px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scroll-padding: 0 16px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.hm-stock-list::-webkit-scrollbar { display: none; }
+.hm-bean { display: flex; flex-direction: column; gap: 8px; flex: 0 0 148px; box-sizing: border-box; min-width: 0; padding: 12px; border: 1px solid var(--c-line); border-radius: var(--r-md); background: var(--c-surface); color: var(--c-ink); font: inherit; text-align: left; cursor: pointer; scroll-snap-align: start; }
+.hm-bean.is-picked { border-color: var(--c-accent); box-shadow: inset 0 0 0 1px var(--c-accent); }
+.hm-bean-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hm-bean-title { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; min-height: 2.7em; font-size: 13px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+.hm-bean-meta { overflow: hidden; color: var(--c-ink-2); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.hm-track { display: block; height: 4px; overflow: hidden; border-radius: var(--r-pill); background: var(--c-fill); }
+.hm-track i { display: block; height: 100%; border-radius: inherit; background: var(--c-accent); }
+.hm-amount { color: var(--c-ink-2); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hm-amount.is-low { color: var(--c-accent); font-weight: 600; }
+.hm-peak { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.hm-peak .pk-pill { align-self: flex-start; }
+.hm-peak > .hm-phone { display: flex; }
+
+/* This week */
+.hm-week { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; width: 100%; box-sizing: border-box; padding: 14px 16px; border: 1px solid var(--c-line); border-radius: var(--r-md); background: var(--c-surface); color: var(--c-ink); font: inherit; text-align: left; cursor: pointer; }
+.hm-week-label { color: var(--c-ink-2); font-size: 12px; font-weight: 600; }
+.hm-week-count { font-size: 15px; }
+.hm-week-count b { color: var(--c-brown-deep); font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hm-streak { padding: 2px 8px; border-radius: var(--r-pill); background: var(--c-soft-2); color: var(--c-accent); font-size: 11px; font-weight: 600; }
+.hm-heat { display: inline-flex; gap: 4px; margin-left: auto; }
+.hm-heat i { width: 14px; height: 14px; border-radius: 4px; }
+
+/* Latest brews */
+.hm-recent-list { overflow: hidden; border: 1px solid var(--c-line); border-radius: var(--r-md); background: var(--c-surface); }
+.hm-recent-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 56px; box-sizing: border-box; padding: 9px 14px; border: 0; border-top: 1px solid var(--c-line); background: transparent; color: var(--c-ink); font: inherit; text-align: left; cursor: pointer; }
+.hm-recent-row:first-child { border-top: 0; }
+.hm-recent-row:hover { background: var(--c-soft); }
+.hm-recent-row:nth-child(n + 3) { display: none; }
+.hm-recent-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hm-recent-title { overflow: hidden; font-size: 15px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.hm-recent-meta { overflow: hidden; color: var(--c-ink-2); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.hm-recent-stars { flex: 0 0 auto; color: var(--c-accent); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Saved toast, above the floating tab bar on phones */
+/* Centred with margins, not a transform: the tab-change animation sets transform on the page's children. */
+.hm-toast { position: fixed; z-index: 90; left: 0; right: 0; width: max-content; margin: 0 auto; bottom: calc(96px + env(safe-area-inset-bottom)); max-width: calc(100vw - 32px); box-sizing: border-box; padding: 11px 16px; border-radius: var(--r-pill); background: var(--c-ink); color: var(--c-page); font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 8px 24px rgba(var(--sh-5c442a), calc(0.2 * var(--shadow-k))); animation: settings-rise .22s cubic-bezier(.2, .8, .2, 1); }
+
+/* Quick save and "다른 원두로" sheets: the picker sheet, sized to what it holds */
+.hm-layer .be-pick { height: auto; max-height: 82%; transition: transform .24s cubic-bezier(.2, .8, .2, 1); }
+.hm-layer.closing .be-pick { transform: translateY(100%); transition-timing-function: cubic-bezier(.4, 0, 1, 1); }
+.hm-layer .be-pick-backdrop { transition: opacity .24s ease-out; }
+.hm-layer.closing .be-pick-backdrop { opacity: 0; }
+.hm-sheet-top { display: flex; flex-direction: column; gap: 4px; touch-action: none; }
+.hm-other { height: min(60vh, 82%); }
+.hm-save-line { margin: 0; color: var(--c-ink-2); font-size: 13px; overflow-wrap: anywhere; }
+.hm-save-stars { display: flex; justify-content: center; padding: 6px 0; }
+.hm-memo input { font-size: 15px; }
+.hm-save-actions { display: grid; grid-template-columns: 1fr 1.6fr; gap: 8px; }
+.hm-save-actions button { min-height: 46px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.hm-save-actions .quiet-button { border-color: var(--c-line-strong); }
+.hm-pick-item { padding-right: 12px; }
+.hm-pick-item > button:disabled { color: var(--c-ink-3); cursor: default; }
+.hm-pick-item > button:disabled:hover { background: transparent; }
+.hm-pick-item .pk-pill { flex: 0 0 auto; }
+
+@media (max-width: 759px) {
+  .hm-memo input { font-size: 16px; }
+}
+
+@media (min-width: 541px) {
+  .hm-phone { display: none; }
+  .hm-wide { display: inline; }
+  .hm-peak > .hm-phone { display: none; }
+  .hm-peak > .hm-wide { display: flex; }
+  .hm-toast { bottom: 32px; }
+  .hm-hero { flex-direction: row; align-items: center; gap: 24px; padding: 22px 24px; }
+  .hm-hero-main { flex: 1 1 auto; }
+  .hm-hero-actions { display: flex; flex-direction: column; flex: 0 0 190px; }
+  .hm-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); align-items: start; gap: 20px; }
+  /* Beans left: rows in one card */
+  .hm-stock-list { display: block; margin: 0; padding: 0; overflow: hidden; border: 1px solid var(--c-line); border-radius: var(--r-md); background: var(--c-surface); }
+  .hm-bean { display: grid; grid-template-columns: minmax(0, 1fr) 150px auto; align-items: center; gap: 14px; width: 100%; padding: 12px 16px; border: 0; border-top: 1px solid var(--c-line); border-radius: 0; background: transparent; }
+  .hm-bean:first-child { border-top: 0; }
+  .hm-bean:hover { background: var(--c-soft); }
+  .hm-bean.is-picked { border-top-color: var(--c-line); box-shadow: inset 0 0 0 1.5px var(--c-accent); border-radius: var(--r-md); }
+  .hm-bean-title { display: block; min-height: 0; overflow: hidden; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+  .hm-bean-meta { display: block; }
+  .hm-peak { grid-column: 2; grid-row: 1; }
+  .hm-amount { grid-column: 3; grid-row: 1; font-size: 13px; text-align: right; }
+  .hm-recent-row:nth-child(n + 3) { display: flex; }
+  .hm-week-count { font-size: 15px; }
+}

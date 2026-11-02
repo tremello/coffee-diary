@@ -52,15 +52,20 @@ const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion:
 
 const emptyBeanForm: BeanForm = { name: "", origin: "", process: "", roastery: "", date: "", purchased: "", consumed: "", price: "", roasteryNotes: "", roastDate: "", farm: "", variety: "", flavor: "", memo: "", status: undefined, quality: undefined, roastLevel: undefined, peak: undefined };
 
-export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, onBrew, desk, recipeCount = 0, onGoto }: { beans: Bean[]; setBeans: StorageSetter<Bean[]>; brews: Brew[]; setBrews: StorageSetter<Brew[]>; notes: TastingNote[]; setNotes: StorageSetter<TastingNote[]>; userId: string | null; onBrew: (beanId?: number) => void; desk?: boolean; recipeCount?: number; onGoto?: (page: Page) => void }) {
-  const [pickedId, setPickedId] = useState<number | null>(null);
+export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, userId, onBrew, initialOpenId = null, desk, recipeCount = 0, onGoto }: { initialOpenId?: number | null; beans: Bean[]; setBeans: StorageSetter<Bean[]>; brews: Brew[]; setBrews: StorageSetter<Brew[]>; notes: TastingNote[]; setNotes: StorageSetter<TastingNote[]>; userId: string | null; onBrew: (beanId?: number) => void; desk?: boolean; recipeCount?: number; onGoto?: (page: Page) => void }) {
+  const [pickedId, setPickedId] = useState<number | null>(initialOpenId);
   const [show, setShow] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<BeanForm>(emptyBeanForm);
   const [filter, setFilter] = useState("active");
   const [sort, setSort] = useState<BeanSort>("registered");
   const [qualityFilter, setQualityFilter] = useState<"all" | BeanQuality>("all");
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [expandedId, setExpandedId] = useState<number | null>(initialOpenId);
+  // A bean tapped on the home tab opens in place and scrolls into view.
+  useEffect(() => {
+    if (initialOpenId !== null) document.querySelector(`.bean-list > [data-swipe-id="${initialOpenId}"]`)?.scrollIntoView({ block: "center" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [twoColumns, setTwoColumns] = useState(() => window.matchMedia?.("(min-width: 541px)").matches ?? false);
   useEffect(() => {
     const query = window.matchMedia?.("(min-width: 541px)");

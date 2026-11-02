@@ -8,7 +8,7 @@ export const DEVICE_KEYS = { startPage: "coffee-start-page", swipeHint: "coffee-
 const readString = (key: string) => { try { return localStorage.getItem(key); } catch { return null; } };
 const writeString = (key: string, value: string | null) => { try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch {} };
 
-export const readStartPage = (): Page => { const saved = readString(DEVICE_KEYS.startPage); return (PAGES as readonly string[]).includes(saved ?? "") ? saved as Page : "Beans"; };
+export const readStartPage = (): Page => { const saved = readString(DEVICE_KEYS.startPage); return (PAGES as readonly string[]).includes(saved ?? "") ? saved as Page : "Home"; };
 
 // A device setting the settings sheet edits; pages read it again when they mount after the sheet closes.
 export function useDeviceSetting<T extends string>(key: string, read: () => T): [T, (value: T) => void] {

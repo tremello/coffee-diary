@@ -1,6 +1,6 @@
 import { blendFields, blendName, isBlend } from "../../lib/blend";
 import { fmt, localDate, parseLocalDate } from "../../lib/format";
-import { type Brew, type BrewForm, type CoffeeValue, isCafeBrew, type TastingNote, type TastingNoteForm } from "../../types";
+import { type Bean, type BeanStatus, type Brew, type BrewForm, type CoffeeValue, isCafeBrew, type TastingNote, type TastingNoteForm } from "../../types";
 
 export const emptyBrewForm = (): BrewForm => ({ beanId: "", amount: "", waterAmount: "", method: "", date: localDate(), recipe: "", grindSize: "", waterTemp: "", brewTime: "", filter: "", water: "", ...emptyCafeFields() });
 
@@ -117,3 +117,14 @@ export const emptyNoteForm = (): TastingNoteForm => ({
   memo: "",
   date: localDate()
 });
+
+// A new or edited own brew takes its grams from the bean; the first cup from a degassing bean starts it as 소비 중.
+export const takeFromBean = (beans: Bean[], beanId: number, amount: number) => beans.map(item => item.id === beanId ? { ...item, remaining: Math.round((item.remaining - amount) * 10) / 10, ...(item.status === "디개싱 중" ? { status: "소비 중" as BeanStatus } : {}) } : item);
+
+// The tasting note saved with a brew (linked by brewId), or null when there is nothing to keep.
+export const brewNote = (brew: Brew, note: { memo: string; rating: number; taste: TasteScores }, date: string, previousNote?: TastingNote | null): TastingNote | null => {
+  if (!(note.memo.trim() || note.rating > 0 || Object.values(note.taste).some(Boolean) || previousNote)) return null;
+  const base = previousNote ?? emptyNoteForm();
+  const taste = Object.fromEntries(TASTE_ATTRIBUTES.map(({ key }) => [key, note.taste[key] ? String(note.taste[key]) : tasteScore(base[key]) ? "" : base[key] ?? ""]));
+  return { ...base, ...taste, id: previousNote?.id ?? Date.now() + 1, beanId: brew.beanId, brewId: brew.id, rating: note.rating, memo: note.memo.trim(), date };
+};

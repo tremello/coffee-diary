@@ -3,7 +3,7 @@ import { type StorageSetter, useStorage } from "../data/sync";
 import { Empty, JourneySteps } from "../components/ui";
 import { BrewDetail } from "../components/brew-editor/BrewDetail";
 import { BrewEditor, type BrewNote } from "../components/brew-editor/BrewEditor";
-import { brewConditions, brewConditionsForm, coffeeFields, cafeTitle, recentCafes, composeGrind, parseGrind, brewRatio, dayHeading, emptyBrewForm, emptyNoteForm, latestBrewOf, normalizeBrewTime, noteMemo, shortDate, TASTE_ATTRIBUTES, tasteScore, tasteSummary } from "../components/brew-editor/brewFormat";
+import { brewConditions, brewConditionsForm, brewNote, takeFromBean, coffeeFields, cafeTitle, recentCafes, composeGrind, parseGrind, brewRatio, dayHeading, emptyBrewForm, latestBrewOf, normalizeBrewTime, noteMemo, shortDate, TASTE_ATTRIBUTES, tasteScore, tasteSummary } from "../components/brew-editor/brewFormat";
 import { RatingStars } from "../components/brew-editor/RatingStars";
 import { BrewPanel } from "../components/desk/BrewPanel";
 import { DeskSearch, DeskStart, DeskToolbar, Tile } from "../components/desk/Desk";
@@ -13,7 +13,7 @@ import { beanValues } from "../lib/blend";
 import { readLocal, writeLocal } from "../data/storage";
 import { fmt, localDate } from "../lib/format";
 import { normalizedRecipeAction, recipeTime, recipeTimeToSeconds, recipeWater } from "../lib/recipe";
-import { type Bean, BEAN_ORIGINS, type BeanStatus, type Brew, type BrewForm, isCafeBrew, type SavedRecipe, type TastingNote } from "../types";
+import { type Bean, BEAN_ORIGINS, type Brew, type BrewForm, isCafeBrew, type SavedRecipe, type TastingNote } from "../types";
 
 // Shown only until the user registers drippers of their own.
 const DRIPPER_SUGGESTIONS = ["하리오 V60", "오리가미", "칼리타"];
@@ -32,7 +32,10 @@ type Prefill = { kind: "bean" | "again" | "draft"; text: string } | null;
 
 const RepeatIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3" /><path d="M18 3v4h-4M6 21v-4h4" /></svg>;
 
-export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, userId, openInitially, initialBeanId, initialRecipeId, initialCafe, desk, onGoto, onOpened }: {
+// What the home tab asked to open: a brew to repeat or edit, and the stars and memo typed in its quick sheet.
+export type BrewIntent = { brewId?: number; mode?: "again" | "edit"; note?: { rating: number; memo: string } };
+
+export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, userId, openInitially, initialBeanId, initialRecipeId, initialCafe, intent, desk, onGoto, onOpened }: {
   beans: Bean[];
   setBeans: StorageSetter<Bean[]>;
   brews: Brew[];
@@ -47,6 +50,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   initialCafe?: boolean;
   desk?: boolean;
   onGoto?: (page: Page) => void;
+  intent?: BrewIntent | null;
   onOpened: () => void;
 }) {
   const [show, setShow] = useState(false);
@@ -154,7 +158,12 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   };
   useEffect(() => {
     if (!openInitially) return;
-    if (initialBeanId) openWithBean(initialBeanId); else openNew();
+    const target = intent?.brewId === undefined ? undefined : brews.find(brew => brew.id === intent.brewId);
+    if (target && intent?.mode === "edit") edit(target);
+    // The usual brew of another bean can stand in as the template for a bean never brewed.
+    else if (target) { again(target); if (initialBeanId && initialBeanId !== target.beanId) setForm(current => ({ ...current, beanId: String(initialBeanId) })); }
+    else if (initialBeanId) openWithBean(initialBeanId); else openNew();
+    if (intent?.note) { const { rating, memo } = intent.note; setNote(current => ({ ...current, rating, memo })); }
     if (initialRecipeId) pickRecipe(String(initialRecipeId));
     if (initialCafe) setForm(current => ({ ...current, kind: "cafe" }));
     onOpened();
@@ -163,10 +172,8 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
 
   // The tasting note rides along with the brew (linked by brewId); a cafe brew's note has beanId 0 like the brew.
   const saveNote = (brew: Brew, previousNote: TastingNote | null | undefined) => {
-    if (!(note.memo.trim() || note.rating > 0 || Object.values(note.taste).some(Boolean) || previousNote)) return;
-    const base = previousNote ?? emptyNoteForm();
-    const taste = Object.fromEntries(TASTE_ATTRIBUTES.map(({ key }) => [key, note.taste[key] ? String(note.taste[key]) : tasteScore(base[key]) ? "" : base[key] ?? ""]));
-    const saved = { ...base, ...taste, id: previousNote?.id ?? Date.now() + 1, beanId: brew.beanId, brewId: brew.id, rating: note.rating, memo: note.memo.trim(), date: form.date };
+    const saved = brewNote(brew, note, form.date, previousNote);
+    if (!saved) return;
     setNotes(previousNote ? notes.map(item => item.id === previousNote.id ? saved : item) : [...notes, saved]);
   };
   const finishSave = () => {
@@ -206,7 +213,6 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     const restoredBeans = previous && !isCafeBrew(previous) ? beans.map(item => item.id === previous.beanId ? { ...item, remaining: Math.round((item.remaining + previous.amount) * 10) / 10 } : item) : beans;
     const available = restoredBeans.find(item => item.id === nextBeanId);
     if (!available || available.remaining < amt) { setBrewError(`잔여량(${fmt(available?.remaining ?? 0)}g)이 부족해요.`); return; }
-    const startsConsuming = available.status === "디개싱 중";
     const recipeId = selectedRecipeId ? Number(selectedRecipeId) : previous && previous.recipe === form.recipe ? previous.recipeId : undefined;
     const brew: Brew = { id: editingId ?? Date.now(), beanId: nextBeanId, amount: amt, waterAmount: water, method: form.method.trim(), date: form.date, recipe: form.recipe, ...(recipeId !== undefined ? { recipeId } : {}), grindSize: form.grindSize.trim() || undefined, waterTemp: temp, brewTime: brewTime || undefined, filter: form.filter.trim() || undefined, water: form.water.trim() || undefined };
     setBrews(editingId === null ? [...brews, brew] : brews.map(item => item.id === editingId ? brew : item));
@@ -215,7 +221,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     if (brew.water && !waters.includes(brew.water)) setWaters([...waters, brew.water]);
     const savedGrinder = brew.grindSize ? parseGrind(brew.grindSize, grinders).grinder : "";
     if (savedGrinder && !grinders.includes(savedGrinder)) setGrinders([...grinders, savedGrinder]);
-    setBeans(restoredBeans.map(item => item.id === nextBeanId ? { ...item, remaining: Math.round((item.remaining - amt) * 10) / 10, ...(startsConsuming ? { status: "소비 중" as BeanStatus } : {}) } : item));
+    setBeans(takeFromBean(restoredBeans, nextBeanId, amt));
     saveNote(brew, previousNote);
     finishSave();
   };
