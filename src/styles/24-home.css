@@ -184,3 +184,6 @@
 .hm-week-body { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
 .hm-week-card .hm-heat { margin-left: 0; width: 100%; }
 .hm-week-card .hm-heat i { flex: 1; height: 14px; }
+
+/* Phones: the header has no bottom margin there, so give the title the same breathing room as the gaps between home sections. */
+@media (max-width: 540px) { .home { padding-top: 18px; } }
