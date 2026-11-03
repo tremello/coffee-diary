@@ -80,9 +80,8 @@
 .recent-recipes button { max-width: min(260px, 100%); overflow: hidden; border: 1px solid var(--c-line-strong); border-radius: var(--r-pill); background: var(--c-page); color: var(--c-ink-2); padding: 6px 10px; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .recent-recipes button:hover { border-color: var(--bd-ae9272); background: var(--c-soft-2); color: var(--c-brown-deep); }
 .brew-rating-label { display: block; margin-bottom: 4px; font-size: 12px; color: var(--color-text-secondary); font-family: inherit; }
-.star-rating { display: flex; height: 44px; align-items: center; }
-/* 48px per star so each half-star button is 24×44, the smallest tap target WCAG 2.5.8 allows for side-by-side buttons. */
-.star-rating-star { position: relative; display: inline-block; width: 48px; height: 44px; color: var(--fg-d7c8b5); font-size: 28px; line-height: 44px; text-align: center; }
+.star-rating { display: flex; gap: 1px; height: 32px; align-items: center; }
+.star-rating-star { position: relative; display: inline-block; width: 24px; height: 30px; color: var(--fg-d7c8b5); font-size: 26px; line-height: 30px; }
 .star-rating-star.full { color: var(--c-accent); }
 .star-rating-star.half { color: var(--fg-d7c8b5); }
 .star-rating-star.half > span { background: linear-gradient(90deg, var(--bg-7a5733) 50%, var(--bg-d7c8b5) 50%); background-clip: text; -webkit-background-clip: text; color: transparent; }
