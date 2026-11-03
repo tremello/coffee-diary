@@ -78,7 +78,7 @@
 
 /* First-run: three steps on the left, a faded example on the right */
 .desk-start-steps { display: grid; gap: 14px; align-content: start; padding: 20px; border: 1px dashed var(--c-line-strong); border-radius: var(--r-md); }
-.desk-start-steps h3 { margin: 0; font-size: 17px; font-weight: 700; color: var(--c-ink); }
+.desk-start-steps h2 { margin: 0; font-size: 17px; font-weight: 700; color: var(--c-ink); }
 .desk-start-steps p { margin: 4px 0 0; font-size: 13px; color: var(--c-ink-2); }
 .desk-start-steps ol { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .desk-start-steps li { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 12px 14px; border: 1px solid transparent; border-radius: var(--r-sm); background: var(--c-soft); }

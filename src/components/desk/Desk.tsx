@@ -77,7 +77,7 @@ export function DeskStart({ steps, extra, example }: { steps: StartStep[]; extra
   return <div className="desk-split desk-start">
     <div className="desk-start-steps">
       <div>
-        <h3>커피 다이어리를 시작해요</h3>
+        <h2>커피 다이어리를 시작해요</h2>
         <p>세 단계만 하면 기록이 쌓이기 시작해요.</p>
       </div>
       <ol>
@@ -91,7 +91,7 @@ export function DeskStart({ steps, extra, example }: { steps: StartStep[]; extra
     </div>
     <div className="desk-panel desk-start-example" aria-hidden="true">
       <span className="desk-start-badge">예시 · 등록하면 이렇게 보여요</span>
-      <div className="desk-start-ghost">{example}</div>
+      <div className="desk-start-ghost" aria-hidden="true">{example}</div>
     </div>
   </div>;
 }
