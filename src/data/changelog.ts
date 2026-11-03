@@ -3,6 +3,7 @@
 export type Release = { version: string; date: string; changes: string[] };
 
 export const RELEASES: Release[] = [
+  { version: "1.19.6", date: "2026-11-04", changes: ["별점을 손가락으로 좌우로 밀어서 고를 수 있어요. 별 크기는 그대로예요"] },
   { version: "1.19.5", date: "2026-11-04", changes: ["브루잉 기록의 별점 크기를 1.19.4 이전으로 되돌렸어요"] },
   { version: "1.19.4", date: "2026-11-04", changes: ["브루잉 기록의 별점을 휴대폰에서 누르기 쉽게 별 사이를 넓혔어요. 반 별 단위로도 정확히 눌려요", "PC 처음 사용 안내 옆의 흐린 예시를 화면 읽기 기능(스크린리더)이 실제 기록처럼 읽던 것을 고쳤어요"] },
   { version: "1.19.3", date: "2026-11-03", changes: ["휴대폰 홈 화면에서 '오늘은 뭘 내릴까요?' 제목과 바로 아래 카드가 너무 붙어 있던 것을 조금 띄웠어요"] },

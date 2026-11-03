@@ -80,7 +80,7 @@
 .recent-recipes button { max-width: min(260px, 100%); overflow: hidden; border: 1px solid var(--c-line-strong); border-radius: var(--r-pill); background: var(--c-page); color: var(--c-ink-2); padding: 6px 10px; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .recent-recipes button:hover { border-color: var(--bd-ae9272); background: var(--c-soft-2); color: var(--c-brown-deep); }
 .brew-rating-label { display: block; margin-bottom: 4px; font-size: 12px; color: var(--color-text-secondary); font-family: inherit; }
-.star-rating { display: flex; gap: 1px; height: 32px; align-items: center; }
+.star-rating { display: flex; gap: 1px; height: 32px; align-items: center; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
 .star-rating-star { position: relative; display: inline-block; width: 24px; height: 30px; color: var(--fg-d7c8b5); font-size: 26px; line-height: 30px; }
 .star-rating-star.full { color: var(--c-accent); }
 .star-rating-star.half { color: var(--fg-d7c8b5); }

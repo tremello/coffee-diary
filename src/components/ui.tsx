@@ -1,12 +1,25 @@
-import { type ReactNode } from "react";
+import { type PointerEvent, type ReactNode } from "react";
 import { FONT } from "../lib/format";
 
 export function FormCard({ children }: { children: ReactNode }) {
   return <div className="form-card">{children}</div>;
 }
 
+// Half-star score (0.5–5) under a pointer at x within the row.
+export const ratingAt = (x: number, left: number, width: number) => Math.max(1, Math.ceil(Math.min(Math.max((x - left) / width, 0), 1) * 10)) / 2;
+
 export function StarRating({ value, onChange }: { value: number; onChange: (value: number) => void }) {
-  return <div className="star-rating" aria-label={`별점 ${value}점`}>{[1, 2, 3, 4, 5].map(star => <span className={`star-rating-star ${value >= star ? "full" : value >= star - 0.5 ? "half" : "empty"}`} key={star}><span aria-hidden="true">★</span><button type="button" aria-label={`${star - 0.5}점`} onClick={() => onChange(star - 0.5)} /><button type="button" aria-label={`${star}점`} onClick={() => onChange(star)} /></span>)}</div>;
+  // A tap or a drag along the row picks the score like a slider; the buttons stay for the keyboard (detail 0 = not a pointer click).
+  const pick = (event: PointerEvent<HTMLDivElement>, always: boolean) => {
+    const box = event.currentTarget.getBoundingClientRect();
+    const next = ratingAt(event.clientX, box.left, box.width);
+    if (always || next !== value) onChange(next);
+  };
+  return <div className="star-rating" aria-label={`별점 ${value}점`}
+    onPointerDown={event => { event.currentTarget.setPointerCapture(event.pointerId); pick(event, true); }}
+    onPointerMove={event => { if (event.currentTarget.hasPointerCapture(event.pointerId)) pick(event, false); }}>
+    {[1, 2, 3, 4, 5].map(star => <span className={`star-rating-star ${value >= star ? "full" : value >= star - 0.5 ? "half" : "empty"}`} key={star}><span aria-hidden="true">★</span><button type="button" aria-label={`${star - 0.5}점`} onClick={event => event.detail === 0 && onChange(star - 0.5)} /><button type="button" aria-label={`${star}점`} onClick={event => event.detail === 0 && onChange(star)} /></span>)}
+  </div>;
 }
 
 export function Field({ label, children, required = false, invalid = false }: { label: string; children: ReactNode; required?: boolean; invalid?: boolean }) {
