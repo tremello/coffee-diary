@@ -18,7 +18,7 @@
   /* Every tab ends with enough room that its last card clears the floating bar. */
   #root { padding-bottom: env(safe-area-inset-bottom) !important; }
   .page-transition { padding-bottom: 64px; }
-  .page-tabs { left: 14px; right: 14px; bottom: calc(10px + env(safe-area-inset-bottom)); width: auto; padding: 6px; border: 1px solid var(--glass-edge); border-radius: 32px; background: var(--glass-bg-solid); box-shadow: var(--sh-glass), inset 0 1px 0 var(--glass-bd); }
+  .page-tabs { left: 14px; right: 14px; touch-action: none; user-select: none; -webkit-user-select: none; bottom: calc(10px + env(safe-area-inset-bottom)); width: auto; padding: 6px; border: 1px solid var(--glass-edge); border-radius: 32px; background: var(--glass-bg-solid); box-shadow: var(--sh-glass), inset 0 1px 0 var(--glass-bd); }
   @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
     .page-tabs { background: var(--glass-bg); -webkit-backdrop-filter: blur(20px) saturate(1.6); backdrop-filter: blur(20px) saturate(1.6); }
   }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type PointerEvent, useRef, useState } from "react";
 import { confirmAndSignOut, signInWithGoogle } from "../data/auth";
 import { FONT, localDate } from "../lib/format";
 import { homeDateLine } from "../lib/home";
@@ -15,6 +15,17 @@ export function Header({ page, setPage, user, authLoading, settingsOpen, onOpenS
   const signOut = () => confirmAndSignOut(accountName);
   // The home tab's title area: today's date over a question instead of the app name over the tab name.
   const home = page === "Home" && !settingsOpen;
+  // Phones: dragging along the floating bar slides the pill under the finger, and letting go opens the tab beneath it.
+  const pill = useRef<HTMLSpanElement>(null);
+  const slotAt = (event: PointerEvent<HTMLElement>) => Math.min(PAGES.length - 1, Math.max(0, Math.floor((event.clientX - event.currentTarget.getBoundingClientRect().left) / event.currentTarget.getBoundingClientRect().width * PAGES.length)));
+  const follow = (event: PointerEvent<HTMLElement>) => {
+    const el = pill.current, width = el?.offsetWidth ?? 0;
+    if (!el) return;
+    const x = event.clientX - event.currentTarget.getBoundingClientRect().left - el.offsetLeft - width / 2;
+    el.style.transition = "none";
+    el.style.transform = `translateX(${Math.min(Math.max(x, 0), width * (PAGES.length - 1))}px)`;
+  };
+  const settle = (slot: number) => { if (pill.current) { pill.current.style.transition = ""; pill.current.style.transform = `translateX(${slot * 100}%)`; } };
   return (
     <div className="app-header" style={{ borderBottom: "0.5px solid var(--color-border-tertiary)", marginBottom: "1.5rem" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 0 0" }}>
@@ -25,8 +36,12 @@ export function Header({ page, setPage, user, authLoading, settingsOpen, onOpenS
         <div className="account-actions">{user ? <button type="button" className="refresh-button account-button" onClick={signOut} aria-label={`${accountName} 로그아웃`} title={`${accountName} · 로그아웃`}>{accountName.slice(0, 1).toUpperCase()}</button> : <button type="button" className="google-button" onClick={signInGoogle} aria-label="Google 계정으로 로그인" title="Google 계정으로 로그인">로그인</button>}<button className="refresh-button" onClick={() => window.location.reload()} aria-label="새로고침" title="새로고침">↻</button><img className="brand-mark" src="/coffee-diary-logo-brown-96.png" width="40" height="40" alt="커피 기록 로고" /><button type="button" className="menu-button" onClick={onOpenSettings} aria-label="설정" title="설정"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 6.5h16M4 12h16M4 17.5h16" /></svg></button></div>
       </div>
       {loginError && <p className="login-error" role="alert">{loginError}</p>}
-      <nav className="page-tabs">
-        <span className="page-tab-indicator" aria-hidden="true" style={{ transform: `translateX(${PAGES.indexOf(page) * 100}%)` }} />
+      <nav className="page-tabs"
+        onPointerDown={event => { if (!window.matchMedia("(max-width: 540px)").matches) return; event.currentTarget.setPointerCapture(event.pointerId); follow(event); }}
+        onPointerMove={event => { if (event.currentTarget.hasPointerCapture(event.pointerId)) follow(event); }}
+        onPointerUp={event => { if (!event.currentTarget.hasPointerCapture(event.pointerId)) return; const slot = slotAt(event); settle(slot); setPage(PAGES[slot]); }}
+        onPointerCancel={() => settle(PAGES.indexOf(page))}>
+        <span ref={pill} className="page-tab-indicator" aria-hidden="true" style={{ transform: `translateX(${PAGES.indexOf(page) * 100}%)` }} />
         {PAGES.map(p => {
           const current = page === p && !settingsOpen;
           return (
