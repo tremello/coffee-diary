@@ -26,3 +26,4 @@
 @import "./24-home.css"; /* Home tab: today's bean, quick save, beans left, this week and the latest brews. */
 @import "./25-touch.css"; /* Bigger invisible tap areas around small text buttons (44px tall). */
 @import "./26-one-layer.css"; /* 한 겹 규칙: one layer of cards; inside a card, lines and space instead of filled or bordered boxes. */
+@import "./27-color-themes.css"; /* Extra colour themes (얼그레이, 에스프레소) chosen in settings; they refill the colour tokens. */

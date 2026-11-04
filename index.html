@@ -10,11 +10,17 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/coffee-diary-icon-180.png" />
     <meta name="theme-color" content="#7a5733" />
     <script>
-      // Apply the saved light/dark choice before the first paint so the page never flashes the wrong theme.
+      // Apply the saved light/dark and colour choices before the first paint so the page never flashes the wrong theme.
+      // Bar colours match BAR_COLORS in src/data/theme.ts.
       try {
         var t = localStorage.getItem("coffee-theme");
+        var c = localStorage.getItem("coffee-color");
+        var bars = { coffee: ["#7a5733", "#1a1713"], earlgrey: ["#45627f", "#15181b"], espresso: ["#665d55", "#181717"] };
+        if (!bars[c]) c = "coffee";
         if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
-        if (t === "dark" || (t !== "light" && matchMedia("(prefers-color-scheme: dark)").matches)) document.querySelector('meta[name="theme-color"]').setAttribute("content", "#1a1713");
+        if (c !== "coffee") document.documentElement.dataset.color = c;
+        var dark = t === "dark" || (t !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+        document.querySelector('meta[name="theme-color"]').setAttribute("content", bars[c][dark ? 1 : 0]);
       } catch (e) {}
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
