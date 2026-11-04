@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BrewDetail } from "../components/brew-editor/BrewDetail";
 import { brewConditions, brewRatio, cafeTitle } from "../components/brew-editor/brewFormat";
 import { RatingStars } from "../components/brew-editor/RatingStars";
 import { fmt, localDate, parseLocalDate, toDateKey } from "../lib/format";
 import { isBlend } from "../lib/blend";
 import { type Bean, type Brew, type TastingNote, isCafeBrew } from "../types";
+
+import { type DateRange } from "../lib/pages";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const PERIODS = [{ value: 7, label: "7일" }, { value: 30, label: "30일" }, { value: 0, label: "전체" }];
@@ -27,15 +29,19 @@ const longestRun = (dates: Set<string>, from: Date, to: Date) => {
   return best;
 };
 
-export function BrewStats({ beans, brews: allBrews, notes }: { beans: Bean[]; brews: Brew[]; notes: TastingNote[] }) {
+export function BrewStats({ beans, brews: allBrews, notes, initialRange }: { initialRange?: DateRange; beans: Bean[]; brews: Brew[]; notes: TastingNote[] }) {
   // The calendar counts every cup, cafe ones too; grams, cost, habits and the recap are about our own beans only.
   const brews = allBrews.filter(brew => !isCafeBrew(brew));
   const today = localDate();
   const todayDate = parseLocalDate(today);
   const thisMonth = today.slice(0, 7);
-  const [month, setMonth] = useState(thisMonth);
-  const [selected, setSelected] = useState(today);
+  const [month, setMonth] = useState(initialRange?.to.slice(0, 7) ?? thisMonth);
+  const [selected, setSelected] = useState(initialRange?.to ?? today);
   const [period, setPeriod] = useState(7);
+  const [range, setRange] = useState(initialRange);
+  useEffect(() => {
+    if (initialRange) document.getElementById("period-recap")?.scrollIntoView({ block: "start" });
+  }, [initialRange]);
   const [detailId, setDetailId] = useState<number | null>(null);
 
   const byDate = allBrews.reduce<Map<string, Brew[]>>((result, brew) => result.set(brew.date, [...(result.get(brew.date) ?? []), brew]), new Map());
@@ -72,10 +78,14 @@ export function BrewStats({ beans, brews: allBrews, notes }: { beans: Bean[]; br
   const detailBrew = detailId === null ? undefined : allBrews.find(brew => brew.id === detailId);
 
   // 돌아보기: the last N days (today included) by bean, with what each cup cost and how it was rated.
-  const from = period ? toDateKey(addDays(todayDate, -(period - 1))) : "";
-  const prevFrom = period ? toDateKey(addDays(todayDate, -(period * 2 - 1))) : "";
-  const recent = brews.filter(brew => brew.date >= from && brew.date <= today);
-  const previous = period ? brews.filter(brew => brew.date >= prevFrom && brew.date < from) : [];
+  const rangeDays = range ? Math.round((Date.parse(range.to) - Date.parse(range.from)) / DAY) + 1 : 0;
+  const from = range?.from ?? (period ? toDateKey(addDays(todayDate, -(period - 1))) : "");
+  const to = range?.to ?? today;
+  const offset = range ? Math.max(7, rangeDays) : period;
+  const prevFrom = range ? toDateKey(addDays(parseLocalDate(from), -offset)) : period ? toDateKey(addDays(todayDate, -(period * 2 - 1))) : "";
+  const prevTo = range ? toDateKey(addDays(parseLocalDate(to), -offset)) : period ? toDateKey(addDays(parseLocalDate(from), -1)) : "";
+  const recent = brews.filter(brew => brew.date >= from && brew.date <= to);
+  const previous = period || range ? brews.filter(brew => brew.date >= prevFrom && brew.date <= prevTo) : [];
   const ratingsOf = (list: Brew[]) => list.map(ratingOf).filter(Boolean);
   const costOf = (brew: Brew) => { const perGram = pricePerGram(beanOf(brew)); return perGram === null ? null : perGram * brew.amount; };
   const pricedCosts = recent.map(costOf).filter((cost): cost is number => cost !== null);
@@ -99,7 +109,7 @@ export function BrewStats({ beans, brews: allBrews, notes }: { beans: Bean[]; br
   }).sort((a, b) => b.rating - a.rating || b.cups - a.cups);
 
   // Beans still in the bag, and how many days they last at the pace of the chosen period.
-  const spanDays = period || Math.max(1, Math.round((todayDate.getTime() - parseLocalDate(recent.reduce((first, brew) => brew.date < first ? brew.date : first, today)).getTime()) / DAY) + 1);
+  const spanDays = rangeDays || period || Math.max(1, Math.round((todayDate.getTime() - parseLocalDate(recent.reduce((first, brew) => brew.date < first ? brew.date : first, today)).getTime()) / DAY) + 1);
   const runningOut = beanRows.filter(row => row.bean && !row.bean.deleted && row.bean.remaining > 0)
     .map(row => ({ ...row, remaining: row.bean!.remaining, left: row.bean!.purchased > 0 ? Math.min(1, row.bean!.remaining / row.bean!.purchased) : 0, days: Math.round(row.bean!.remaining / (row.grams / spanDays)) }))
     .sort((a, b) => a.days - b.days).slice(0, 4);
@@ -132,8 +142,8 @@ export function BrewStats({ beans, brews: allBrews, notes }: { beans: Bean[]; br
   const processRows = [...new Set(recent.map(processOf).filter((process): process is string => Boolean(process)))]
     .map(process => ({ process, rating: average(ratingsOf(recent.filter(brew => processOf(brew) === process))) }))
     .filter(row => row.rating).sort((a, b) => b.rating - a.rating);
-  const periodLabel = period ? `최근 ${period}일` : "전체 기간";
-  const prevLabel = period ? `지난 ${period}일` : "";
+  const periodLabel = range ? `${range.from} ~ ${range.to}` : period ? `최근 ${period}일` : "전체 기간";
+  const prevLabel = range ? (rangeDays <= 7 ? "지난주 같은 기간" : `이전 ${rangeDays}일`) : period ? `지난 ${period}일` : "";
 
   return <div className="brew-stats">
     <div className="inventory-intro stats-header"><div><p>날짜를 누르면 그날 내린 커피가 나와요.</p></div></div>
@@ -197,10 +207,10 @@ export function BrewStats({ beans, brews: allBrews, notes }: { beans: Bean[]; br
       </section>
     </div>
 
-    <section className="stats-section recap" aria-labelledby="recap-title">
+    <section className="stats-section recap" aria-labelledby="recap-title" id="period-recap">
       <div className="recap-head">
         <h3 id="recap-title">{periodLabel} 돌아보기</h3>
-        <div className="recap-periods" role="group" aria-label="돌아볼 기간">{PERIODS.map(item => <button type="button" key={item.value} aria-pressed={period === item.value} onClick={() => setPeriod(item.value)}>{item.label}</button>)}</div>
+        <div className="recap-periods" role="group" aria-label="돌아볼 기간">{PERIODS.map(item => <button type="button" key={item.value} aria-pressed={!range && period === item.value} onClick={() => { setRange(undefined); setPeriod(item.value); }}>{item.label}</button>)}</div>
       </div>
       {recent.length === 0 ? <p className="stats-empty">{periodLabel} 동안 내린 기록이 없어요.</p> : <>
         <div className="recap-cards">
@@ -216,7 +226,7 @@ export function BrewStats({ beans, brews: allBrews, notes }: { beans: Bean[]; br
         </ul>}
 
         {runningOut.length > 0 && <>
-          <h4 className="recap-sub">곧 떨어지는 원두<small>{period ? `최근 ${period}일` : "지금까지"} 쓴 속도로</small></h4>
+          <h4 className="recap-sub">곧 떨어지는 원두<small>{range ? "선택한 기간" : period ? `최근 ${period}일` : "지금까지"} 쓴 속도로</small></h4>
           <div className="recap-left">{runningOut.map(row => <div key={row.beanId}>
             <span><b>{row.bean!.name}</b><em className={row.days <= 3 ? "soon" : ""}>약 {fmt(row.days)}일 · {fmt(round1(row.remaining))}g</em></span>
             <i aria-hidden="true"><i style={{ width: `${Math.max(3, row.left * 100)}%` }} className={row.days <= 3 ? "soon" : ""} /></i>

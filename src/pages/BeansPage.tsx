@@ -59,15 +59,17 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
   const [show, setShow] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<BeanForm>(emptyBeanForm);
-  const [filter, setFilter] = useState("active");
+  const [filter, setFilter] = useState(initialOpenId === null ? "active" : "all");
   const [sort, setSort] = useState<BeanSort>("registered");
   const [qualityFilter, setQualityFilter] = useState<"all" | BeanQuality>("all");
   const [expandedId, setExpandedId] = useState<number | null>(initialOpenId);
-  // A bean tapped on the home tab opens in place and scrolls into view.
+  // Wait for synced data before scrolling to the linked card, once per target.
+  const scrolledLink = useRef<number | null>(null);
   useEffect(() => {
-    if (initialOpenId !== null) document.querySelector(`.bean-list > [data-swipe-id="${initialOpenId}"]`)?.scrollIntoView({ block: "center" });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (initialOpenId === null || scrolledLink.current === initialOpenId) return;
+    const card = document.querySelector(`.bean-list > [data-swipe-id="${initialOpenId}"]`);
+    if (card) { card.scrollIntoView({ block: "center" }); scrolledLink.current = initialOpenId; }
+  }, [initialOpenId, beans]);
   const [twoColumns, setTwoColumns] = useState(() => window.matchMedia?.("(min-width: 541px)").matches ?? false);
   useEffect(() => {
     const query = window.matchMedia?.("(min-width: 541px)");
@@ -598,7 +600,7 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
   </>;
 
   if (desk) {
-    const pickedBean = sortedVisible.find(bean => bean.id === pickedId) ?? sortedVisible[0];
+    const pickedBean = sortedVisible.find(bean => bean.id === pickedId) ?? (initialOpenId !== null && pickedId === initialOpenId ? undefined : sortedVisible[0]);
     const totalWeight = Math.round(active.reduce((sum, b) => sum + b.remaining, 0) * 10) / 10;
     return (
       <main className="inventory desk-page beans-desk">

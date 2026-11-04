@@ -35,7 +35,7 @@ const RepeatIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="n
 // What the home tab asked to open: a brew to repeat or edit, and the stars and memo typed in its quick sheet.
 export type BrewIntent = { brewId?: number; mode?: "again" | "edit"; note?: { rating: number; memo: string } };
 
-export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, userId, openInitially, initialBeanId, initialRecipeId, initialCafe, intent, desk, onGoto, onOpened }: {
+export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, recipes, userId, openInitially, initialBeanId, initialRecipeId, initialCafe, initialDetailId, intent, desk, onGoto, onOpened }: {
   beans: Bean[];
   setBeans: StorageSetter<Bean[]>;
   brews: Brew[];
@@ -48,6 +48,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   initialBeanId: number | null;
   initialRecipeId?: number | null;
   initialCafe?: boolean;
+  initialDetailId?: number;
   desk?: boolean;
   onGoto?: (page: Page) => void;
   intent?: BrewIntent | null;
@@ -69,9 +70,9 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   const [brewSort, setBrewSort] = useState<"latest" | "oldest">("latest");
   const [selectedRecipeId, setSelectedRecipeId] = useState("");
   const [brewError, setBrewError] = useState("");
-  const [detailId, setDetailId] = useState<number | null>(null);
+  const [detailId, setDetailId] = useState<number | null>(desk ? null : initialDetailId ?? null);
   // The brew shown in the right pane on wide screens.
-  const [pickedId, setPickedId] = useState<number | null>(null);
+  const [pickedId, setPickedId] = useState<number | null>(initialDetailId ?? null);
   const [deletedBrew, setDeletedBrew] = useState<{ brew: Brew; notes: TastingNote[] } | null>(null);
 
   const activeBeans = beans.filter(b => !b.deleted && b.remaining > 0);
@@ -305,7 +306,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     return groups;
   }, []);
   const detailBrew = detailId === null ? undefined : brews.find(brew => brew.id === detailId);
-  const pickedBrew = sorted.find(brew => brew.id === pickedId) ?? sorted[0];
+  const pickedBrew = sorted.find(brew => brew.id === pickedId) ?? (initialDetailId !== undefined && pickedId === initialDetailId ? undefined : sorted[0]);
   const thisMonth = today.slice(0, 7);
   const monthCount = brews.filter(brew => brew.date.startsWith(thisMonth)).length;
 

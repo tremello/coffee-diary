@@ -3,6 +3,7 @@
 export type Release = { version: string; date: string; changes: string[] };
 
 export const RELEASES: Release[] = [
+  { version: "1.20.5", date: "2026-11-05", changes: ["맥 앱에서 보던 원두와 브루잉 기록을 웹에서 바로 이어볼 수 있어요", "통계 링크로 전달된 기간을 그대로 보여주고, Google 로그인 후에도 보던 항목으로 돌아와요"] },
   { version: "1.20.4", date: "2026-11-04", changes: ["글씨체를 예전에 쓰던 IBM Plex Sans KR로 되돌렸어요"] },
   { version: "1.20.3", date: "2026-11-04", changes: ["앱 글씨체를 나눔스퀘어로 바꿨어요. 네모반듯해서 제목이 더 단단해 보여요. 드문 글자는 프리텐다드로 보여요", "레시피 공유 이미지도 같은 글씨체로 그려져요"] },
   { version: "1.20.2", date: "2026-11-04", changes: ["내부 정리: 더 이상 쓰지 않는 옛 입력창 스타일과 코드를 지웠어요. 화면과 사용법은 그대로예요"] },

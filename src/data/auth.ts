@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
 import { adoptLocalData, clearLocalData, hasPendingSync } from "./storage";
+import { appLinkHash, PENDING_LINK_KEY, readAppLink } from "../lib/pages";
 
 export function useAuth() {
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
@@ -15,7 +16,14 @@ export function useAuth() {
   return { user, loading };
 }
 
-export const signInWithGoogle = () => supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/` } });
+export const signInWithGoogle = () => {
+  const link = readAppLink(window.location.hash);
+  try {
+    if (!link.invalid && (link.beanId || link.brewId || link.range)) sessionStorage.setItem(PENDING_LINK_KEY, appLinkHash(link));
+    else sessionStorage.removeItem(PENDING_LINK_KEY);
+  } catch { /* Optional view context; login still works without storage. */ }
+  return supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/` } });
+};
 export const signOutAndClear = async () => {
   await supabase.auth.signOut();
   clearLocalData();
