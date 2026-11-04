@@ -7,12 +7,7 @@
 .roastery { font-size: 17px; color: var(--c-accent); letter-spacing: -0.035em; margin: 0 0 7px; overflow-wrap: anywhere; }
 .bean-info h3 { font-size: 17px; font-weight: 700; margin: 0 0 16px; letter-spacing: -.02em; line-height: 1.35; overflow-wrap: anywhere; }
 .compact-summary { display: none; }
-.compact-extra { display: none; }
-.bean-facts { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 0 0 21px; font-size: 12px; }
-.bean-facts div { display: flex; gap: 8px; }
-.bean-facts dt, .detail-label { color: var(--c-ink-2); font-size: 11px; }
-.bean-facts dd { margin: 0; color: var(--c-ink-strong); overflow-wrap: anywhere; }
-.flavor-notes { display: grid; gap: 8px; }
+.detail-label { color: var(--c-ink-2); font-size: 11px; }
 .flavor-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .flavor-tags > span { background: var(--c-soft-2); color: var(--c-ink-2); border-radius: var(--r-pill); padding: 5px 9px; font-size: 12px; overflow-wrap: anywhere; }
 .placeholder-note { color: var(--c-ink-3); font-size: 12px; margin: 0; }
@@ -42,20 +37,10 @@
 .stock-meter > div { height: 100%; background: var(--bg-7a5733); border-radius: inherit; }
 .stock-percent { font-size: 11px; color: var(--c-ink-3); margin: 7px 0 0; }
 .compact-stock-donut { display: none; }
-.bean-form { border: 1px solid var(--c-line-strong); background: var(--c-surface); border-radius: var(--r-md); padding: 24px; margin-bottom: 24px; }
-.bean-form h3 { margin-top: 0; font-size: 18px; }
-.bean-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.bean-form-grid label { display: grid; gap: 7px; font-size: 12px; color: var(--c-ink-2); }
-.bean-form-grid input, .bean-form-grid textarea { width: 100%; min-width: 0; padding: 10px 12px; }
-.full-width { grid-column: 1 / -1; }
-.form-buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 .inventory-empty { text-align: center; padding: 65px 20px; border: 1px dashed var(--c-line-strong); border-radius: var(--r-md); }
 .inventory-empty > span { font-size: 28px; }
 .inventory-empty h3 { font-size: 18px; font-weight: 500; }
 .inventory-empty p { color: var(--c-ink-2); font-size: 13px; margin-bottom: 24px; }
-.getting-started { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0 0 20px; padding: 0; list-style: none; }
-.getting-started li { display: grid; justify-items: center; gap: 6px; min-width: 0; color: var(--c-ink-2); font-size: 12px; }
-.getting-started b { display: grid; width: 24px; height: 24px; place-items: center; border-radius: 50%; color: var(--fg-ffffff); background: var(--bg-7a5733); font-size: 12px; font-variant-numeric: tabular-nums; }
 @media (min-width: 721px) { #root { padding: 0 32px; } }
 @media (max-width: 540px) {
   #root { padding-bottom: calc(4rem + env(safe-area-inset-bottom)) !important; }
@@ -79,13 +64,11 @@
   .inventory-toolbar-row { gap: 4px; }
   .inventory-filters { width: auto; gap: 1px; padding: 2px; border-radius: var(--r-sm); }
   .inventory-filters button { padding: 6px 10px; font-size: 11px; white-space: nowrap; }
-  .view-mode-control { font-size: 11px; }
   .inventory-toolbar-meta { width: auto; gap: 3px; flex-wrap: nowrap; font-size: 11px; }
   .inventory-toolbar-meta .inventory-sort { max-width: 96px; }
   .bean-list { gap: 10px; }
   .brew-log-tools { align-items: center; flex-direction: row; }
   .brew-log-tools select { width: auto; }
-  .brew-note-form { grid-template-columns: 1fr; gap: 10px; }
   .stats-header { align-items: stretch; flex-direction: column; }
   .stats-header h2 { font-size: 25px; }
   .stats-header select { width: 100%; }
@@ -96,12 +79,8 @@
   .inventory-card { grid-template-columns: minmax(0, 1fr) 116px; }
   .bean-info { padding: 20px 16px; }
   .bean-info h3 { font-size: 17px; }
-  .bean-facts { flex-direction: column; gap: 6px; }
   .bean-stock { padding: 20px 12px; }
   .stock-status { font-size: 11px; padding: 4px 6px; }
   .remaining-weight { font-size: 28px; }
   .remaining-weight span { font-size: 12px; }
-  .bean-form { padding: 18px; }
-  .bean-form-grid { grid-template-columns: 1fr; }
-  .bean-purchase-row { grid-template-columns: 1fr; gap: 12px; }
 }

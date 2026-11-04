@@ -16,28 +16,26 @@
 }
 
 .inventory, .recipe-page, .brew-log, .brew-stats { padding-top: 10px; }
-.page-intro, .inventory-intro, .stats-header { margin: 14px 0 20px; }
+.inventory-intro, .stats-header { margin: 14px 0 20px; }
 @media (min-width: 541px) {
   .inventory, .recipe-page, .brew-log, .brew-stats { padding-top: 0; }
-  .page-intro, .inventory-intro, .stats-header { margin-top: 4px; }
+  .inventory-intro, .stats-header { margin-top: 4px; }
 }
-.page-intro h2, .inventory-intro h2, .stats-header h2 { margin: 0 0 8px; color: var(--c-ink); font-size: 29px; font-weight: 600; letter-spacing: -1.1px; line-height: 1.2; }
-.page-intro p:last-child, .inventory-intro p:last-child, .stats-header p:last-child { color: var(--c-ink-2); font-size: 13px; line-height: 1.55; }
+.inventory-intro h2, .stats-header h2 { margin: 0 0 8px; color: var(--c-ink); font-size: 29px; font-weight: 600; letter-spacing: -1.1px; line-height: 1.2; }
+.inventory-intro p:last-child, .stats-header p:last-child { color: var(--c-ink-2); font-size: 13px; line-height: 1.55; }
 .recipe-intro { margin-bottom: 16px; }
 .brew-log-heading { align-items: flex-end; margin-bottom: 16px; }
 .brew-log-heading-actions { padding-bottom: 1px; }
 .brew-add-button { min-height: 38px; padding: 8px 13px; }
 
-.form-card, .brew-card, .recipe-composer-card, .saved-recipe-card, .stats-section {
+.brew-card, .saved-recipe-card, .stats-section {
   border: 1px solid var(--surface-border);
   border-radius: var(--r-md);
   background: var(--surface-card);
   box-shadow: 0 3px 12px rgba(var(--sh-5c442a), calc(0.025 * var(--shadow-k)));
 }
-.form-card { padding: 16px; margin-bottom: 16px; background: var(--surface-muted); }
 .brew-card { padding: 16px; margin-bottom: 10px; transition: border-color .18s ease, box-shadow .18s ease; }
 .brew-card:hover, .saved-recipe-card:hover { border-color: var(--c-line-strong); box-shadow: 0 6px 18px rgba(var(--sh-5c442a), calc(0.06 * var(--shadow-k))); }
-.recipe-composer-card { margin-bottom: 16px; }
 .saved-recipe-card { padding: 14px; }
 .stats-section { padding: 18px; margin-bottom: 12px; }
 .stats-cards > div { border: 1px solid var(--c-line); border-radius: var(--r-md); box-shadow: 0 3px 10px rgba(var(--sh-5c442a), calc(0.02 * var(--shadow-k))); }
@@ -53,14 +51,14 @@
   .page-tabs { padding-top: 9px; padding-bottom: calc(9px + env(safe-area-inset-bottom)); }
   .page-tab { min-height: 60px; position: relative; }
   .page-tab[aria-current="page"]::after { position: absolute; right: 30%; bottom: 3px; left: 30%; height: 2px; border-radius: 2px; background: var(--bg-7a5733); content: ""; }
-  .page-intro, .inventory-intro, .stats-header { margin-top: 14px; margin-bottom: 18px; }
-  .page-intro h2, .inventory-intro h2, .stats-header h2 { font-size: 25px; }
-  .page-intro p:last-child, .inventory-intro p:last-child, .stats-header p:last-child { font-size: 11px; }
+  .inventory-intro, .stats-header { margin-top: 14px; margin-bottom: 18px; }
+  .inventory-intro h2, .stats-header h2 { font-size: 25px; }
+  .inventory-intro p:last-child, .stats-header p:last-child { font-size: 11px; }
   .brew-log-heading { align-items: flex-end; gap: 10px; }
   .brew-log-heading-actions { padding-bottom: 0; }
   .brew-add-button { min-height: 34px; padding: 7px 10px; font-size: 13px; }
-  .form-card, .brew-card { padding: 14px; }
-  .recipe-composer-card, .saved-recipe-card, .stats-section { border-radius: var(--r-md); }
+  .brew-card { padding: 14px; }
+  .saved-recipe-card, .stats-section { border-radius: var(--r-md); }
   .stats-section { padding: 15px; }
   .brew-log-tools { gap: 4px; padding: 3px; }
 }
@@ -77,9 +75,6 @@
 .recipe-onboarding > span { width: 34px; height: 34px; font-size: 15px; }
 .recipe-onboarding strong { margin-top: 2px; font-size: 16px; font-weight: 600; }
 .recipe-onboarding p { max-width: 300px; color: var(--c-ink-2); font-size: 12px; }
-.recipe-getting-started { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: min(260px, 100%); gap: 12px; margin: 8px 0 10px; padding: 0; list-style: none; }
-.recipe-getting-started li { display: grid; justify-items: center; gap: 6px; color: var(--c-ink-2); font-size: 11px; }
-.recipe-getting-started b { display: grid; width: 24px; height: 24px; place-items: center; border-radius: 50%; color: var(--fg-ffffff); background: var(--bg-7a5733); font-size: 12px; font-variant-numeric: tabular-nums; }
 .recipe-onboarding .primary-button { padding: 9px 13px; font-size: 12px; }
 
 /* Shared three-step start guide for empty Beans, Recipes, and Brew Log. */
@@ -90,7 +85,6 @@
 .journey-steps b { display: grid; width: 24px; height: 24px; place-items: center; border: 1px solid var(--c-line); border-radius: 50%; color: var(--c-ink-3); background: var(--c-soft); font-size: 11px; font-variant-numeric: tabular-nums; }
 .journey-steps li.is-active { color: var(--c-brown-deep); font-weight: 700; }
 .journey-steps li.is-active b { border-color: var(--bd-7a5733); color: var(--fg-ffffff); background: var(--bg-7a5733); box-shadow: 0 3px 8px rgba(var(--sh-806444), calc(0.16 * var(--shadow-k))); }
-.recipe-getting-started, .getting-started { display: none; }
 .recipe-library-empty.recipe-onboarding { padding-top: 32px; }
 .recipe-onboarding .journey-steps { margin-top: 8px; margin-bottom: 10px; }
 .brew-empty { margin-top: 2px; }
@@ -103,7 +97,7 @@
 :root { --surface-radius: var(--r-md); }
 .recipe-intro, .brew-log-heading, .stats-header { margin-bottom: 20px; }
 .recipe-intro h2, .brew-log-heading h2, .stats-header h2 { font-size: 30px; letter-spacing: -1px; }
-.recipe-composer-card, .saved-recipe-card, .brew-card, .form-card, .stats-section, .stats-cards > div { border-radius: var(--r-md); }
+.saved-recipe-card, .brew-card, .stats-section, .stats-cards > div { border-radius: var(--r-md); }
 
 /* Controls use the same quiet outlined treatment as inventory filters and sorting. */
 .brew-log-tools { gap: 8px; min-height: 0; margin-bottom: 16px; padding: 0; border: 0; border-radius: 0; background: transparent; }
@@ -180,41 +174,10 @@
 }
 
 /* Keep bean registration's compact data fields on one shared height. */
-.bean-form-grid > label > input,
-.bean-dates input,
-.bean-purchase-row input {
-  min-height: 38px;
-  height: 38px;
-  padding: 7px 10px;
-}
-.bean-dates input[type="date"] { min-height: 38px; height: 38px; }
-.existing-varieties { margin-top: 8px; }
-
-.bean-dates > label { display: grid; gap: 7px; }
-.purchase-field-label { display: inline-flex; align-items: baseline; gap: 6px; }
-.purchase-field-label .input-hint { color: var(--c-ink-2); font-size: 11px; font-weight: 400; }
 
 /* Compact bean provenance fields without leaving a single process button stranded. */
-.bean-origin-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
-.bean-origin-row > label { display: grid; gap: 7px; min-width: 0; color: var(--c-ink-2); font-size: 12px; }
-.bean-origin-row input { width: 100%; min-width: 0; height: 38px; padding: 7px 10px; }
-.process-options { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; }
-.process-options button { min-width: 0; padding-right: 6px; padding-left: 6px; white-space: nowrap; }
-.process-options button:nth-child(-n + 3) { grid-column: span 2; }
-.process-options button:nth-child(n + 4) { grid-column: span 3; }
-@media (max-width: 540px) {
-  .bean-origin-row { gap: 10px; }
-  .process-options { gap: 6px; }
-  .process-options button { padding-right: 4px; padding-left: 4px; font-size: 11px; }
-}
 
 /* Process chips keep their natural text width. */
-.process-options { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
-.process-options > button { flex: 0 0 auto; padding-right: 12px; padding-left: 12px; }
-@media (max-width: 540px) {
-  .process-options { gap: 6px; }
-  .process-options > button { padding-right: 10px; padding-left: 10px; font-size: 12px; }
-}
 
 /* Center the shared three-step guide in every empty-state card. */
 .journey-steps { margin-right: auto; margin-left: auto; }

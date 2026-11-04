@@ -30,46 +30,13 @@
 .bean-list .density-compact .compact-stock-donut strong { font-size: 19px; line-height: 1; letter-spacing: -1px; }
 .bean-list .density-compact .compact-stock-donut strong span { margin-left: 1px; font-size: 11px; font-weight: 400; letter-spacing: 0; }
 .bean-list .density-compact .compact-stock-donut small { display: none; }
-.bean-list.density-dense { gap: 7px; }
-.bean-list.density-dense .inventory-card { grid-template-columns: minmax(0, 1fr) 88px; }
-.bean-list.density-dense .bean-info { padding: 10px 11px; }
-.bean-list.density-dense .bean-info .title-dates,
-.bean-list.density-dense .bean-info .roastery-cup-notes,
-.bean-list.density-dense .bean-info .edit-bean,
-.bean-list.density-dense .bean-info .bean-comments { display: none; }
-.bean-list.density-dense .roastery { display: none; }
-.bean-list.density-dense .bean-info h3 { margin: 0; font-size: 13px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bean-list.density-dense .bean-stock { padding: 10px 8px; }
-.bean-list.density-dense .stock-status { font-size: 11px; padding: 3px 4px; }
-.bean-list.density-dense .remaining-label { margin-bottom: 1px; font-size: 11px; }
-.bean-list.density-dense .remaining-weight { font-size: 21px; }
-.bean-list.density-dense .purchased-weight { display: none; }
-.bean-list.density-dense .stock-percent { margin-top: 3px; font-size: 11px; }
 @media (min-width: 541px) {
-.bean-list, .bean-list.density-dense { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.bean-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .bean-list .swipe-card.density-detail { grid-column: 1 / -1; }
 .bean-list .density-compact .inventory-card { grid-template-columns: minmax(0, 1fr) 132px; }
 }
 /* Empty state spans both columns so it doesn't sit in the left half on PC. */
 .bean-list > .inventory-empty { grid-column: 1 / -1; }
-.origin-field { border: 0; padding: 0; margin: 0; min-width: 0; }
-.origin-field legend { font-size: 12px; color: var(--c-ink-2); margin-bottom: 9px; }
-.origin-options { display: flex; flex-wrap: wrap; gap: 7px; }
-.origin-options button { background: var(--c-surface); border: 1px solid var(--c-line); border-radius: var(--r-pill); padding: 8px 12px; color: var(--c-ink-2); font-size: 12px; }
-.origin-options button[aria-pressed="true"] { background: var(--bg-7a5733); color: white; border-color: var(--bd-7a5733); }
-.origin-add { display: flex; align-items: end; gap: 10px; margin-top: 12px; }
-.origin-add label { flex: 1; min-width: 0; }
-.generated-name { display: grid; gap: 8px; background: var(--c-soft); padding: 16px; border-radius: var(--r-sm); }
-.generated-name span { color: var(--c-ink-2); font-size: 11px; }
-.generated-name output { font-size: 16px; overflow-wrap: anywhere; }
-.existing-purchasers { display: grid; gap: 7px; margin-top: 8px; color: var(--c-ink-2); font-size: 11px; }
-.existing-purchaser-options { display: flex; flex-wrap: wrap; gap: 6px; }
-.existing-purchaser-option { display: inline-flex; align-items: center; border: 1px solid var(--c-line); background: var(--c-soft); border-radius: var(--r-pill); overflow: hidden; }
-.existing-purchaser-option > button:first-child { border: 0; background: transparent; color: var(--c-accent); padding: 6px 8px 6px 10px; font-size: 11px; cursor: pointer; }
-.existing-purchaser-option > button:first-child:hover { background: var(--c-fill); }
-.existing-purchaser-option .remove-purchaser { border: 0; border-left: 1px solid var(--c-line); background: transparent; color: var(--c-ink-3); padding: 3px 7px 4px 5px; font-size: 12px; line-height: 1; cursor: pointer; }
-.existing-purchaser-option .remove-purchaser:hover { color: var(--fg-9b634f); background: var(--c-fill); }
-.farm-detail { font-size: 12px; color: var(--c-ink-2); }
 .bean-comments { border-top: 1px solid var(--c-line); margin-top: 20px; padding-top: 15px; }
 .comments-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
 .comments-heading h4 { margin: 0; font-size: 13px; font-weight: 500; }
@@ -79,26 +46,12 @@
 .taste-comment time { display: block; color: var(--c-ink-2); font-size: 11px; margin-bottom: 9px; }
 .taste-comment .bean-memo { margin-top: 8px; }
 .bean-stock { justify-content: flex-start; }
-.process-custom { margin-top: 12px; }
-.process-custom > span { font-size: 11px; color: var(--c-ink-2); }
-.bean-dates { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
-.bean-dates label { min-width: 0; align-content: start; }
-.bean-dates input { height: 42px; box-sizing: border-box; }
-.bean-purchase-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
-.bean-purchase-row input { box-sizing: border-box; }
-.bean-purchase-row fieldset { min-width: 0; }
-.bean-date-details { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 11px; color: var(--c-ink-2); }
-.bean-date-details time { margin-left: 5px; }
 .roastery { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
 .roastery-cup-notes { display: grid; gap: 8px; margin-top: 4px; }
-.delete-bean-button { margin-right: auto; border: 1px solid var(--bd-e9caca); background: var(--bg-fbefed); color: var(--fg-ae6262); border-radius: var(--r-sm); padding: 11px 16px; font-size: 13px; }
-.delete-bean-button:hover { background: var(--bg-f5e0dc); }
 .delete-notice { display: flex; justify-content: space-between; align-items: center; background: var(--c-soft-2); padding: 12px 16px; border-radius: var(--r-sm); margin-bottom: 16px; font-size: 13px; }
 .delete-notice button { border: none; background: none; color: var(--c-accent); text-decoration: underline; }
 .sync-alert { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; padding: 10px 14px; border: 1px solid var(--bd-e6c2b3); border-radius: var(--r-sm); background: var(--bg-fbefe9); color: var(--fg-7a3a22); font-size: 13px; }
 .sync-alert button { flex: 0 0 auto; min-height: 36px; padding: 6px 12px; border: 1px solid var(--bd-c98a72); border-radius: var(--r-sm); background: var(--c-surface); color: var(--fg-7a3a22); }
-.stock-dates { display: grid; gap: 7px; font-size: 11px; color: var(--c-ink-2); margin-top: 24px; }
-.stock-dates span { display: grid; gap: 3px; }
 @media (max-width: 540px) { .roastery { font-size: 15px; } }
 .bean-info { padding: 20px 24px; }
 .bean-info h3 { margin-bottom: 9px; }
@@ -115,15 +68,6 @@
 .taste-comment { margin: 10px 0 0; }
 .comments-heading { margin-bottom: 8px; }
 .more-records { border: none; background: none; color: var(--c-accent); padding: 9px 0 0; font-size: 11px; }
-.input-hint { font-size: 11px; color: var(--c-ink-2); }
-.brew-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.brew-form-grid label { min-width: 0; }
-.brew-form-grid > :nth-child(1) { grid-column: 1; grid-row: 1; }
-.brew-form-grid > :nth-child(2) { grid-column: 1; grid-row: 2; }
-.brew-form-grid > :nth-child(3) { grid-column: 2; grid-row: 2; }
-.brew-form-grid > :nth-child(4) { grid-column: 2; grid-row: 1; }
-.brew-form-grid input[type="date"], .bean-dates input[type="date"] { width: 100%; min-height: 42px; box-sizing: border-box; appearance: none; -webkit-appearance: none; }
-.brew-form-grid select, .brew-form-grid input[type="date"] { height: 42px; box-sizing: border-box; }
 @media (max-width: 540px) { .bean-info { padding: 16px; } }
 
 /* Compact inventory rows for a long mobile bean shelf. */

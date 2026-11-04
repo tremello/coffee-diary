@@ -1,21 +1,6 @@
 /* Saved recipes live beside, rather than inside, a brewing record. */
-.recipe-composer-card { border: 1px solid var(--c-line); border-radius: var(--r-md); background: var(--c-surface); overflow: hidden; }
-.recipe-composer-card { margin-bottom: 14px; }
 .recipe-library { margin: 0; }
 .brew-log, .recipe-page, .brew-stats { padding-top: 24px; }
-.recipe-library-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border: 0; color: var(--c-brown-deep); background: transparent; text-align: left; }
-.recipe-library-toggle strong { display: block; font-size: 14px; }
-.recipe-library-toggle small { display: block; margin-top: 3px; color: var(--c-ink-2); font-size: 11px; }
-.recipe-toggle-mark { color: var(--c-accent); font-size: 18px; line-height: 1; transition: transform .18s ease; }
-.recipe-library-toggle[aria-expanded="true"] .recipe-toggle-mark { transform: rotate(45deg); }
-.recipe-composer { display: grid; gap: 14px; padding: 0 16px 16px; border-top: 1px solid var(--c-line); }
-.recipe-top-fields { display: grid; grid-template-columns: minmax(0, 1fr) 100px; gap: 10px; padding-top: 14px; }
-.recipe-composer input, .recipe-composer textarea { width: 100%; box-sizing: border-box; }
-.recipe-composer textarea { min-height: 38px; height: 38px; padding-top: 8px; padding-bottom: 8px; resize: vertical; }
-.recipe-step-section { min-width: 0; }
-.recipe-section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 7px; }
-.recipe-section-heading strong { color: var(--c-brown-deep); font-size: 12px; }
-.recipe-section-heading span { color: var(--c-ink-2); font-size: 11px; }
 .recipe-step-editor { border: 1px solid var(--c-line); border-radius: var(--r-md); background: var(--c-surface); overflow: hidden; }
 .recipe-step-editor.has-error { border-color: var(--bd-c76657); }
 .recipe-step-head, .recipe-step-row { display: grid; grid-template-columns: 58px 92px minmax(0, 1fr) 55px 22px; gap: 6px; align-items: center; }
@@ -33,12 +18,8 @@
 .recipe-remove-step { width: 22px; height: 24px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; color: var(--c-ink-3); background: transparent; font-size: 16px; }
 .recipe-remove-step:hover { background: var(--c-soft); }
 .recipe-remove-step:disabled { visibility: hidden; }
-.recipe-add-step { margin-top: 8px; padding: 6px 9px; border: 1px solid var(--bd-c9b195); border-radius: var(--r-sm); color: var(--c-brown-deep); background: var(--c-page); font-size: 11px; font-weight: 700; }
-.recipe-add-step:disabled { opacity: .48; cursor: not-allowed; }
 .recipe-metrics { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 10px; border-radius: var(--r-sm); color: var(--c-ink-2); background: var(--c-soft-2); font-size: 11px; }
 .recipe-metrics b { color: var(--c-brown-deep); font-variant-numeric: tabular-nums; }
-.recipe-form-actions { display: flex; justify-content: flex-end; gap: 8px; }
-.recipe-form-actions .primary-button, .recipe-form-actions .quiet-button { padding: 8px 11px; font-size: 11px; }
 .recipe-library-list-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0 0; color: var(--c-brown-deep); }
 .recipe-library-heading { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 .recipe-sort-control { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; color: var(--c-ink-2); font-size: 12px; }
@@ -73,22 +54,13 @@
   .brew-log-heading { align-items: center; }
   .brew-log-heading-actions { gap: 5px; }
   .brew-log-heading-actions button { padding: 8px 10px; font-size: 11px; }
-  .recipe-top-fields { grid-template-columns: minmax(0, 1fr) 86px; }
   .recipe-step-head, .recipe-step-row { grid-template-columns: 50px 75px minmax(0, 1fr) 46px 18px; gap: 4px; padding-left: 7px; padding-right: 7px; }
   .recipe-step-row::before { left: 33px; }
   .recipe-step-head { font-size: 11px; }
   .recipe-step-row select, .recipe-amount-input input { font-size: 11px; }
 }
 /* 기본형 ⇄ 침출형: 재고 카드의 상태 버튼과 같은 알약 모양. */
-.recipe-library-head { position: relative; }
-.recipe-library-head .recipe-library-toggle { padding-right: 16px; }
-.recipe-type-toggle { position: absolute; top: 50%; right: 44px; display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border: 0; border-radius: var(--r-pill); font-family: inherit; font-size: 11px; font-weight: 700; line-height: 1.2; cursor: pointer; transform: translateY(-50%); }
-.recipe-type-toggle span { opacity: .7; font-size: .9em; }
-.recipe-type-toggle[data-type="기본형"] { background: var(--bg-e3eedf); color: var(--fg-2f5a2a); }
-.recipe-type-toggle[data-type="침출형"] { background: var(--bg-f6e7cf); color: var(--fg-7a4e12); }
-.recipe-type-toggle:hover { filter: brightness(.97); }
 .recipe-step-editor.is-immersion .recipe-step-head, .recipe-step-editor.is-immersion .recipe-step-row { grid-template-columns: 58px 62px 92px minmax(0, 1fr) 55px 22px; }
-.recipe-switch-select.has-switch { border-color: var(--bd-c9b195); color: var(--c-brown-deep); background: var(--c-soft-2); font-weight: 700; }
 .recipe-type-badge { margin-left: 6px; padding: 1px 7px; border-radius: var(--r-pill); color: var(--c-accent); background: var(--c-soft-2); font-size: 11px; font-weight: 700; vertical-align: middle; }
 .recipe-switch-note { margin-left: 6px; color: var(--c-ink-3); font-size: 11px; font-weight: 500; }
 /* 스위치가 닫힌(침출) 구간: 점을 채우고 다음 단계까지 선을 굵게 */

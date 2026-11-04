@@ -7,10 +7,4 @@
 .stats-cards small { margin-left: 2px; font-size: 12px; font-weight: 400; }
 .stats-section { padding: 20px; border: 1px solid var(--c-line); border-radius: var(--r-md); background: var(--c-surface); margin-bottom: 12px; }
 .stats-section h3 { margin: 0 0 14px; font-size: 15px; font-weight: 600; }
-.usage-list { display: grid; gap: 10px; }
-.usage-row { display: flex; justify-content: space-between; gap: 12px; color: var(--c-ink-2); font-size: 12px; }
-.usage-row-value { display: flex; align-items: center; justify-content: flex-end; gap: 10px; min-width: 52%; }
-.usage-bar { width: min(180px, 28vw); height: 7px; overflow: hidden; border-radius: 999px; background: var(--c-fill); }
-.usage-bar i { display: block; height: 100%; border-radius: inherit; background: var(--bg-7a5733); }
-.usage-row b { color: var(--c-brown-deep); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.stats-empty, .ratio-summary { margin: 0; color: var(--c-ink-2); font-size: 12px; }
+.stats-empty { margin: 0; color: var(--c-ink-2); font-size: 12px; }

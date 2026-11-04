@@ -16,7 +16,6 @@
   .inventory-filters button { flex: 1; padding: 7px 4px; }
   .inventory-toolbar-meta { flex: 0 1 auto; gap: 4px; font-size: 11px; }
   .inventory-toolbar-meta .inventory-sort { width: 104px; max-width: 104px; }
-  .view-mode-control { font-size: 11px; }
 }
 @media (max-width: 359px) {
   .inventory-toolbar-meta label { display: none; }
@@ -26,10 +25,7 @@
 .inventory-sort, .advanced-filter-button { box-sizing: border-box; height: 32px; font-size: 12px; }
 .advanced-filter-button { padding: 0 11px; }
 .advanced-filter-panel { gap: 14px; }
-.advanced-filter-search input { box-sizing: border-box; width: 100%; height: 38px; border: 1px solid var(--c-line-strong); border-radius: var(--r-sm); background: var(--c-surface); color: var(--c-ink-strong); padding: 0 16px; font: inherit; font-size: 13px; }
-.advanced-filter-search input:focus { border-color: var(--bd-a98b67); outline: none; }
 /* Placeholder can be smaller than the 16px phone input size without triggering iOS zoom. */
-.advanced-filter-search input::placeholder { color: var(--c-ink-2); font-size: 12px; }
 .filter-section { display: grid; gap: 10px; padding-top: 12px; border-top: 1px solid var(--c-line); }
 .filter-section h4 { margin: 0; color: var(--c-brown-deep); font-size: 13px; font-weight: 700; }
 .facet-options button { min-height: 32px; padding: 0 11px; font-size: 12px; }
@@ -55,7 +51,6 @@
 @media (max-width: 540px) {
   .advanced-filter-button { padding: 0 10px; font-size: 12px; }
   .facet-options button { padding: 0 10px; font-size: 12px; }
-  .advanced-filter-search input { height: 40px; }
 }
 /* iOS Safari draws native selects with its own metrics, so toolbar selects drop native styling to match the 세부 검색 button exactly. */
 .inventory-sort { -webkit-appearance: none; appearance: none; padding: 0 26px 0 10px; line-height: 1; background: var(--c-surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2375634d' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 10px center / 10px 6px; }

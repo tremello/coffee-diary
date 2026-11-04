@@ -7,9 +7,6 @@ export const beanName = (bean: BeanForm) => isBlend(bean) ? blendName(bean) : [b
 
 export const FONT = "var(--font-sans)";
 
-// Scroll after React has rendered the editor: scrolling first lets the inserted form shift the page and stop the scroll short.
-export const scrollToEditor = (editor: { current: HTMLElement | null }) => window.setTimeout(() => editor.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
-
 // Notes are separated by commas (or ·, 、, line breaks) only, so a note like "흰 꽃" stays whole.
 export const splitCupNotes = (value?: string) => (value ?? "").split(/[,，·、\n]+/).map(note => note.trim()).filter(Boolean);
 

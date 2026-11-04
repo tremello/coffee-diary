@@ -6,7 +6,6 @@ import { brewNote, cafeTitle, takeFromBean } from "../components/brew-editor/bre
 import { useSheet } from "../components/brew-editor/useSheet";
 import { PeakBar, PeakPill, peakScale } from "../components/peak/PeakParts";
 import { StarRating } from "../components/ui";
-import { RatingStars } from "../components/brew-editor/RatingStars";
 import { DeskStart } from "../components/desk/Desk";
 import { type BrewIntent } from "./BrewLog";
 import { fmt, localDate } from "../lib/format";

@@ -1,9 +1,4 @@
-import { type PointerEvent, type ReactNode } from "react";
-import { FONT } from "../lib/format";
-
-export function FormCard({ children }: { children: ReactNode }) {
-  return <div className="form-card">{children}</div>;
-}
+import { type PointerEvent } from "react";
 
 // Half-star score (0.5–5) under a pointer at x within the row.
 export const ratingAt = (x: number, left: number, width: number) => Math.max(1, Math.ceil(Math.min(Math.max((x - left) / width, 0), 1) * 10)) / 2;
@@ -20,24 +15,6 @@ export function StarRating({ value, onChange }: { value: number; onChange: (valu
     onPointerMove={event => { if (event.currentTarget.hasPointerCapture(event.pointerId)) pick(event, false); }}>
     {[1, 2, 3, 4, 5].map(star => <span className={`star-rating-star ${value >= star ? "full" : value >= star - 0.5 ? "half" : "empty"}`} key={star}><span aria-hidden="true">★</span><button type="button" aria-label={`${star - 0.5}점`} onClick={event => event.detail === 0 && onChange(star - 0.5)} /><button type="button" aria-label={`${star}점`} onClick={event => event.detail === 0 && onChange(star)} /></span>)}
   </div>;
-}
-
-export function Field({ label, children, required = false, invalid = false }: { label: string; children: ReactNode; required?: boolean; invalid?: boolean }) {
-  return (
-    <div>
-      <label style={{ fontSize: 12, color: invalid ? "var(--fg-b65f50)" : "var(--color-text-secondary)", display: "block", marginBottom: 4, fontFamily: FONT }}>{label}{required && <span aria-hidden="true" style={{ color: invalid ? "var(--fg-b65f50)" : "var(--c-accent)", marginLeft: 2 }}>*</span>}</label>
-      {children}
-    </div>
-  );
-}
-
-export function FormActions({ onSave, onCancel, saveLabel }: { onSave: () => void; onCancel: () => void; saveLabel: string }) {
-  return (
-    <div className="form-buttons">
-      <button type="button" className="quiet-button" onClick={onCancel}>취소</button>
-      <button type="button" className="primary-button" onClick={onSave}>{saveLabel}</button>
-    </div>
-  );
 }
 
 export function JourneySteps({ active }: { active: "beans" | "recipes" | "brews" }) {

@@ -21,7 +21,7 @@ textarea {
   letter-spacing: inherit;
 }
 input[aria-invalid="true"] { border-color: var(--bd-c76657); background: var(--bg-fff8f6); }
-.field-error-message, .recipe-timeline-error { margin: 5px 0 0; color: var(--fg-b65f50); font-size: 11px; line-height: 1.4; }
+.recipe-timeline-error { margin: 5px 0 0; color: var(--fg-b65f50); font-size: 11px; line-height: 1.4; }
 
 input,
 select,
@@ -57,7 +57,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .google-button:hover { background: var(--c-soft); }
 .inventory { padding-top: 10px; }
 .inventory-intro { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 14px 0; }
-.eyebrow { font-size: 11px; letter-spacing: 2px; color: var(--c-ink-2); margin: 0 0 8px; }
 .inventory-intro h2 { font-size: 30px; letter-spacing: -1px; margin: 0 0 9px; font-weight: 600; }
 .inventory-intro p:last-child { color: var(--c-ink-2); font-size: 13px; margin: 0; }
 .primary-button, .quiet-button { border: 1px solid var(--bd-7a5733); border-radius: var(--r-sm); padding: 11px 16px; font-size: 13px; white-space: nowrap; }
@@ -75,7 +74,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .inventory-filters { display: flex; align-items: center; flex: 0 1 auto; gap: 2px; min-width: 0; padding: 3px; border: 0; border-radius: var(--r-sm); background: var(--c-soft-2); }
 .inventory-filters button { border: 0; background: transparent; color: var(--c-ink-2); padding: 7px 18px; border-radius: calc(var(--r-sm) - 3px); font-size: 12px; white-space: nowrap; }
 .inventory-filters button[aria-pressed="true"] { background: var(--bg-7a5733); color: var(--fg-ffffff); font-weight: 600; }
-.view-mode-control { display: flex; align-items: center; justify-self: end; gap: 5px; white-space: nowrap; }
 .inventory-toolbar-meta { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex: 0 0 auto; flex-wrap: wrap; }
 .inventory-sort { border: 1px solid var(--c-line-strong); border-radius: var(--r-sm); background: var(--c-surface); color: var(--c-ink-2); padding: 7px 9px; font: inherit; }
 .brew-log-tools { display: flex; align-items: center; gap: 6px; margin: 0 0 14px; }

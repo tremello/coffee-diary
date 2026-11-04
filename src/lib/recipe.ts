@@ -4,7 +4,6 @@ export const recipeActions: RecipeStep["action"][] = ["블룸", "센터 푸어",
 
 // 침출형: 스위치만 조작하는 단계를 위해 동작이 비어 있음("–")을 고를 수 있다.
 export const immersionActions: RecipeStep["action"][] = ["없음", ...recipeActions];
-export const recipeSwitches: NonNullable<RecipeStep["switch"]>[] = ["닫고", "열고"];
 
 // 이 동작은 붓는 양 없이 시점만 기록한다.
 export const isAmountlessStep = (step: RecipeStep) => step.action === "마무리" || step.action === "없음";
