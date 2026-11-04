@@ -25,3 +25,4 @@
 @import "./23-desk.css"; /* Wide desktop windows: two panes per tab (list | picked item), toolbar row, first-run steps. */
 @import "./24-home.css"; /* Home tab: today's bean, quick save, beans left, this week and the latest brews. */
 @import "./25-touch.css"; /* Bigger invisible tap areas around small text buttons (44px tall). */
+@import "./26-one-layer.css"; /* 한 겹 규칙: one layer of cards; inside a card, lines and space instead of filled or bordered boxes. */

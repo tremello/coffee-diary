@@ -1,0 +1,51 @@
+/* 한 겹 규칙: the page holds one layer of white cards. Inside a card, groups are split by space and a thin line,
+   never by another filled or bordered box. Filled backgrounds stay only on selected states, state chips and meters. */
+
+/* Summary numbers (bean stock, brew stats, 7-day recap): one card with three columns split by lines. */
+.stats-cards { gap: 0; border: 1px solid var(--c-line); border-radius: var(--r-md); background: var(--c-surface); }
+.stats-cards > div { background: transparent; border: 0; border-left: 1px solid var(--c-line); border-radius: 0; box-shadow: none; }
+.stats-cards > div:first-child { border-left: 0; }
+.recap-cards { gap: 0; }
+.recap-cards > div { padding-block: 4px; background: transparent; border-left: 1px solid var(--c-line); border-radius: 0; }
+.recap-cards > div:first-child { padding-left: 0; border-left: 0; }
+.recap-habits div { padding: 10px 0; background: transparent; border-top: 1px solid var(--c-line); border-radius: 0; }
+
+/* Brew card: conditions are plain lines, the memo sits under a divider. */
+.bw-card .brew-recipe-block { padding: 0; background: transparent; border-radius: 0; }
+.brew-note-inline { margin-top: 10px; padding: 10px 0 0; border: 0; border-top: 1px solid var(--c-line); border-radius: 0; background: transparent; }
+
+/* Bean card: the stock side shares the card's white; the roast date is text, not a pill. */
+.bean-list .inventory-card .bean-stock { background: var(--c-surface); border-left-color: transparent; }
+.bean-list .density-compact .compact-stock-donut::before { background: var(--c-surface); }
+.bean-list .density-compact .compact-roast { padding: 0; background: transparent; }
+.title-dates strong { padding: 0; background: transparent; }
+
+/* Home: last conditions read as one dotted line instead of a row of pills. */
+.hm-chips { gap: 6px; }
+.hm-chips span, .hm-chip { padding: 0; background: transparent; }
+.hm-chips span + span::before, .hm-chip + .hm-chip::before { content: "·"; margin-right: 6px; color: var(--c-ink-3); }
+.hm-streak { padding: 0; background: transparent; }
+
+/* Stats day list: the day's brews are rows inside the day card, not cards inside a card. */
+.cal-day-list { gap: 0; }
+.cal-brew { padding: 12px 0; border: 0; border-top: 1px solid var(--c-line); border-radius: 0; background: transparent; }
+
+/* Recipe card memo. */
+.saved-recipe-memo { padding: 9px 0 0; border-top: 1px solid var(--c-line); border-radius: 0; background: transparent; }
+
+/* Wide screens: detail panes use lines instead of beige tiles. */
+.desk-tiles { gap: 0; }
+.desk-tile { padding: 9px 12px 9px 0; background: transparent; border-top: 1px solid var(--c-line); border-radius: 0; }
+.desk-note { padding: 0; background: transparent; }
+.desk-strip { background: transparent; border-block: 1px solid var(--c-line); border-radius: 0; }
+.desk-strip > * { padding-inline: 0 16px; } /* room before the divider so the stock bar isn't cut */
+.desk-strip .peak-block { padding-inline: 16px 0; }
+.desk-table th { background: transparent; border-bottom: 1px solid var(--c-line); }
+.desk-date-chip { padding: 0; background: transparent; }
+/* PC lists: an 8px scrollbar with the same 8px kept on the left, and top/bottom padding matching the sides (6 + 8 = 14px). */
+.desk-list { padding: 14px 6px; scrollbar-gutter: stable both-edges; scrollbar-width: auto; scrollbar-color: auto; }
+.desk-list::-webkit-scrollbar { width: 8px; }
+.desk-list::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 8px; background: var(--c-line-strong) padding-box; }
+@supports not selector(::-webkit-scrollbar) { .desk-list { scrollbar-width: thin; scrollbar-color: var(--c-line-strong) transparent; } }
+/* Grade chip (특식/준특식/사료): the pill shape everywhere, not only on the phone bean card (PC detail pane had color with no padding). */
+.quality-tag { border-radius: var(--r-pill); padding: 3px 7px; font-size: 11px; font-weight: 600; line-height: 1.3; }
