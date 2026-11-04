@@ -7,7 +7,7 @@ import { type SavedRecipe } from "../types";
 const SCALE = 2.7;
 const WIDTH = 400;
 const HEIGHTS = [400, 500];
-const FONT = '"Pretendard Variable", Pretendard, "Apple SD Gothic Neo", sans-serif';
+const FONT = '"NanumSquare ac", "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", sans-serif';
 const C = {
   cream: "#fbf7f1", paper: "#ffffff", line: "#ede3d6", ink: "#34291f", mid: "#6b5d50", warm: "#967b5a", brown: "#7a5733",
   dot: "#b08b5d", track: "#e3d5c5", tag: "#f3ece2", time: "#806d58", step: "#5f4b35", memoBg: "#faf6f0", memo: "#7d6a55"
