@@ -7,7 +7,7 @@ import { type SavedRecipe } from "../types";
 const SCALE = 2.7;
 const WIDTH = 400;
 const HEIGHTS = [400, 500];
-const FONT = '"IBM Plex Sans KR", "Apple SD Gothic Neo", sans-serif';
+const FONT = '"Pretendard Variable", Pretendard, "Apple SD Gothic Neo", sans-serif';
 const C = {
   cream: "#fbf7f1", paper: "#ffffff", line: "#ede3d6", ink: "#34291f", mid: "#6b5d50", warm: "#967b5a", brown: "#7a5733",
   dot: "#b08b5d", track: "#e3d5c5", tag: "#f3ece2", time: "#806d58", step: "#5f4b35", memoBg: "#faf6f0", memo: "#7d6a55"
@@ -54,8 +54,11 @@ const loadImage = (src: string) => new Promise<HTMLImageElement | null>(resolve 
   image.src = src;
 });
 
-const ensureFonts = async () => {
-  try { await Promise.all([400, 500, 600, 700].map(weight => document.fonts.load(`${weight} 20px ${FONT}`, "가A1"))); } catch {}
+// The font arrives in pieces by character, so ask for the pieces this card's own text needs before drawing.
+const CARD_LABELS = "가수 닫고 없음 스위치 닫기 열기 침출 시작 우린 뒤 드로다운 서버에 추가 마무리 초 분 침출형 기본형 온도 ℃ 원두 물 비율 단계 붓기 누적 · –0123456789:+g";
+const ensureFonts = async (text: string) => {
+  const sample = text + CARD_LABELS;
+  try { await Promise.all([400, 500, 600, 700].map(weight => document.fonts.load(`${weight} 20px ${FONT}`, sample))); } catch {}
 };
 
 // Canvas letter spacing isn't available everywhere, so spaced caps are drawn a letter at a time.
@@ -94,7 +97,7 @@ const wrap = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number) => 
 const font = (weight: number, size: number) => `${weight} ${size}px ${FONT}`;
 
 export async function drawRecipeCard(recipe: SavedRecipe, footer: { by?: string; date: string }): Promise<Blob> {
-  await ensureFonts();
+  await ensureFonts(JSON.stringify(recipe) + JSON.stringify(footer));
   const logo = await loadImage(LOGO);
   const measure = document.createElement("canvas").getContext("2d")!;
 

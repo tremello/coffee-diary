@@ -12,7 +12,7 @@
   --r-pill: 999px;
   --border-radius-md: var(--r-sm);
   --border-radius-lg: var(--r-md);
-  --font-sans: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', sans-serif;
+  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, 'Apple SD Gothic Neo', sans-serif;
 }
 
 /* Light palette: every literal colour in this file, named by role (bg/fg/bd) and its light value. */

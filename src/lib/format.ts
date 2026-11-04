@@ -5,7 +5,7 @@ export const localDate = () => { const now = new Date(); return `${now.getFullYe
 
 export const beanName = (bean: BeanForm) => isBlend(bean) ? blendName(bean) : [bean.origin, bean.farm, bean.variety, bean.process].map(value => value?.trim()).filter(Boolean).join(" ");
 
-export const FONT = "'IBM Plex Sans KR', 'Apple SD Gothic Neo', sans-serif";
+export const FONT = "var(--font-sans)";
 
 // Scroll after React has rendered the editor: scrolling first lets the inserted form shift the page and stop the scroll short.
 export const scrollToEditor = (editor: { current: HTMLElement | null }) => window.setTimeout(() => editor.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
