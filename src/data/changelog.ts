@@ -3,6 +3,7 @@
 export type Release = { version: string; date: string; changes: string[] };
 
 export const RELEASES: Release[] = [
+  { version: "1.20.4", date: "2026-11-04", changes: ["글씨체를 예전에 쓰던 IBM Plex Sans KR로 되돌렸어요"] },
   { version: "1.20.3", date: "2026-11-04", changes: ["앱 글씨체를 나눔스퀘어로 바꿨어요. 네모반듯해서 제목이 더 단단해 보여요. 드문 글자는 프리텐다드로 보여요", "레시피 공유 이미지도 같은 글씨체로 그려져요"] },
   { version: "1.20.2", date: "2026-11-04", changes: ["내부 정리: 더 이상 쓰지 않는 옛 입력창 스타일과 코드를 지웠어요. 화면과 사용법은 그대로예요"] },
   { version: "1.20.1", date: "2026-11-04", changes: ["앱 글씨체를 프리텐다드로 바꿨어요. 작은 숫자와 글씨가 더 또렷하게 읽혀요", "글씨체 파일을 앱 안에 같이 넣어서, 처음 열 때 받는 글꼴 양이 절반 정도로 줄었어요. 레시피 공유 이미지도 같은 글씨체로 그려져요"] },
