@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../supabase";
+import { googleReturn, supabase } from "../supabase";
+import { GOOGLE_CLIENT_ID, startGoogleLogin } from "./googleLogin";
 import { adoptLocalData, clearLocalData, hasPendingSync } from "./storage";
 import { appLinkHash, PENDING_LINK_KEY, readAppLink } from "../lib/pages";
+
+// Google's answer from the address, used once by the first useAuth.
+let pendingGoogle = googleReturn;
 
 export function useAuth() {
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
@@ -9,7 +13,17 @@ export function useAuth() {
   useEffect(() => {
     // Clear another account's local data before any storage hook sees the new user id.
     const applyUser = (next: { id: string; email?: string } | null) => { if (next) adoptLocalData(next.id); setUser(next); };
-    supabase.auth.getSession().then(({ data }) => { applyUser(data.session?.user ?? null); setLoading(false); });
+    const ready = async () => {
+      // Back from Google's screen: hand its token to Supabase once (StrictMode runs effects twice).
+      const back = pendingGoogle; pendingGoogle = null;
+      if (back && "idToken" in back) {
+        const { error } = await supabase.auth.signInWithIdToken({ provider: "google", token: back.idToken, nonce: back.nonce });
+        if (error) window.alert(`Google 로그인에 실패했어요. 다시 시도해 주세요. (${error.message})`);
+      } else if (back && back.error !== "access_denied") window.alert("Google 로그인에 실패했어요. 다시 시도해 주세요.");
+      const { data } = await supabase.auth.getSession();
+      applyUser(data.session?.user ?? null); setLoading(false);
+    };
+    void ready();
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => applyUser(session?.user ?? null));
     return () => listener.subscription.unsubscribe();
   }, []);
@@ -22,7 +36,8 @@ export const signInWithGoogle = () => {
     if (!link.invalid && (link.beanId || link.brewId || link.range)) sessionStorage.setItem(PENDING_LINK_KEY, appLinkHash(link));
     else sessionStorage.removeItem(PENDING_LINK_KEY);
   } catch { /* Optional view context; login still works without storage. */ }
-  return supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/` } });
+  if (!GOOGLE_CLIENT_ID) return supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/` } });
+  return startGoogleLogin().then(() => ({ error: null }), (error: Error) => ({ error }));
 };
 export const signOutAndClear = async () => {
   await supabase.auth.signOut();
