@@ -1,13 +1,14 @@
 import { useEffect, useRef } from "react";
 import { fmt, localDate, parseLocalDate, splitCupNotes } from "../../lib/format";
-import { type Bean, type Brew, isCafeBrew, type TastingNote } from "../../types";
+import { type Bean, type Brew, type CardPhoto, isCafeBrew, type TastingNote } from "../../types";
 import { brewRatio, cafeCup, cafeTitle, noteMemo, shortDate, tasteSummary } from "./brewFormat";
 import { RatingStars } from "./RatingStars";
 import { useSheet } from "./useSheet";
 import { blendDetail, isBlend } from "../../lib/blend";
+import { CardPhotoButton } from "../card-photo/CardPhoto";
 
 // One brew in full: how it was brewed, the bean it used, and every brew of that bean so the good ones are easy to repeat.
-export function BrewDetail({ brew, beans, brews, notes, onSelect, onAgain, onEdit, onClose }: {
+export function BrewDetail({ brew, beans, brews, notes, onSelect, onAgain, onEdit, onCard, onClose }: {
   brew: Brew;
   beans: Bean[];
   brews: Brew[];
@@ -16,6 +17,7 @@ export function BrewDetail({ brew, beans, brews, notes, onSelect, onAgain, onEdi
   // Left out where the brew can only be looked at (the stats calendar): no 수정 or 다시 내리기 buttons.
   onAgain?: (brew: Brew) => void;
   onEdit?: (brew: Brew) => void;
+  onCard?: (brew: Brew, card: CardPhoto) => void;
   onClose: () => void;
 }) {
   const sheet = useSheet(onClose);
@@ -71,8 +73,8 @@ export function BrewDetail({ brew, beans, brews, notes, onSelect, onAgain, onEdi
       </div>
       <div className="be-body" ref={bodyRef}><div className="be-body-inner">
         <div className="bw-detail-title">
-          {cafe ? <div><p className="brew-roastery"><span className="bw-cafe-chip">카페</span>{brew.cafe?.name}</p><h2 id="bw-detail-title">{cafeTitle(brew)}</h2></div>
-            : <div>{bean?.roastery && <p className="brew-roastery">{bean.roastery}</p>}<h2 id="bw-detail-title">{bean?.name || "삭제된 원두"}</h2></div>}
+          {cafe ? <div><p className="brew-roastery"><span className="bw-cafe-chip">카페</span>{brew.cafe?.name}</p><h2 id="bw-detail-title">{cafeTitle(brew)}<CardPhotoButton card={brew.card} title={cafeTitle(brew)} onChange={onCard && (card => onCard(brew, card))} /></h2></div>
+            : <div>{bean?.roastery && <p className="brew-roastery">{bean.roastery}</p>}<h2 id="bw-detail-title">{bean?.name || "삭제된 원두"}<CardPhotoButton card={bean?.card} title={bean?.name ?? ""} /></h2></div>}
           <RatingStars value={note?.rating ?? 0} />
         </div>
         {memo && <p className="bw-detail-memo">“{memo}”</p>}

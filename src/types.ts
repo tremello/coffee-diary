@@ -28,6 +28,10 @@ export type PeakSettings = { defaults?: Partial<Record<RoastLevel, PeakWindow>>;
 // One coffee in a blend. Only the origin is required; labels often leave out the rest.
 export type BlendPart = { origin: string; process?: string; variety?: string; ratio?: number };
 
+// A photo of the card a roastery packs with its beans, flattened and cropped on the phone and kept in Supabase Storage
+// (bucket bean-cards, under the account's id). path is the full-resolution JPEG, thumb a small copy for grids.
+export type CardPhoto = { path: string; thumb: string; w: number; h: number; at: string };
+
 export type Bean = {
   id: number;
   name: string;
@@ -56,6 +60,7 @@ export type Bean = {
   roastLevel?: RoastLevel;
   // This bean's own window, overriding the roastery and settings defaults.
   peak?: PeakWindow;
+  card?: CardPhoto;
 };
 
 export type BeanForm = Omit<Bean, "id" | "purchased" | "remaining" | "consumed"> & {
@@ -116,6 +121,8 @@ export type Brew = {
   price?: string;
   // Only on the first cafe records; no longer asked for.
   roastery?: string;
+  // The cafe's bean card, if one came with the cup. Own brews show their bean's card instead.
+  card?: CardPhoto;
 };
 
 // What a coffee is, in the Bean type's own fields: the bean editor fills a bean with it, a cafe brew keeps the same fields.

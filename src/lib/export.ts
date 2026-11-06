@@ -19,16 +19,17 @@ export const downloadJson = (data: ExportData) => download(`coffee-diary-${today
 const cell = (value: unknown) => { const text = value === undefined || value === null ? "" : String(value); return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text; };
 const toCsv = (header: string[], rows: unknown[][]) => [header, ...rows].map(row => row.map(cell).join(",")).join("\r\n");
 
+// Card photos live in storage, not in the file: the CSV only says whether one exists (the JSON backup keeps its storage path).
 // Two sheets as one file each would be awkward on phones, so beans and brews go in one CSV with a blank line between; Excel opens it with the BOM.
 export const downloadCsv = ({ beans, brews }: ExportData) => {
   const live = beans.filter(bean => !bean.deleted);
   const byId = new Map(beans.map(bean => [bean.id, bean]));
-  const beanTable = toCsv(["원두", "로스터리", "원산지", "농장", "품종", "가공", "구매일", "로스팅일", "구매량(g)", "남은 양(g)", "가격", "상태", "등급", "컵노트", "메모", "블렌드 구성", "로스팅 정도", "맛있는 시기(이 원두만)"],
-    live.map(b => [b.name, b.roastery, b.origin, b.farm, b.variety, b.process, b.date, b.roastDate, b.purchased, b.remaining, b.price, b.status, b.quality, b.roasteryNotes, b.memo, isBlend(b) ? blendDetail(b.parts) : "", b.roastLevel, b.peak ? `${b.peak.start}~${b.peak.best}일 (괜찮음 ${b.peak.ok}일까지)` : ""]));
+  const beanTable = toCsv(["원두", "로스터리", "원산지", "농장", "품종", "가공", "구매일", "로스팅일", "구매량(g)", "남은 양(g)", "가격", "상태", "등급", "컵노트", "메모", "블렌드 구성", "로스팅 정도", "맛있는 시기(이 원두만)", "원두 카드 사진"],
+    live.map(b => [b.name, b.roastery, b.origin, b.farm, b.variety, b.process, b.date, b.roastDate, b.purchased, b.remaining, b.price, b.status, b.quality, b.roasteryNotes, b.memo, isBlend(b) ? blendDetail(b.parts) : "", b.roastLevel, b.peak ? `${b.peak.start}~${b.peak.best}일 (괜찮음 ${b.peak.ok}일까지)` : "", b.card ? "있음" : ""]));
   // Cafe brews put their coffee in the 원두 column, leave the grams empty, and fill the cafe columns at the end.
-  const brewTable = toCsv(["날짜", "원두", "원두량(g)", "물(g)", "드리퍼", "레시피", "분쇄도", "물 온도(℃)", "추출 시간", "물 종류", "필터", "카페", "카페 주소", "메뉴", "원산지", "가공", "가격", "로스터리 컵노트"],
+  const brewTable = toCsv(["날짜", "원두", "원두량(g)", "물(g)", "드리퍼", "레시피", "분쇄도", "물 온도(℃)", "추출 시간", "물 종류", "필터", "카페", "카페 주소", "메뉴", "원산지", "가공", "가격", "로스터리 컵노트", "원두 카드 사진"],
     [...brews].sort((a, b) => b.date.localeCompare(a.date)).map(b => isCafeBrew(b)
-      ? [b.date, cafeCup(b).beanName, "", "", b.method, "", "", "", "", "", "", b.cafe?.name, b.cafe?.address, cafeCup(b).menu, b.origin, b.process, b.price, b.roasteryNotes]
+      ? [b.date, cafeCup(b).beanName, "", "", b.method, "", "", "", "", "", "", b.cafe?.name, b.cafe?.address, cafeCup(b).menu, b.origin, b.process, b.price, b.roasteryNotes, b.card ? "있음" : ""]
       : [b.date, byId.get(b.beanId)?.name ?? "", b.amount, b.waterAmount, b.method, b.recipe, b.grindSize, b.waterTemp, b.brewTime, b.water, b.filter]));
   download(`coffee-diary-${today()}.csv`, "text/csv", `﻿[원두]\r\n${beanTable}\r\n\r\n[브루잉 기록]\r\n${brewTable}`);
 };

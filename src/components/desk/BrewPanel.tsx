@@ -1,9 +1,10 @@
 import { blendDetail } from "../../lib/blend";
 import { fmt, localDate, parseLocalDate, splitCupNotes } from "../../lib/format";
-import { type Bean, type Brew, isCafeBrew, type TastingNote } from "../../types";
+import { type Bean, type Brew, type CardPhoto, isCafeBrew, type TastingNote } from "../../types";
 import { brewRatio, cafeCup, cafeTitle, noteMemo, shortDate, tasteSummary } from "../brew-editor/brewFormat";
 import { RatingStars } from "../brew-editor/RatingStars";
 import { Tile } from "./Desk";
+import { CardPhotoButton } from "../card-photo/CardPhoto";
 
 const RepeatIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3" /><path d="M18 3v4h-4M6 21v-4h4" /></svg>;
 
@@ -18,7 +19,7 @@ const COMPARE: { label: string; value: (brew: Brew) => string }[] = [
 ];
 
 // The right pane of the brew log on wide screens: the picked brew in full, its buttons, and the bean's earlier brews beside it.
-export function BrewPanel({ brew, beans, brews, notes, onSelect, onAgain, onEdit, onRemove }: {
+export function BrewPanel({ brew, beans, brews, notes, onSelect, onAgain, onEdit, onRemove, onCard }: {
   brew: Brew;
   beans: Bean[];
   brews: Brew[];
@@ -27,6 +28,7 @@ export function BrewPanel({ brew, beans, brews, notes, onSelect, onAgain, onEdit
   onAgain: (brew: Brew) => void;
   onEdit: (brew: Brew) => void;
   onRemove: (brew: Brew) => void;
+  onCard?: (brew: Brew, card: CardPhoto) => void;
 }) {
   const cafe = isCafeBrew(brew);
   const bean = cafe ? undefined : beans.find(item => item.id === brew.beanId);
@@ -73,7 +75,7 @@ export function BrewPanel({ brew, beans, brews, notes, onSelect, onAgain, onEdit
       <p className="desk-kicker">{cafe
         ? <><span className="bw-cafe-chip">카페</span>{brew.cafe?.name} · {when}</>
         : [bean?.roastery, when, roastDays !== null && roastDays >= 0 ? `로스팅 ${roastDays}일째` : ""].filter(Boolean).join(" · ")}</p>
-      <h2 id="desk-brew-title">{title}</h2>
+      <h2 id="desk-brew-title">{title}<CardPhotoButton card={cafe ? brew.card : bean?.card} title={title} onChange={cafe && onCard ? card => onCard(brew, card) : undefined} /></h2>
       <RatingStars value={note?.rating ?? 0} />
     </header>
     <div className="desk-actions">

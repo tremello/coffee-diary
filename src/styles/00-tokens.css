@@ -32,6 +32,9 @@
   --c-fill: #e6dacb; /* tracks and meters */
   --c-line: #ede3d6; /* default border and divider */
   --c-line-strong: #d9cbb9; /* input and outlined-button border */
+  /* Photo viewer and corner step: always dark like a photo app, so the same value in light and dark (and every colour theme). */
+  --c-viewer: #0f0d0b; /* viewer background */
+  --c-viewer-ink: #f4eee7; /* text and icons on the viewer */
   --bd-7a5733: #7a5733;
   --bd-a98b67: #a98b67;
   --bd-ae9272: #ae9272;

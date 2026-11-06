@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { type StorageSetter, useStorage } from "../data/sync";
 import { Empty, JourneySteps } from "../components/ui";
 import { BrewDetail } from "../components/brew-editor/BrewDetail";
@@ -8,12 +8,16 @@ import { RatingStars } from "../components/brew-editor/RatingStars";
 import { BrewPanel } from "../components/desk/BrewPanel";
 import { DeskSearch, DeskStart, DeskToolbar, Tile } from "../components/desk/Desk";
 import { type Page } from "../lib/pages";
+import { removeCard } from "../lib/cardPhoto";
+import { cafeFieldsFromLabel, readLabelPhoto } from "../lib/labelRead";
+import { photoProblem } from "../lib/photo";
+import { CardPhotoButton } from "../components/card-photo/CardPhoto";
 import { LIST_KEYS, STORAGE_KEYS } from "../data/keys";
 import { beanValues } from "../lib/blend";
 import { readLocal, writeLocal } from "../data/storage";
 import { fmt, localDate } from "../lib/format";
 import { normalizedRecipeAction, recipeTime, recipeTimeToSeconds, recipeWater } from "../lib/recipe";
-import { type Bean, BEAN_ORIGINS, type Brew, type BrewForm, isCafeBrew, type SavedRecipe, type TastingNote } from "../types";
+import { type Bean, BEAN_ORIGINS, type Brew, type BrewForm, type CardPhoto, isCafeBrew, type SavedRecipe, type TastingNote } from "../types";
 
 // Shown only until the user registers drippers of their own.
 const DRIPPER_SUGGESTIONS = ["하리오 V60", "오리가미", "칼리타"];
@@ -56,6 +60,48 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
 }) {
   const [show, setShow] = useState(false);
   const [form, setForm] = useState<BrewForm>(emptyBrewForm);
+  // A cafe record's card photo when its editor opened, so a photo uploaded and then cancelled can be dropped again.
+  const originalCard = useRef<CardPhoto | undefined>(undefined);
+  // From the viewer: the new card is saved on the record at once and the old files go.
+  // One photo of the cafe's bean card (or bag) fills the coffee rows, like the bean form's label photo.
+  const [cafePhoto, setCafePhoto] = useState<{ preview: string; busy: boolean; error: string; readCount: number | null }>({ preview: "", busy: false, error: "", readCount: null });
+  const [cafeRead, setCafeRead] = useState<ReadonlySet<string>>(new Set());
+  const cafeRun = useRef(0);
+  const cafeFile = useRef<File | null>(null);
+  const clearCafePhoto = () => {
+    cafeRun.current += 1; cafeFile.current = null;
+    setCafePhoto(current => { if (current.preview) URL.revokeObjectURL(current.preview); return { preview: "", busy: false, error: "", readCount: null }; });
+    setCafeRead(new Set());
+  };
+  const readCafePhoto = async (file = cafeFile.current) => {
+    if (!file) return;
+    const run = ++cafeRun.current;
+    setCafePhoto(current => ({ ...current, busy: true, error: "", readCount: null }));
+    try {
+      const result = await readLabelPhoto(file);
+      if (run !== cafeRun.current) return;
+      const { coffee, roasteryNotes, price, read } = cafeFieldsFromLabel(result);
+      setForm(current => ({ ...current, coffee, roasteryNotes: roasteryNotes || current.roasteryNotes, price: price || current.price }));
+      setCafeRead(read);
+      setCafePhoto(current => ({ ...current, busy: false, readCount: read.size }));
+    } catch (problem) {
+      if (run !== cafeRun.current) return;
+      setCafePhoto(current => ({ ...current, busy: false, error: problem instanceof Error ? problem.message : "사진에서 정보를 읽지 못했어요." }));
+    }
+  };
+  const selectCafePhoto = (file?: File) => {
+    clearCafePhoto();
+    if (!file) return;
+    const problem = photoProblem(file);
+    if (problem) { setCafePhoto({ preview: "", busy: false, error: problem, readCount: null }); return; }
+    cafeFile.current = file;
+    setCafePhoto({ preview: URL.createObjectURL(file), busy: false, error: "", readCount: null });
+    if (userId) void readCafePhoto(file);
+  };
+  const updateCard = (brew: Brew, card: CardPhoto) => {
+    setBrews(brews.map(item => item.id === brew.id ? { ...item, card } : item));
+    if (brew.card && brew.card.path !== card.path) removeCard(brew.card);
+  };
   const [editingId, setEditingId] = useState<number | null>(null);
   const [note, setNote] = useState<BrewNote>(emptyNote);
   const [prefill, setPrefill] = useState<Prefill>(null);
@@ -106,13 +152,13 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   const habitsTouched = (form.filter !== "" && form.filter !== lastUsed("filter")) || (form.water !== "" && form.water !== lastUsed("water"));
 
   // Keep the unsaved new brew while the sheet is open; saving or "비우기" removes it.
-  const dirty = Boolean(form.cafe || form.beanName || form.coffee.origin || form.coffee.parts?.some(part => part.origin) || form.roasteryNotes || form.price || form.beanId || form.amount || form.waterAmount || form.method || form.recipe || grindTouched || form.waterTemp || form.brewTime || habitsTouched || note.memo.trim() || note.rating || Object.values(note.taste).some(Boolean));
+  const dirty = Boolean(form.card || form.cafe || form.beanName || form.coffee.origin || form.coffee.parts?.some(part => part.origin) || form.roasteryNotes || form.price || form.beanId || form.amount || form.waterAmount || form.method || form.recipe || grindTouched || form.waterTemp || form.brewTime || habitsTouched || note.memo.trim() || note.rating || Object.values(note.taste).some(Boolean));
   useEffect(() => {
     if (show && editingId === null && dirty) writeLocal(DRAFT_KEY, { form, recipeId: selectedRecipeId, note } satisfies BrewDraft);
   }, [show, editingId, dirty, form, selectedRecipeId, note]);
   const dropDraft = () => { try { localStorage.removeItem(DRAFT_KEY); } catch {} };
 
-  const resetForm = () => { setForm(emptyBrewForm()); setNote(emptyNote()); setSelectedRecipeId(""); setEditingId(null); setPrefill(null); setBrewError(""); };
+  const resetForm = () => { clearCafePhoto(); originalCard.current = undefined; setForm(emptyBrewForm()); setNote(emptyNote()); setSelectedRecipeId(""); setEditingId(null); setPrefill(null); setBrewError(""); };
   // "이대로 다시 내리기" keeps the brew's own click; a bean's last-conditions prefill takes the grinder's latest one.
   const fillFrom = (brew: Brew, beanId: string, exact = false) => {
     const conditions = brewConditionsForm(brew);
@@ -188,8 +234,9 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
     if (!cafe || !form.date) { setBrewError("카페와 날짜를 확인해주세요."); return; }
     const previous = editingId === null ? null : brews.find(item => item.id === editingId) ?? null;
     const text = (value: string) => value.trim() || undefined;
-    const brew: Brew = { id: editingId ?? Date.now(), beanId: 0, amount: 0, kind: "cafe", cafe, method: form.method.trim(), date: form.date, recipe: "", menu: text(form.menu), beanName: form.beanName.trim(), roastery: previous && isCafeBrew(previous) ? previous.roastery : undefined, ...coffeeFields(form.coffee), roasteryNotes: text(form.roasteryNotes), price: text(form.price) };
+    const brew: Brew = { id: editingId ?? Date.now(), beanId: 0, amount: 0, kind: "cafe", cafe, method: form.method.trim(), date: form.date, recipe: "", menu: text(form.menu), beanName: form.beanName.trim(), roastery: previous && isCafeBrew(previous) ? previous.roastery : undefined, ...coffeeFields(form.coffee), roasteryNotes: text(form.roasteryNotes), price: text(form.price), card: form.card };
     setBrews(editingId === null ? [...brews, brew] : brews.map(item => item.id === editingId ? brew : item));
+    if (previous?.card && previous.card.path !== brew.card?.path) removeCard(previous.card);
     if (previous && !isCafeBrew(previous)) setBeans(beans.map(item => item.id === previous.beanId ? { ...item, remaining: Math.round((item.remaining + previous.amount) * 10) / 10 } : item));
     saveNote(brew, previous ? noteOf(previous) : null);
     finishSave();
@@ -244,7 +291,8 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
   const edit = (brew: Brew) => {
     resetForm();
     setEditingId(brew.id);
-    setForm({ ...brewConditionsForm(brew), beanId: isCafeBrew(brew) ? "" : String(brew.beanId), date: brew.date });
+    originalCard.current = brew.card;
+    setForm({ ...brewConditionsForm(brew), beanId: isCafeBrew(brew) ? "" : String(brew.beanId), date: brew.date, card: brew.card });
     setSelectedRecipeId(recipeIdFor(brew));
     const saved = noteOf(brew);
     setNote({ memo: saved?.memo ?? "", rating: saved?.rating ?? 0, taste: Object.fromEntries(TASTE_ATTRIBUTES.map(({ key }) => [key, tasteScore(saved?.[key])])) });
@@ -319,7 +367,9 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
       onPickFilter={pickFilter} onHideFilter={filter => { setFilters(filters.filter(item => item !== filter)); if (form.filter === filter) setForm(current => ({ ...current, filter: "" })); }}
       onPickWater={pickWater} onHideWater={water => { setWaters(waters.filter(item => item !== water)); if (form.water === water) setForm(current => ({ ...current, water: "" })); }}
       onPickGrinder={pickGrinder} onHideGrinder={grinder => setGrinders(grinders.filter(item => item !== grinder))}
-      onSave={add} onClose={() => { setShow(false); if (editingId !== null) resetForm(); }} />}
+      onSave={add} onClose={() => { setShow(false); if (editingId !== null) { if (form.card && form.card.path !== originalCard.current?.path) removeCard(form.card); resetForm(); } }}
+      cafePhoto={{ ...cafePhoto, canRead: Boolean(userId), onSelect: selectCafePhoto, onRetry: () => readCafePhoto(), onClear: clearCafePhoto }} cafeRead={cafeRead}
+      canSaveCard={Boolean(userId)} onCard={card => { if (form.card && form.card.path !== originalCard.current?.path) removeCard(form.card); setForm(current => ({ ...current, card })); }} />}
   </>;
 
   if (desk) {
@@ -363,7 +413,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
               })}
             </Fragment>)}
           </div>
-          {pickedBrew ? <BrewPanel brew={pickedBrew} beans={beans} brews={brews} notes={notes} onSelect={brew => setPickedId(brew.id)} onAgain={again} onEdit={edit} onRemove={remove} /> : <div className="desk-panel desk-detail desk-detail-empty">검색 결과가 없어요</div>}
+          {pickedBrew ? <BrewPanel brew={pickedBrew} beans={beans} brews={brews} notes={notes} onSelect={brew => setPickedId(brew.id)} onAgain={again} onEdit={edit} onRemove={remove} onCard={updateCard} /> : <div className="desk-panel desk-detail desk-detail-empty">검색 결과가 없어요</div>}
         </div>}
         {editorLayers}
       </div>
@@ -400,7 +450,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
                   <span>{cafe ? <span className="brew-roastery"><span className="bw-cafe-chip">카페</span>{brew.cafe?.name}</span> : bean?.roastery && <span className="brew-roastery">{bean.roastery}</span>}</span>
                   <RatingStars value={saved?.rating ?? 0} />
                 </span>
-                <span className="bw-card-name bw-line">{title}</span>
+                <span className="bw-card-name bw-line">{title}<CardPhotoButton inline card={cafe ? brew.card : bean?.card} title={title} onChange={cafe ? card => updateCard(brew, card) : undefined} /></span>
                 {/* A cafe cup has no grams or brewing conditions of ours: the card is its name and the memo, like a bean's. */}
                 {!cafe && <span className="brew-recipe-block bw-line"><span className="brew-metrics bw-line">원두 {fmt(brew.amount)}g {brew.waterAmount ? `· 물 ${fmt(brew.waterAmount)}g · ${brewRatio(brew.amount, brew.waterAmount)}` : ""}</span>{brewConditions(brew) && <span className="brew-conditions-line bw-line">{brewConditions(brew)}</span>}{brew.recipe && <span className="bw-line">{brew.recipe}</span>}</span>}
                 {memo && <span className="brew-note-inline bw-line"><span>메모</span> {memo}</span>}
@@ -417,7 +467,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
       {!show && <button type="button" className="bean-fab brew-fab" onClick={openNew}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>브루잉 추가</button>}
 
       {editorLayers}
-      {detailBrew && <BrewDetail brew={detailBrew} beans={beans} brews={brews} notes={notes} onSelect={brew => setDetailId(brew.id)} onAgain={again} onEdit={edit} onClose={() => setDetailId(null)} />}
+      {detailBrew && <BrewDetail brew={detailBrew} beans={beans} brews={brews} notes={notes} onSelect={brew => setDetailId(brew.id)} onAgain={again} onEdit={edit} onCard={updateCard} onClose={() => setDetailId(null)} />}
     </div>
   );
 }

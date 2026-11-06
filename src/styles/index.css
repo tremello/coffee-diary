@@ -29,3 +29,4 @@
 @import "./27-color-themes.css"; /* Extra colour themes (얼그레이, 에스프레소) chosen in settings; they refill the colour tokens. */
 
 @import "./28-view-links.css";
+@import "./29-card-photo.css"; /* 원두 카드 사진: icon after names, editor row, corner step, photo viewer. */

@@ -395,6 +395,48 @@ async function readLabelTwice(base64, mimeType) {
   throw first.error ?? second.error;
 }
 
+// 원두 카드 사진: Gemini only finds the card's four corners; the app straightens and crops it on the phone.
+const cornerSchema = {
+  type: "object",
+  properties: {
+    found: { type: "boolean", description: "사진에 카드(직사각형 종이·인쇄물)가 보이면 true" },
+    corners: {
+      type: "array",
+      description: "카드 네 모서리. 왼쪽 위, 오른쪽 위, 오른쪽 아래, 왼쪽 아래 순서. 사진 크기를 0~1000으로 본 [x, y]",
+      items: { type: "array", items: { type: "number" } }
+    }
+  }
+};
+const CORNER_PROMPT = `사진에는 커피 원두와 함께 받은 카드(원두 정보가 인쇄된 직사각형 종이 카드)가 있습니다. 카드 종이의 네 모서리 위치를 찾아 JSON으로 답하세요.
+- 좌표는 사진 가로·세로를 각각 0~1000으로 본 [x, y]입니다(x는 왼쪽→오른쪽, y는 위→아래).
+- 순서: 카드의 왼쪽 위, 오른쪽 위, 오른쪽 아래, 왼쪽 아래.
+- 카드 안의 글자 영역이 아니라 종이 가장자리 끝을 찍습니다. 모서리가 둥글면 두 변을 이어 만나는 점을 씁니다.
+- 카드가 기울어 있거나 원근으로 사다리꼴이어도 실제 보이는 네 점을 씁니다.
+- 카드가 여러 장이면 가장 크게 보이는 한 장만. 카드가 없으면 found를 false로 합니다.`;
+
+async function findCorners(base64, mimeType) {
+  const geminiResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY },
+    body: JSON.stringify({
+      model: GEMINI_MODEL,
+      input: [{ type: "image", mime_type: mimeType, data: base64 }, { type: "text", text: CORNER_PROMPT }],
+      response_format: { type: "text", mime_type: "application/json", schema: cornerSchema },
+      generation_config: { thinking_level: thinkingLevel, max_output_tokens: 1024 },
+      store: false
+    })
+  });
+  const payload = await geminiResponse.json();
+  if (!geminiResponse.ok) return { status: geminiResponse.status, error: errorMessage(payload) };
+  let parsed = null;
+  try { parsed = JSON.parse(interactionText(payload)); } catch { return { corners: null }; }
+  const points = Array.isArray(parsed?.corners) ? parsed.corners : [];
+  const valid = points.length === 4 && points.every(point => Array.isArray(point) && point.length >= 2 && point.slice(0, 2).every(value => Number.isFinite(value) && value >= -50 && value <= 1050));
+  // Back as 0–1 fractions of the photo, clamped to its edges.
+  const clamp = value => Math.min(1, Math.max(0, value / 1000));
+  return { corners: parsed?.found !== false && valid ? points.map(([x, y]) => [clamp(x), clamp(y)]) : null };
+}
+
 function interactionText(payload) {
   if (typeof payload?.output_text === "string") return payload.output_text;
   return payload?.steps
@@ -427,7 +469,7 @@ export default async function handler(request, response) {
   }
 
   try {
-    const { image, mimeType } = getBody(request);
+    const { image, mimeType, mode } = getBody(request);
     if (typeof image !== "string" || !image.startsWith("data:image/")) {
       return response.status(400).json({ error: "사진 파일을 다시 선택해주세요." });
     }
@@ -438,6 +480,12 @@ export default async function handler(request, response) {
     const base64 = image.split(",")[1] ?? "";
     if (Buffer.byteLength(base64, "base64") > MAX_IMAGE_BYTES) {
       return response.status(413).json({ error: "사진은 3MB 이하로 줄여서 보내주세요." });
+    }
+
+    if (mode === "corners") {
+      const found = await findCorners(base64, mimeType);
+      if (found.error) return response.status(found.status).json({ error: found.error });
+      return response.status(200).json({ corners: found.corners });
     }
 
     const started = Date.now();

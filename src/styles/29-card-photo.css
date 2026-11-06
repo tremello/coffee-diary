@@ -1,0 +1,76 @@
+/* 원두 카드 사진: the icon after a name, the editor row, the corner step and the viewer. */
+
+/* Icon after a name: 16px glyph in a 44px tap area that doesn't push the line taller. */
+.cp-icon { display: inline-flex; align-items: center; justify-content: center; position: relative; width: 22px; height: 22px; margin: -4px 0 -4px 4px; padding: 0; border: 0; background: none; color: var(--c-ink-2); vertical-align: middle; cursor: pointer; flex: 0 0 auto; }
+.cp-icon::after { content: ""; position: absolute; inset: -11px; }
+.cp-icon:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 1px; border-radius: 6px; }
+.cp-icon svg { display: block; }
+.cp-name { display: inline-flex; align-items: center; min-width: 0; max-width: 100%; }
+.cp-name > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* Editor row */
+.cp-row { padding-right: 8px; }
+.cp-row .be-row-name { gap: 8px; }
+.cp-row .be-row-name svg { flex: 0 0 auto; color: var(--c-accent); }
+.cp-row-actions { display: inline-flex; align-items: center; gap: 6px; }
+.cp-row-thumb { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 34px; padding: 0; border: 1px solid var(--c-line); border-radius: 6px; background: var(--c-fill); color: var(--c-ink-2); overflow: hidden; cursor: pointer; }
+.cp-row-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Shared full-screen layer (phone). */
+.cp-layer { position: fixed; inset: 0; z-index: 300; display: flex; flex-direction: column; background: var(--c-viewer); color: var(--c-viewer-ink); padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); overscroll-behavior: contain; animation: cp-in .18s ease-out; }
+.cp-layer h2 { margin: 0; font-size: 17px; font-weight: 700; text-align: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cp-bar { display: grid; grid-template-columns: 64px 1fr 64px; align-items: center; min-height: 52px; padding: 0 8px; flex: 0 0 auto; }
+.cp-text-button { min-height: 44px; padding: 0 8px; border: 0; background: none; color: var(--c-viewer-ink); font: inherit; font-size: 15px; cursor: pointer; text-align: left; }
+.cp-hint { margin: 0; padding: 0 16px 10px; font-size: 13px; text-align: center; color: color-mix(in srgb, var(--c-viewer-ink) 72%, transparent); }
+.cp-hint strong { color: var(--c-viewer-ink); font-weight: 600; }
+.cp-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; padding: 12px 16px 16px; flex: 0 0 auto; }
+.cp-actions .cp-hint { flex: 1 0 100%; padding-bottom: 0; }
+.cp-button { display: inline-flex; align-items: center; justify-content: center; position: relative; min-width: 120px; min-height: 44px; padding: 0 18px; border: 1px solid color-mix(in srgb, var(--c-viewer-ink) 30%, transparent); border-radius: var(--r-pill); background: transparent; color: var(--c-viewer-ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.cp-button input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.cp-button:focus-within, .cp-button:focus-visible { outline: 2px solid var(--c-viewer-ink); outline-offset: 2px; }
+.cp-button.primary { border-color: var(--c-viewer-ink); background: var(--c-viewer-ink); color: var(--c-viewer); }
+.cp-button:disabled { opacity: .5; cursor: default; }
+
+/* Corner step */
+.cp-stage { position: relative; flex: 1 1 auto; min-height: 0; margin: 0 16px; touch-action: none; user-select: none; -webkit-user-select: none; }
+.cp-photo { position: absolute; display: block; pointer-events: none; -webkit-user-drag: none; }
+.cp-frame { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.cp-frame polygon { fill: color-mix(in srgb, var(--c-viewer-ink) 10%, transparent); stroke: var(--c-viewer-ink); stroke-width: 2; stroke-linejoin: round; }
+.cp-handle { position: absolute; width: 44px; height: 44px; margin: -22px 0 0 -22px; padding: 0; border: 0; background: none; touch-action: none; cursor: grab; }
+.cp-handle span { position: absolute; inset: 12px; border: 2px solid var(--c-viewer); border-radius: 50%; background: var(--c-viewer-ink); box-shadow: 0 0 0 1px var(--c-viewer-ink); }
+.cp-handle:focus-visible span { box-shadow: 0 0 0 4px color-mix(in srgb, var(--c-viewer-ink) 45%, transparent); }
+.cp-handle:active { cursor: grabbing; }
+.cp-result { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+
+/* Viewer */
+.cp-viewer { background: color-mix(in srgb, var(--c-viewer) calc(var(--cp-fade, 1) * 100%), transparent); }
+.cp-viewer.closing { animation: cp-out .2s ease-in forwards; }
+.cp-dialog { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.cp-zoom { position: relative; flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+.cp-full { max-width: 100%; max-height: 100%; transform-origin: center; will-change: transform; -webkit-user-drag: none; border-radius: 4px; }
+
+@keyframes cp-in { from { opacity: 0; } }
+@keyframes cp-out { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .cp-layer, .cp-viewer.closing { animation: none; } }
+
+/* Wider screens: the viewer is a large centred dialog over a dimmed page; the corner step stays full screen. */
+@media (min-width: 760px) {
+  .cp-viewer { align-items: center; justify-content: center; padding: 32px; background: color-mix(in srgb, var(--c-viewer) 62%, transparent); }
+  .cp-viewer .cp-dialog { flex: 0 1 auto; width: min(960px, 100%); height: min(860px, 100%); border-radius: var(--r-lg); background: var(--c-viewer); overflow: hidden; box-shadow: 0 24px 60px color-mix(in srgb, var(--c-viewer) 40%, transparent); }
+  .cp-viewer .cp-zoom { padding: 0 24px; }
+  .cp-crop .cp-stage { margin: 0 32px; }
+}
+
+/* One photo for reading and the card: the label reading's progress under the hint, in the viewer's colours. */
+.cp-reading { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: -2px auto 10px; padding: 0 16px; width: min(320px, 100%); font-size: 12px; text-align: center; color: color-mix(in srgb, var(--c-viewer-ink) 72%, transparent); }
+.cp-reading strong { color: var(--c-viewer-ink); font-weight: 600; font-size: 13px; }
+.cp-reading .be-progress-time { color: color-mix(in srgb, var(--c-viewer-ink) 72%, transparent); }
+.cp-reading .be-progress { align-self: stretch; }
+.cp-reading .be-progress i { position: relative; flex: 1 1 0; height: 4px; overflow: hidden; border-radius: var(--r-pill); background: color-mix(in srgb, var(--c-viewer-ink) 22%, transparent); }
+.cp-reading .be-progress i::after { background: var(--c-viewer-ink); }
+.cp-reading .ok { color: var(--c-viewer-ink); }
+.pf-name { display: inline-flex; align-items: center; gap: 8px; }
+.be-quick .be-row-stack small { font-weight: 400; }
+.be-quick-row .be-row-stack { flex: 1 1 auto; min-width: 0; padding: 8px 0; }
+.be-quick-row .be-row-stack small { white-space: normal; }
+.be-quick-row .be-quick-actions { flex: 0 0 auto; }

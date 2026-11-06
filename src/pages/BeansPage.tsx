@@ -7,7 +7,7 @@ import { BeanEditor } from "../components/bean-editor/BeanEditor";
 import { beanValues, blendFields, blendSummary, isBlend, MAX_BLEND_PARTS, ratioTotal, usedParts } from "../lib/blend";
 import { beanName, fmt, handleNumericInput, localDate, splitCupNotes, withCommas } from "../lib/format";
 import { localizedPhotoField, PHOTO_ORIGIN_LABELS, PHOTO_PROCESS_LABELS, photoMimeType, photoProblem, preparePhoto, sendPhoto } from "../lib/photo";
-import { type Bean, BEAN_ORIGINS, BEAN_PROCESSES, BEAN_QUALITIES, BEAN_STATUSES, type BeanForm, type BeanQuality, type BeanStatus, type Brew, type PeakSettings, type RecognizedBeanFields, type TastingNote } from "../types";
+import { type Bean, BEAN_ORIGINS, BEAN_PROCESSES, BEAN_QUALITIES, BEAN_STATUSES, type BeanForm, type BeanQuality, type BeanStatus, type Brew, type CardPhoto, type PeakSettings, type RecognizedBeanFields, type TastingNote } from "../types";
 import { LIST_KEYS, PEAK_KEY } from "../data/keys";
 import { basePeak, beanPeak, type BeanPeak, effectiveStatus, isRoastLevel, roastDateLabel, levelPeak, peakSortKey, RESEARCH_PEAK, shiftPeak, withRoasteryPeak } from "../lib/peak";
 import { PeakBlock, PeakPill } from "../components/peak/PeakParts";
@@ -16,6 +16,8 @@ import { DEVICE_KEYS } from "../data/settings";
 import { BeanPanel } from "../components/desk/BeanPanel";
 import { capListRows, DeskSearch, DeskStart, DeskToolbar, Tile } from "../components/desk/Desk";
 import { type Page } from "../lib/pages";
+import { removeCard } from "../lib/cardPhoto";
+import { CardPhotoButton } from "../components/card-photo/CardPhoto";
 
 const capBeanList = capListRows(8);
 
@@ -59,6 +61,8 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
   const [show, setShow] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<BeanForm>(emptyBeanForm);
+  // The card photo the bean had when its editor opened: a photo uploaded since then is dropped again if the editor is cancelled.
+  const originalCard = useRef<CardPhoto | undefined>(undefined);
   const [filter, setFilter] = useState(initialOpenId === null ? "active" : "all");
   const [sort, setSort] = useState<BeanSort>("registered");
   const [qualityFilter, setQualityFilter] = useState<"all" | BeanQuality>("all");
@@ -457,9 +461,10 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
       if (run === photoRun.current) setPhotoBusy(false);
     }
   };
-  const close = () => { clearPhoto(); setShow(false); setEditingId(null); setForm(emptyBeanForm); setError(""); setRoastDateTouched(false); purchaseDateFollowsRoast.current = false; };
+  const close = () => { originalCard.current = undefined; clearPhoto(); setShow(false); setEditingId(null); setForm(emptyBeanForm); setError(""); setRoastDateTouched(false); purchaseDateFollowsRoast.current = false; };
   const openNewBean = () => { close(); setShow(true); };
   const edit = (bean: Bean) => {
+    originalCard.current = bean.card;
     setForm({ ...bean, status: bean.status ?? "소비 중", purchased: String(bean.purchased), consumed: String(bean.consumed ?? 0) });
     setRoastDateTouched(Boolean(bean.roastDate && bean.roastDate !== bean.date));
     purchaseDateFollowsRoast.current = false;
@@ -522,11 +527,19 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
     const fields: BeanForm = blend ? { ...form, ...blendFields(form) } : single;
     const bean: Bean = { ...fields, name: beanName(fields), id: editingId ?? Date.now(), purchased, consumed, remaining: Math.round((purchased - used) * 10) / 10 };
     setBeans(editingId === null ? [...beans, bean] : beans.map(b => b.id === editingId ? bean : b));
+    // The old card photo goes only once the bean no longer points at it.
+    if (previous?.card && previous.card.path !== bean.card?.path) removeCard(previous.card);
     close();
   };
   // Cards get one unchanging set of actions that always call this render's handlers.
-  const latest = useRef({ toggleExpanded, onCardClick, edit, updateStatus, onBrew, dismissSwipeHint });
-  latest.current = { toggleExpanded, onCardClick, edit, updateStatus, onBrew, dismissSwipeHint };
+  // A photo swapped or re-cropped from the viewer replaces the bean's card at once; the old files go after.
+  const updateCard = (id: number, card: CardPhoto) => {
+    const old = beans.find(bean => bean.id === id)?.card;
+    setBeans(beans.map(bean => bean.id === id ? { ...bean, card } : bean));
+    if (old && old.path !== card.path) removeCard(old);
+  };
+  const latest = useRef({ toggleExpanded, onCardClick, edit, updateStatus, onBrew, dismissSwipeHint, updateCard });
+  latest.current = { toggleExpanded, onCardClick, edit, updateStatus, onBrew, dismissSwipeHint, updateCard };
   const cardActions = useMemo<CardActions>(() => ({
     toggle: id => latest.current.toggleExpanded(id),
     cardClick: (event, id) => latest.current.onCardClick(event, id),
@@ -535,6 +548,7 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
     edit: bean => latest.current.edit(bean),
     status: (id, status) => latest.current.updateStatus(id, status),
     adjust: id => setAdjustId(id),
+    card: (id, card) => latest.current.updateCard(id, card),
   }), []);
   const editorEl = <>
       {show && <BeanEditor
@@ -550,6 +564,8 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
         varieties={rankByUse(varieties, bean => beanValues(bean, "variety"))}
         pastBeans={editingId === null ? available : []}
         readFields={readFields}
+        canSaveCard={Boolean(userId)}
+        onCard={card => { if (form.card && form.card.path !== originalCard.current?.path) removeCard(form.card); setForm(current => ({ ...current, card })); }}
         photo={editingId === null ? { preview: photoPreview, busy: photoBusy, error: photoError, readCount: photoReadCount, canRead: Boolean(userId), onSelect: selectPhoto, onRetry: () => recognizePhoto(), onClear: clearPhoto } : null}
         error={error}
         onAddOrigin={origin => { if (!origins.includes(origin)) setCustomOrigins([...customOrigins, origin]); }}
@@ -559,7 +575,7 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
         onRoastDate={roastDate => { setRoastDateTouched(true); setForm(current => ({ ...current, roastDate, date: purchaseDateForRoast(current.date, roastDate) })); }}
         onPurchaseDate={date => { purchaseDateFollowsRoast.current = false; setForm(current => ({ ...current, date, roastDate: roastDateTouched ? current.roastDate : date })); }}
         onSave={save}
-        onCancel={close}
+        onCancel={() => { if (form.card && form.card.path !== originalCard.current?.path) removeCard(form.card); close(); }}
         onDelete={editingId !== null ? remove : undefined}
       />}
   </>;
@@ -649,7 +665,7 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
               })}
             </div>
           </div>
-          {pickedBean ? <BeanPanel bean={pickedBean} peak={peakOf(pickedBean)} brews={brews} notes={notesByBean.get(pickedBean.id) ?? NO_NOTES} onBrew={() => onBrew(pickedBean.id)} onEdit={() => edit(pickedBean)} onStatus={status => updateStatus(pickedBean.id, status)} onAdjust={() => setAdjustId(pickedBean.id)} onShowBrews={onGoto && (() => onGoto("Brew Log"))} />
+          {pickedBean ? <BeanPanel bean={pickedBean} peak={peakOf(pickedBean)} brews={brews} notes={notesByBean.get(pickedBean.id) ?? NO_NOTES} onBrew={() => onBrew(pickedBean.id)} onEdit={() => edit(pickedBean)} onStatus={status => updateStatus(pickedBean.id, status)} onAdjust={() => setAdjustId(pickedBean.id)} onCard={card => updateCard(pickedBean.id, card)} onShowBrews={onGoto && (() => onGoto("Brew Log"))} />
             : <div className="desk-panel desk-detail desk-detail-empty">해당하는 원두가 없어요</div>}
         </div>}
         {peakSheetEl}
@@ -693,7 +709,7 @@ function RoastAge({ bean, today }: { bean: Bean; today: string }) {
 }
 
 // The purchase date stays in the form only.
-type CardActions = { toggle: (id: number) => void; cardClick: (event: MouseEvent<HTMLElement>, id: number) => void; swipeChange: (id: number, open: boolean) => void; brew: (id: number) => void; edit: (bean: Bean) => void; status: (id: number, status: BeanStatus) => void; adjust: (id: number) => void };
+type CardActions = { toggle: (id: number) => void; cardClick: (event: MouseEvent<HTMLElement>, id: number) => void; swipeChange: (id: number, open: boolean) => void; brew: (id: number) => void; edit: (bean: Bean) => void; status: (id: number, status: BeanStatus) => void; adjust: (id: number) => void; card: (id: number, card: CardPhoto) => void };
 const NO_NOTES: TastingNote[] = [];
 
 // One bean card. Memoised so opening or closing a card re-renders only the cards that change, not the whole list.
@@ -703,10 +719,10 @@ const BeanCard = memo(function BeanCard({ bean, peak, notes, expanded, swipeOpen
   return <SwipeToBrew className={expanded ? "density-detail is-expanded" : "density-compact"} beanId={bean.id} beanName={bean.name} disabled={bean.remaining <= 0} open={swipeOpen} onOpenChange={open => actions.swipeChange(bean.id, open)} onBrew={() => actions.brew(bean.id)}><article className="inventory-card" tabIndex={0} aria-expanded={expanded} aria-label={`${bean.name}, 눌러서 ${expanded ? "접기" : "자세히 보기"}`} onClick={event => actions.cardClick(event, bean.id)} onKeyDown={event => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); actions.toggle(bean.id); } }}>
     <div className="bean-info">
       <p className="roastery"><span>{bean.roastery || "로스터리 미입력"}</span></p>
-      <h3>{bean.name}</h3>
+      <h3>{bean.name}<CardPhotoButton card={bean.card} title={bean.name} onChange={card => actions.card(bean.id, card)} /></h3>
       {isBlend(bean) && <div className="blend-line"><span className="blend-tag">블렌드</span><span>{blendSummary(bean.parts)}</span></div>}
       <BeanDates bean={bean} />
-      <div className="compact-summary"><strong>{bean.roastery || "로스터리 미입력"}</strong><time className="compact-roast" dateTime={bean.roastDate}>{roastDateLabel(bean.roastDate)}</time><b>{bean.name}</b>{isBlend(bean) && <span className="blend-line"><span className="blend-tag">블렌드</span><span>{blendSummary(bean.parts)}</span></span>}{bean.roasteryNotes && <span className="compact-cup-notes">{splitCupNotes(bean.roasteryNotes).map((note, index) => <i key={index}>{note}</i>)}</span>}</div>
+      <div className="compact-summary"><strong>{bean.roastery || "로스터리 미입력"}</strong><time className="compact-roast" dateTime={bean.roastDate}>{roastDateLabel(bean.roastDate)}</time><b className="cp-name"><span>{bean.name}</span><CardPhotoButton card={bean.card} title={bean.name} onChange={card => actions.card(bean.id, card)} /></b>{isBlend(bean) && <span className="blend-line"><span className="blend-tag">블렌드</span><span>{blendSummary(bean.parts)}</span></span>}{bean.roasteryNotes && <span className="compact-cup-notes">{splitCupNotes(bean.roasteryNotes).map((note, index) => <i key={index}>{note}</i>)}</span>}</div>
       {bean.roasteryNotes && <div className="roastery-cup-notes"><span className="detail-label">로스터리 컵노트</span><div className="flavor-tags">{splitCupNotes(bean.roasteryNotes).map((note, index) => <span key={index}>{note}</span>)}</div></div>}
       <div className="bean-card-actions"><button className="edit-bean" onClick={() => actions.edit(bean)} aria-label={`${bean.name} 원두 정보 수정`}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16v4Z" /><path d="M13.5 6.5l4 4" /></svg>원두 정보 수정</button>{expanded && <details className="record-details"><summary>내 메모 보기</summary><BeanComments bean={bean} notes={notes} /></details>}</div>
     </div>

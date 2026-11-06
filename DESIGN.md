@@ -20,6 +20,8 @@ Use the role tokens. Each has a light value and a dark value, so dark mode follo
 | `--c-line` | default border and divider |
 | `--c-line-strong` | input and outlined-button border |
 
+Photo viewer (원두 카드 사진 보기, 모서리 맞추기): `--c-viewer` background and `--c-viewer-ink` text. They stay the same in light, dark and every colour theme, because a photo is judged on a dark backdrop.
+
 State colours (green 소비 중, amber 디개싱, red delete/error), the calendar heat scale and the glass tab bar keep their own values. If a new colour is really needed, add it as a role token with both light and dark values.
 
 ### 시기 색 (맛있는 시기 stages)

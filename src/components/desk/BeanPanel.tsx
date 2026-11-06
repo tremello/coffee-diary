@@ -1,23 +1,25 @@
 import { blendDetail, isBlend } from "../../lib/blend";
 import { fmt, splitCupNotes } from "../../lib/format";
 import { type BeanPeak } from "../../lib/peak";
-import { type Bean, type BeanStatus, type Brew, isCafeBrew, type TastingNote } from "../../types";
+import { type Bean, type BeanStatus, type Brew, type CardPhoto, isCafeBrew, type TastingNote } from "../../types";
 import { brewRatio, shortDate } from "../brew-editor/brewFormat";
 import { RatingStars } from "../brew-editor/RatingStars";
 import { PeakBlock, PeakPill } from "../peak/PeakParts";
 import { Tile } from "./Desk";
+import { CardPhotoButton } from "../card-photo/CardPhoto";
 
 const BrewIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 8h12v5a6 6 0 0 1-12 0V8Z" /><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17M8 3v2M12 3v2" /></svg>;
 const EditIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16v4Z" /><path d="M13.5 6.5l4 4" /></svg>;
 
 // The right pane of 원두 재고 on wide screens: the picked bean in full with its buttons, stock and peak side by side,
 // and the brews made with it. The phone keeps opening the card in place.
-export function BeanPanel({ bean, peak, brews, notes, onBrew, onEdit, onStatus, onAdjust, onShowBrews }: {
+export function BeanPanel({ bean, peak, brews, notes, onBrew, onEdit, onStatus, onAdjust, onShowBrews, onCard }: {
   bean: Bean;
   peak: BeanPeak;
   brews: Brew[];
   notes: TastingNote[];
   onBrew: () => void;
+  onCard?: (card: CardPhoto) => void;
   onEdit: () => void;
   onStatus: (status: BeanStatus) => void;
   onAdjust: () => void;
@@ -54,7 +56,7 @@ export function BeanPanel({ bean, peak, brews, notes, onBrew, onEdit, onStatus, 
             : !peak.level && <button type="button" data-status={status} className="stock-status stock-status-toggle" onClick={() => onStatus(next)} aria-label={`상태: ${status}. 눌러서 ${next}으로 변경`} title={`눌러서 ${next}으로 변경`}>{status}<span aria-hidden="true">⇄</span></button>}
         </div>
       </div>
-      <h2 id="desk-bean-title">{bean.name}</h2>
+      <h2 id="desk-bean-title">{bean.name}<CardPhotoButton card={bean.card} title={bean.name} onChange={onCard} /></h2>
       {(bean.roastDate || priceLabel || bean.quality) && <p className="desk-meta">
         {bean.roastDate && <span>로스팅 <time dateTime={bean.roastDate}>{bean.roastDate.slice(2).replace(/-/g, ".")}</time></span>}
         {priceLabel && <span>구매가 {priceLabel}</span>}

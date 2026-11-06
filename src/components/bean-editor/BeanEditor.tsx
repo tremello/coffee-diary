@@ -9,6 +9,9 @@ import { RoastLevelSheet } from "../peak/RoastLevelSheet";
 import { type CoffeeSheet, CoffeeRows } from "./CoffeeRows";
 import { type PickOption, PickSheet } from "./PickSheet";
 import { RebuySheet } from "./RebuySheet";
+import { CardPhotoRow } from "../card-photo/CardPhoto";
+import { PhotoFill } from "../card-photo/PhotoFill";
+import { type CardPhoto } from "../../types";
 import { useKeyboardInset } from "./useKeyboardInset";
 
 export type BeanPhoto = {
@@ -29,7 +32,7 @@ const RepeatIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="n
 
 // The bean form as "name · value" rows: full screen on phones, a dialog on wider screens. BeansPage keeps the form
 // state, saving and photo reading; this only lays the fields out and opens the pickers.
-export function BeanEditor({ editing, form, setForm, peakSettings, setPeakSettings, processes, origins, roasteries, varieties, pastBeans, readFields, photo, error, onAddOrigin, onHideRoastery, onHideVariety, onRebuy, onRoastDate, onPurchaseDate, onSave, onCancel, onDelete }: {
+export function BeanEditor({ editing, form, setForm, peakSettings, setPeakSettings, processes, origins, roasteries, varieties, pastBeans, readFields, photo, canSaveCard, onCard, error, onAddOrigin, onHideRoastery, onHideVariety, onRebuy, onRoastDate, onPurchaseDate, onSave, onCancel, onDelete }: {
   editing: boolean;
   form: BeanForm;
   setForm: Dispatch<SetStateAction<BeanForm>>;
@@ -42,6 +45,8 @@ export function BeanEditor({ editing, form, setForm, peakSettings, setPeakSettin
   pastBeans: Bean[];
   readFields: ReadonlySet<string>;
   photo: BeanPhoto | null;
+  canSaveCard: boolean;
+  onCard: (card: CardPhoto | undefined) => void;
   error: string;
   onAddOrigin: (origin: string) => void;
   onHideRoastery: (roastery: string) => void;
@@ -143,24 +148,7 @@ export function BeanEditor({ editing, form, setForm, peakSettings, setPeakSettin
         {error && <p className="be-alert" role="alert">{error}</p>}
 
         {photo && <div className="be-card be-quick">
-          {photo.preview ? <div className="be-photo">
-            <img src={photo.preview} alt="고른 원두 봉투 사진" />
-            <div className="be-photo-text" role="status">
-              {photo.busy ? <PhotoProgress reading="라벨 읽는 중…" />
-                : photo.error ? <><strong className="bad">{photo.error}</strong><span>다시 읽거나 직접 입력해주세요</span></>
-                : photo.readCount !== null ? <><strong className="ok">라벨에서 {photo.readCount}개를 읽었어요</strong><span>초록 점 칸만 한 번 확인해주세요</span></>
-                : <><strong>사진을 골랐어요</strong><span>{photo.canRead ? "사진은 읽는 동안에만 쓰고 저장하지 않아요" : "사진 인식은 Google 로그인 후 쓸 수 있어요"}</span></>}
-            </div>
-            {!photo.busy && photo.canRead && <button type="button" className="be-pill" onClick={photo.onRetry}>다시 읽기</button>}
-            <button type="button" className="be-photo-remove" onClick={photo.onClear} aria-label={photo.busy ? "읽기 그만두고 사진 지우기" : "고른 사진 지우기"}>×</button>
-          </div> : <div className="be-row be-quick-row">
-            <span className="be-row-name"><CameraIcon />라벨 사진으로 채우기</span>
-            <span className="be-quick-actions">
-              <label className="be-pill"><input type="file" accept={PHOTO_ACCEPT} capture="environment" onChange={event => { photo.onSelect(event.target.files?.[0]); event.target.value = ""; }} />찍기</label>
-              <label className="be-pill"><input type="file" accept={PHOTO_ACCEPT} onChange={event => { photo.onSelect(event.target.files?.[0]); event.target.value = ""; }} />앨범</label>
-            </span>
-          </div>}
-          {photo.error && !photo.preview && <p className="be-photo-note" role="alert">{photo.error}</p>}
+          <PhotoFill photo={photo} card={form.card} canSaveCard={canSaveCard} onCard={onCard} title={name || "원두 카드"} />
           <button type="button" className="be-row" onClick={() => setPicker("rebuy")}><span className="be-row-name"><RepeatIcon />예전에 산 원두 또 샀어요</span><span className="be-chev" aria-hidden="true">›</span></button>
         </div>}
 
@@ -202,6 +190,12 @@ export function BeanEditor({ editing, form, setForm, peakSettings, setPeakSettin
           <h3 className="be-group-label" id="be-notes">로스터리 컵노트</h3>
           <div className="be-card"><label className={`${rowClass("roasteryNotes")} full`}>{readFields.has("roasteryNotes") && <span className="be-dot" aria-hidden="true" />}<span className="sr-only">로스터리 컵노트</span><input value={form.roasteryNotes ?? ""} placeholder="예: 흰 꽃, 복숭아, 꿀 (쉼표로 구분)" onChange={event => set("roasteryNotes", event.target.value)} /></label></div>
         </section>
+
+        {/* A new bean gets its card from the photo row above; this row shows it, or offers one when editing. */}
+        {(editing || form.card) && <section className="be-group" aria-labelledby="be-card-photo">
+          <h3 className="be-group-label" id="be-card-photo">원두 카드</h3>
+          <div className="be-card"><CardPhotoRow card={form.card} title={name || "원두 카드"} canSave={canSaveCard} onChange={onCard} /></div>
+        </section>}
 
         {moreOpen ? <section className="be-group" aria-labelledby="be-more">
           <h3 className="be-group-label" id="be-more">더 보기<button type="button" onClick={() => setMoreOpen(false)}>접기</button></h3>

@@ -5,10 +5,12 @@ import { useKeyboardInset } from "../bean-editor/useKeyboardInset";
 import { usePickDrag } from "../bean-editor/usePickDrag";
 import { fmt, handleNumericInput, withCommas } from "../../lib/format";
 import { recipeWater } from "../../lib/recipe";
-import { type Bean, BEAN_PROCESSES, type BrewForm, type CafePlace, type SavedRecipe } from "../../types";
+import { type Bean, BEAN_PROCESSES, type BrewForm, type CafePlace, type CardPhoto, type SavedRecipe } from "../../types";
 import { brewRatio, brewTimeFromDigits, composeGrind, parseGrind, TASTE_ATTRIBUTES, type TasteScores } from "./brewFormat";
 import { type CoffeeSheet, CoffeeRows } from "../bean-editor/CoffeeRows";
 import { CafeSheet } from "./CafeSheet";
+import { CardPhotoRow } from "../card-photo/CardPhoto";
+import { PhotoFill, type PhotoRead } from "../card-photo/PhotoFill";
 import { FitText } from "./FitText";
 import { useSheet } from "./useSheet";
 
@@ -42,11 +44,15 @@ function ListSheet({ title, items, empty, search, noMatch, onClose }: { title: s
 
 // The brew form as "name · value" rows in a sheet over the list (a dialog on wider screens). BrewLog keeps the state and
 // saving; this lays the fields out and opens the pickers.
-export function BrewEditor({ editing, form, setForm, recentCafes, origins, varieties, onAddOrigin, onHideVariety, beans, recipes, selectedRecipeId, drippers, filters, waters, grinders, defaultGrinder, lastClicks, note, setNote, notice, error, onPickBean, onPickRecipe, onPickDripper, onHideDripper, onPickFilter, onHideFilter, onPickWater, onHideWater, onPickGrinder, onHideGrinder, onSave, onClose }: {
+export function BrewEditor({ editing, form, setForm, recentCafes, origins, varieties, onAddOrigin, onHideVariety, beans, recipes, selectedRecipeId, drippers, filters, waters, grinders, defaultGrinder, lastClicks, note, setNote, notice, error, onPickBean, onPickRecipe, onPickDripper, onHideDripper, onPickFilter, onHideFilter, onPickWater, onHideWater, onPickGrinder, onHideGrinder, onSave, onClose, canSaveCard, onCard, cafePhoto, cafeRead }: {
   editing: boolean;
   form: BrewForm;
   setForm: Dispatch<SetStateAction<BrewForm>>;
   recentCafes: CafePlace[];
+  canSaveCard: boolean;
+  cafePhoto: PhotoRead;
+  cafeRead: ReadonlySet<string>;
+  onCard: (card: CardPhoto | undefined) => void;
   origins: PickOption[];
   varieties: PickOption[];
   onAddOrigin: (origin: string) => void;
@@ -120,6 +126,7 @@ export function BrewEditor({ editing, form, setForm, recentCafes, origins, varie
         {error && <p className="be-alert" role="alert">{error}</p>}
 
         {cafeMode ? <>
+        {!editing && <div className="be-card be-quick"><PhotoFill photo={cafePhoto} card={form.card} canSaveCard={canSaveCard} onCard={onCard} title={form.cafe?.name || "카페 원두 카드"} label="카드 사진으로 채우기" /></div>}
         <section className="be-group" aria-labelledby="bw-where">
           <h3 className="be-group-label" id="bw-where">어디서</h3>
           <div className="be-card">
@@ -135,16 +142,21 @@ export function BrewEditor({ editing, form, setForm, recentCafes, origins, varie
         <section className="be-group" aria-labelledby="bw-coffee">
           <h3 className="be-group-label" id="bw-coffee">원두</h3>
           <div className="be-card">
-            <CoffeeRows value={form.coffee} onChange={update => setForm(current => ({ ...current, coffee: update(current.coffee) }))} required={false} error={error} processes={BEAN_PROCESSES} origins={origins} varieties={varieties}
+            <CoffeeRows value={form.coffee} onChange={update => setForm(current => ({ ...current, coffee: update(current.coffee) }))} required={false} error={error} processes={BEAN_PROCESSES} origins={origins} varieties={varieties} readFields={cafeRead}
               sheet={coffeeSheet} setSheet={setCoffeeSheet} onAddOrigin={onAddOrigin} onHideVariety={onHideVariety} />
-            <label className="be-row"><span className="be-row-name">가격</span><input type="text" inputMode="numeric" value={withCommas(form.price)} placeholder="7,000" onChange={event => handleNumericInput(event, price => set("price", price))} /><span className="be-unit">원</span></label>
+            <label className={`be-row${cafeRead.has("price") ? " read" : ""}`}><span className="be-row-name">{cafeRead.has("price") && <span className="be-dot" aria-hidden="true" />}가격</span><input type="text" inputMode="numeric" value={withCommas(form.price)} placeholder="7,000" onChange={event => handleNumericInput(event, price => set("price", price))} /><span className="be-unit">원</span></label>
           </div>
         </section>
 
         <section className="be-group" aria-labelledby="bw-notes">
           <h3 className="be-group-label" id="bw-notes">로스터리 컵노트</h3>
-          <div className="be-card"><label className="be-row full"><span className="sr-only">로스터리 컵노트</span><input value={form.roasteryNotes} placeholder="예: 흰 꽃, 복숭아, 꿀 (쉼표로 구분)" onChange={event => set("roasteryNotes", event.target.value)} /></label></div>
+          <div className="be-card"><label className={`be-row full${cafeRead.has("roasteryNotes") ? " read" : ""}`}>{cafeRead.has("roasteryNotes") && <span className="be-dot" aria-hidden="true" />}<span className="sr-only">로스터리 컵노트</span><input value={form.roasteryNotes} placeholder="예: 흰 꽃, 복숭아, 꿀 (쉼표로 구분)" onChange={event => set("roasteryNotes", event.target.value)} /></label></div>
         </section>
+
+        {(editing || form.card) && <section className="be-group" aria-labelledby="bw-card-photo">
+          <h3 className="be-group-label" id="bw-card-photo">원두 카드</h3>
+          <div className="be-card"><CardPhotoRow card={form.card} title={form.cafe?.name || "카페 원두 카드"} canSave={canSaveCard} onChange={onCard} /></div>
+        </section>}
         </> : <>
         <section className="be-group" aria-labelledby="bw-what">
           <h3 className="be-group-label" id="bw-what">무엇을{ratio && <span className="bw-ratio">비율 {ratio}</span>}</h3>
