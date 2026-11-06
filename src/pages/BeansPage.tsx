@@ -6,7 +6,7 @@ import { JourneySteps } from "../components/ui";
 import { BeanEditor } from "../components/bean-editor/BeanEditor";
 import { beanValues, blendFields, blendSummary, isBlend, MAX_BLEND_PARTS, ratioTotal, usedParts } from "../lib/blend";
 import { beanName, fmt, handleNumericInput, localDate, splitCupNotes, withCommas } from "../lib/format";
-import { localizedPhotoField, PHOTO_ORIGIN_LABELS, PHOTO_PROCESS_LABELS, photoMimeType, photoProblem, preparePhoto } from "../lib/photo";
+import { localizedPhotoField, PHOTO_ORIGIN_LABELS, PHOTO_PROCESS_LABELS, type PhotoStep, photoMimeType, photoProblem, preparePhoto, sendPhoto } from "../lib/photo";
 import { type Bean, BEAN_ORIGINS, BEAN_PROCESSES, BEAN_QUALITIES, BEAN_STATUSES, type BeanForm, type BeanQuality, type BeanStatus, type Brew, type PeakSettings, type RecognizedBeanFields, type TastingNote } from "../types";
 import { LIST_KEYS, PEAK_KEY } from "../data/keys";
 import { basePeak, beanPeak, type BeanPeak, effectiveStatus, isRoastLevel, roastDateLabel, levelPeak, peakSortKey, RESEARCH_PEAK, shiftPeak, withRoasteryPeak } from "../lib/peak";
@@ -249,6 +249,9 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState("");
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoStep, setPhotoStep] = useState<PhotoStep>({ stage: "prepare", sent: 0 });
+  // Only the latest photo's answer fills the form; clearing the photo or closing the sheet drops a read still on its way.
+  const photoRun = useRef(0);
   const [photoError, setPhotoError] = useState("");
   // How many fields the last photo filled, and which ones, so the editor can mark them for checking.
   const [photoReadCount, setPhotoReadCount] = useState<number | null>(null);
@@ -379,6 +382,7 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
   if (openIndex > 0 && openIndex % 2 === 1) [listOrder[openIndex - 1], listOrder[openIndex]] = [listOrder[openIndex], listOrder[openIndex - 1]];
   const clearPhoto = () => {
     if (photoPreview) URL.revokeObjectURL(photoPreview);
+    photoRun.current += 1;
     setPhotoFile(null); setPhotoPreview(""); setPhotoBusy(false); setPhotoError(""); setPhotoReadCount(null); setReadFields(new Set());
   };
   const selectPhoto = (file?: File) => {
@@ -391,19 +395,17 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
     if (userId) void recognizePhoto(file);
   };
   const recognizePhoto = async (file = photoFile) => {
-    if (!file || photoBusy) return;
-    setPhotoBusy(true); setPhotoError(""); setPhotoReadCount(null);
+    if (!file || (photoBusy && file === photoFile)) return;
+    const run = ++photoRun.current;
+    setPhotoBusy(true); setPhotoStep({ stage: "prepare", sent: 0 }); setPhotoError(""); setPhotoReadCount(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("사진 인식은 Google 로그인 후 사용할 수 있어요.");
       const photo = await preparePhoto(file, photoMimeType(file));
-      const response = await fetch("/api/recognize-bean", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify(photo)
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || "사진에서 정보를 읽지 못했어요.");
+      if (run !== photoRun.current) return;
+      const { ok, payload } = await sendPhoto("/api/recognize-bean", session.access_token, photo, step => { if (run === photoRun.current) setPhotoStep(step); });
+      if (run !== photoRun.current) return;
+      if (!ok) throw new Error(typeof payload.error === "string" && payload.error ? payload.error : "사진에서 정보를 읽지 못했어요.");
       const result = (payload.bean ?? {}) as RecognizedBeanFields;
       const text = (value: unknown) => typeof value === "string" ? value.trim() : "";
       // Two or more coffees on the label make it a blend; each becomes a part row.
@@ -450,9 +452,10 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
       ]);
       setReadFields(read); setPhotoReadCount(read.size);
     } catch (photoRecognitionError) {
+      if (run !== photoRun.current) return;
       setPhotoError(photoRecognitionError instanceof Error ? photoRecognitionError.message : "사진에서 정보를 읽지 못했어요.");
     } finally {
-      setPhotoBusy(false);
+      if (run === photoRun.current) setPhotoBusy(false);
     }
   };
   const close = () => { clearPhoto(); setShow(false); setEditingId(null); setForm(emptyBeanForm); setError(""); setRoastDateTouched(false); purchaseDateFollowsRoast.current = false; };
@@ -548,7 +551,7 @@ export function BeansPage({ beans, setBeans, brews, setBrews, notes, setNotes, u
         varieties={rankByUse(varieties, bean => beanValues(bean, "variety"))}
         pastBeans={editingId === null ? available : []}
         readFields={readFields}
-        photo={editingId === null ? { preview: photoPreview, busy: photoBusy, error: photoError, readCount: photoReadCount, canRead: Boolean(userId), onSelect: selectPhoto, onRetry: () => recognizePhoto(), onClear: clearPhoto } : null}
+        photo={editingId === null ? { preview: photoPreview, busy: photoBusy, step: photoStep, error: photoError, readCount: photoReadCount, canRead: Boolean(userId), onSelect: selectPhoto, onRetry: () => recognizePhoto(), onClear: clearPhoto } : null}
         error={error}
         onAddOrigin={origin => { if (!origins.includes(origin)) setCustomOrigins([...customOrigins, origin]); }}
         onHideRoastery={hideRoastery}

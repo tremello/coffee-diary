@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type Dispatch, type FormEvent, type PointerEvent, type SetStateAction } from "react";
 import { beanName, handleNumericInput, withCommas } from "../../lib/format";
-import { PHOTO_ACCEPT } from "../../lib/photo";
+import { PHOTO_ACCEPT, type PhotoStep } from "../../lib/photo";
+import { PhotoProgress } from "./PhotoProgress";
 import { basePeak, peakRange, peakSourceLabel, withRoasteryPeak } from "../../lib/peak";
 import { type Bean, BEAN_QUALITIES, BEAN_STATUSES, type BeanForm, type PeakSettings } from "../../types";
 import { PeakSheet } from "../peak/PeakSheet";
@@ -13,6 +14,7 @@ import { useKeyboardInset } from "./useKeyboardInset";
 export type BeanPhoto = {
   preview: string;
   busy: boolean;
+  step: PhotoStep;
   error: string;
   readCount: number | null;
   canRead: boolean;
@@ -145,13 +147,13 @@ export function BeanEditor({ editing, form, setForm, peakSettings, setPeakSettin
           {photo.preview ? <div className="be-photo">
             <img src={photo.preview} alt="고른 원두 봉투 사진" />
             <div className="be-photo-text" role="status">
-              {photo.busy ? <strong>라벨을 읽는 중…</strong>
+              {photo.busy ? <PhotoProgress step={photo.step} reading="라벨 읽는 중…" />
                 : photo.error ? <><strong className="bad">{photo.error}</strong><span>다시 읽거나 직접 입력해주세요</span></>
                 : photo.readCount !== null ? <><strong className="ok">라벨에서 {photo.readCount}개를 읽었어요</strong><span>초록 점 칸만 한 번 확인해주세요</span></>
                 : <><strong>사진을 골랐어요</strong><span>{photo.canRead ? "사진은 읽는 동안에만 쓰고 저장하지 않아요" : "사진 인식은 Google 로그인 후 쓸 수 있어요"}</span></>}
             </div>
             {!photo.busy && photo.canRead && <button type="button" className="be-pill" onClick={photo.onRetry}>다시 읽기</button>}
-            <button type="button" className="be-photo-remove" onClick={photo.onClear} aria-label="고른 사진 지우기">×</button>
+            <button type="button" className="be-photo-remove" onClick={photo.onClear} aria-label={photo.busy ? "읽기 그만두고 사진 지우기" : "고른 사진 지우기"}>×</button>
           </div> : <div className="be-row be-quick-row">
             <span className="be-row-name"><CameraIcon />라벨 사진으로 채우기</span>
             <span className="be-quick-actions">

@@ -4,7 +4,8 @@ import { CameraIcon } from "../bean-editor/BeanEditor";
 import { useKeyboardInset } from "../bean-editor/useKeyboardInset";
 import { useSheet } from "../brew-editor/useSheet";
 import { fmt } from "../../lib/format";
-import { PHOTO_ACCEPT, photoMimeType, photoProblem, preparePhoto } from "../../lib/photo";
+import { PHOTO_ACCEPT, type PhotoStep, photoMimeType, photoProblem, preparePhoto, sendPhoto } from "../../lib/photo";
+import { PhotoProgress } from "../bean-editor/PhotoProgress";
 import { basicRecipeSteps, defaultRecipeSteps, extractionCumulative, immersionActions, immersionSeconds, isAmountlessStep, isBypassStep, normalizedRecipeAction, recipeActions, recipeTime, recipeTimeFromDigits, recipeTimeToSeconds, recipeWater } from "../../lib/recipe";
 import { type RecipeStep, type SavedRecipe } from "../../types";
 
@@ -12,8 +13,8 @@ export type RecipeDraft = Pick<SavedRecipe, "name" | "coffee" | "temp" | "memo" 
 
 type ReadField = "name" | "coffee" | "immersion" | "steps" | "memo";
 type RecognizedRecipe = { name?: string; coffee?: number; immersion?: boolean; steps?: RecipeStep[]; memo?: string; trimmed?: boolean };
-type RecipePhoto = { preview: string; busy: boolean; error: string; done: boolean; trimmed: boolean };
-const noPhoto: RecipePhoto = { preview: "", busy: false, error: "", done: false, trimmed: false };
+type RecipePhoto = { preview: string; busy: boolean; step: PhotoStep; error: string; done: boolean; trimmed: boolean };
+const noPhoto: RecipePhoto = { preview: "", busy: false, step: { stage: "prepare", sent: 0 }, error: "", done: false, trimmed: false };
 
 // The recipe form as a sheet over the list (a dialog on wider screens), in the bean and brew editors' be-* layout.
 // `recipe` is the one being edited, or null for a new recipe.
@@ -40,18 +41,15 @@ export function RecipeEditor({ recipe, canReadPhoto, onSave, onClose }: { recipe
   const readPhoto = async (file = photoFile.current) => {
     if (!file) return;
     const run = ++photoRun.current;
-    setPhoto(current => ({ ...current, busy: true, error: "", done: false, trimmed: false }));
+    const setStep = (step: PhotoStep) => { if (run === photoRun.current) setPhoto(current => ({ ...current, step })); };
+    setPhoto(current => ({ ...current, busy: true, step: { stage: "prepare", sent: 0 }, error: "", done: false, trimmed: false }));
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("사진 인식은 Google 로그인 후 사용할 수 있어요.");
       const body = await preparePhoto(file, photoMimeType(file));
-      const response = await fetch("/api/recognize-recipe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify(body)
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || "사진에서 레시피를 읽지 못했어요.");
+      if (run !== photoRun.current) return;
+      const { ok, payload } = await sendPhoto("/api/recognize-recipe", session.access_token, body, setStep);
+      if (!ok) throw new Error(typeof payload.error === "string" && payload.error ? payload.error : "사진에서 레시피를 읽지 못했어요.");
       if (run !== photoRun.current) return;
       const read = (payload.recipe ?? {}) as RecognizedRecipe;
       const readSteps = Array.isArray(read.steps) && read.steps.length >= 2 ? read.steps.map(step => ({ ...step, action: normalizedRecipeAction(step.action) })) : null;
@@ -133,13 +131,13 @@ export function RecipeEditor({ recipe, canReadPhoto, onSave, onClose }: { recipe
           {photo.preview ? <div className="be-photo">
             <img src={photo.preview} alt="고른 레시피 사진" />
             <div className="be-photo-text" role="status">
-              {photo.busy ? <strong>레시피를 읽는 중…</strong>
+              {photo.busy ? <PhotoProgress step={photo.step} reading="레시피 읽는 중…" />
                 : photo.error ? <><strong className="bad">{photo.error}</strong><span>다시 읽거나 직접 입력해주세요</span></>
                 : photo.done ? <><strong className="ok">레시피를 읽었어요</strong><span>{photo.trimmed ? "단계가 많아 앞부분만 넣었어요. " : ""}초록 점 칸만 한 번 확인해주세요</span></>
                 : <><strong>사진을 골랐어요</strong><span>{canReadPhoto ? "사진은 읽는 동안에만 쓰고 저장하지 않아요" : "사진 인식은 Google 로그인 후 쓸 수 있어요"}</span></>}
             </div>
             {!photo.busy && canReadPhoto && <button type="button" className="be-pill" onClick={() => void readPhoto()}>다시 읽기</button>}
-            <button type="button" className="be-photo-remove" onClick={clearPhoto} aria-label="고른 사진 지우기">×</button>
+            <button type="button" className="be-photo-remove" onClick={clearPhoto} aria-label={photo.busy ? "읽기 그만두고 사진 지우기" : "고른 사진 지우기"}>×</button>
           </div> : <div className="be-row be-quick-row">
             <span className="be-row-name"><CameraIcon />레시피 사진으로 채우기</span>
             <span className="be-quick-actions">
