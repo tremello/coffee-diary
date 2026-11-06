@@ -3,6 +3,7 @@
 export type Release = { version: string; date: string; changes: string[] };
 
 export const RELEASES: Release[] = [
+  { version: "1.20.9", date: "2026-11-06", changes: ["사진으로 원두·레시피를 추가할 때 진행 표시를 '읽는 중… N초'와 움직이는 막대 하나로 줄였어요"] },
   { version: "1.20.8", date: "2026-11-06", changes: ["원두나 레시피를 사진으로 추가할 때 진행 상황이 보여요: 사진 보내는 중 몇 %, 읽는 중 몇 초인지 작은 막대로 알려줘요", "버그 수정: 사진을 읽는 도중 지우거나 창을 닫아도 늦게 온 결과가 칸을 채우던 것을 고쳤어요. 인터넷이 끊기거나 너무 오래 걸리면 한국어로 다시 읽어달라고 안내해요"] },
   { version: "1.20.7", date: "2026-11-06", changes: ["맥 메뉴 막대 앱에서 Google 로그인할 때도 우리 사이트 주소가 보여요"] },
   { version: "1.20.6", date: "2026-11-06", changes: ["Google 로그인 화면에 낯선 서버 주소 대신 우리 사이트 주소가 보이게 바꿨어요"] },

@@ -62,38 +62,21 @@ export const preparePhoto = async (file: File, mimeType: string) => {
 
 export const localizedPhotoField = (value: string, labels: Record<string, string>) => labels[value.trim().toLowerCase().replace(/[-_]/g, " ").replace(/\s+/g, " ")] ?? value.trim();
 
-// Where a photo read is, for the small progress bar in the bean and recipe sheets.
-// Only the upload has a real percentage; preparing and reading show a moving bar.
-export type PhotoStep = { stage: "prepare" | "upload" | "read"; sent: number };
-
 const PHOTO_READ_TIMEOUT_MS = 60_000;
 
-// POSTs a prepared photo and reports when it is sent, so the sheet can say "보내는 중" then "읽는 중".
-// Uses XMLHttpRequest because fetch cannot report upload progress.
-export const sendPhoto = (url: string, token: string, body: unknown, onStep: (step: PhotoStep) => void) => new Promise<{ ok: boolean; payload: Record<string, unknown> }>((resolve, reject) => {
-  const xhr = new XMLHttpRequest();
-  xhr.open("POST", url);
-  xhr.setRequestHeader("Content-Type", "application/json");
-  xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-  xhr.timeout = PHOTO_READ_TIMEOUT_MS;
-  // Some browsers report no upload progress at all; then "읽는 중" follows after a short while instead of sitting at 0%.
-  let sending = true;
-  const sent = () => { if (sending) { sending = false; window.clearTimeout(quiet); onStep({ stage: "read", sent: 1 }); } };
-  const quiet = window.setTimeout(sent, 2500);
-  xhr.upload.onprogress = event => {
-    if (!sending || !event.lengthComputable || event.total <= 0) return;
-    window.clearTimeout(quiet);
-    onStep({ stage: "upload", sent: Math.min(1, event.loaded / event.total) });
-  };
-  xhr.upload.onload = sent;
-  xhr.onloadend = () => window.clearTimeout(quiet);
-  xhr.onload = () => {
-    let payload: Record<string, unknown> = {};
-    try { payload = JSON.parse(xhr.responseText) ?? {}; } catch { /* not JSON: keep the default message */ }
-    resolve({ ok: xhr.status >= 200 && xhr.status < 300, payload });
-  };
-  xhr.onerror = () => reject(new Error("인터넷 연결이 끊겼어요. 연결을 확인하고 다시 읽어주세요."));
-  xhr.ontimeout = () => reject(new Error("읽는 데 너무 오래 걸렸어요. 잠시 뒤 다시 읽어주세요."));
-  onStep({ stage: "upload", sent: 0 });
-  xhr.send(JSON.stringify(body));
-});
+// POSTs a prepared photo; a dropped connection or a read over 60 seconds gets a plain Korean message instead of the browser's error.
+export const sendPhoto = async (url: string, token: string, body: unknown): Promise<{ ok: boolean; payload: Record<string, unknown> }> => {
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(PHOTO_READ_TIMEOUT_MS)
+    });
+  } catch (error) {
+    throw new Error(error instanceof DOMException && error.name === "TimeoutError" ? "읽는 데 너무 오래 걸렸어요. 잠시 뒤 다시 읽어주세요." : "인터넷 연결이 끊겼어요. 연결을 확인하고 다시 읽어주세요.");
+  }
+  const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
+  return { ok: response.ok, payload: payload ?? {} };
+};

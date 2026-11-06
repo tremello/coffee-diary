@@ -146,17 +146,14 @@ button.be-row:hover { background: var(--c-soft); }
 }
 @media (prefers-reduced-motion: reduce) { .be-backdrop, .be-panel, .be-pick { animation: none; transition: none; } }
 
-/* Photo reading progress: three short tracks (준비 · 보내기 · 읽기); the current one moves. */
+/* Photo reading progress: one track with a moving bar, while the photo is read. */
 .be-progress-time { margin-left: 6px; color: var(--c-ink-2); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
-.be-progress { display: flex; gap: 4px; margin: 4px 0 2px; }
+.be-progress { display: flex; margin: 4px 0 2px; }
 .be-photo-text .be-progress i { position: relative; flex: 1 1 0; height: 4px; overflow: hidden; border-radius: var(--r-pill); background: var(--c-fill); }
-.be-progress i::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--c-accent); transform: scaleX(0); transform-origin: left; transition: transform .3s ease; }
-.be-progress i.done::after { transform: scaleX(1); }
-.be-progress i.now::after { transform: scaleX(var(--sent, 0)); }
+.be-progress i::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--c-accent); }
 .be-progress i.run::after { width: 45%; transform: translateX(-100%); animation: be-progress-run 1.3s ease-in-out infinite; }
 @keyframes be-progress-run { to { transform: translateX(225%); } }
 @media (prefers-reduced-motion: reduce) {
-  .be-progress i::after { transition: none; }
   .be-progress i.run::after { width: 100%; transform: none; animation: be-progress-pulse 1.6s ease-in-out infinite alternate; }
   @keyframes be-progress-pulse { from { opacity: .25; } to { opacity: .7; } }
 }
