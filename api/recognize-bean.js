@@ -396,23 +396,39 @@ async function readLabelTwice(base64, mimeType) {
 }
 
 // 원두 카드 사진: Gemini only finds the card's four corners; the app straightens and crops it on the phone.
+// Gemini locates things best in its own convention: [y, x] on a 0–1000 grid, after first boxing the object.
 const cornerSchema = {
   type: "object",
   properties: {
-    found: { type: "boolean", description: "사진에 카드(직사각형 종이·인쇄물)가 보이면 true" },
-    corners: {
-      type: "array",
-      description: "카드 네 모서리. 왼쪽 위, 오른쪽 위, 오른쪽 아래, 왼쪽 아래 순서. 사진 크기를 0~1000으로 본 [x, y]",
-      items: { type: "array", items: { type: "number" } }
-    }
-  }
+    found: { type: "boolean", description: "사진에 원두 카드나 라벨(직사각형 종이·인쇄물)이 보이면 true" },
+    box_2d: { type: "array", items: { type: "number" }, description: "카드 종이 전체를 감싸는 상자 [ymin, xmin, ymax, xmax], 0~1000" },
+    top_left: { type: "array", items: { type: "number" }, description: "카드 종이의 왼쪽 위 꼭짓점 [y, x], 0~1000" },
+    top_right: { type: "array", items: { type: "number" }, description: "오른쪽 위 꼭짓점 [y, x], 0~1000" },
+    bottom_right: { type: "array", items: { type: "number" }, description: "오른쪽 아래 꼭짓점 [y, x], 0~1000" },
+    bottom_left: { type: "array", items: { type: "number" }, description: "왼쪽 아래 꼭짓점 [y, x], 0~1000" }
+  },
+  required: ["found"]
 };
-const CORNER_PROMPT = `사진에는 커피 원두와 함께 받은 카드(원두 정보가 인쇄된 직사각형 종이 카드)가 있습니다. 카드 종이의 네 모서리 위치를 찾아 JSON으로 답하세요.
-- 좌표는 사진 가로·세로를 각각 0~1000으로 본 [x, y]입니다(x는 왼쪽→오른쪽, y는 위→아래).
-- 순서: 카드의 왼쪽 위, 오른쪽 위, 오른쪽 아래, 왼쪽 아래.
-- 카드 안의 글자 영역이 아니라 종이 가장자리 끝을 찍습니다. 모서리가 둥글면 두 변을 이어 만나는 점을 씁니다.
-- 카드가 기울어 있거나 원근으로 사다리꼴이어도 실제 보이는 네 점을 씁니다.
-- 카드가 여러 장이면 가장 크게 보이는 한 장만. 카드가 없으면 found를 false로 합니다.`;
+const CORNER_PROMPT = `# 원두 카드 네 꼭짓점 찾기
+
+사진에는 원두와 함께 받은 카드(원두 정보가 인쇄된 직사각형 종이)나 원두 봉투의 라벨이 있습니다. 나중에 이 네 점으로 카드를 반듯하게 펴서 잘라 보관합니다. 꼭짓점이 몇 픽셀만 어긋나도 테두리가 잘리거나 바닥이 같이 남으니, 정확하게 찍어 주세요.
+
+## 무엇을 찾나
+- 사진에서 가장 크게, 가장 앞에 보이는 카드 한 장(카드가 없으면 봉투에 붙은 라벨 스티커).
+- 카드 **종이의 바깥 가장자리**를 찾습니다. 카드 안에 인쇄된 테두리선, 로고 상자, 글자 영역, 흰 여백 안쪽 선은 가장자리가 아닙니다. 흰 여백까지 포함한 종이 끝이 기준입니다.
+- 그림자, 카드가 놓인 바닥·테이블 무늬, 손가락, 반사광은 카드가 아닙니다. 그림자는 종이 바깥쪽에 생기므로 그림자 경계가 아니라 종이 경계를 찍습니다.
+- 흰 카드가 흰 바닥에 있으면 밝기·질감이 바뀌는 미세한 선을 따라갑니다.
+
+## 순서
+1. 먼저 box_2d에 카드 종이 전체를 감싸는 상자를 [ymin, xmin, ymax, xmax]로 씁니다.
+2. 그다음 네 꼭짓점을 [y, x]로 씁니다. 좌표는 사진 세로·가로를 각각 0~1000으로 본 값입니다(y는 위→아래, x는 왼쪽→오른쪽).
+3. 왼쪽 위·오른쪽 위·오른쪽 아래·왼쪽 아래는 **사진 화면 기준**입니다. 카드 글자가 거꾸로이거나 옆으로 누워 있어도 사진에서 보이는 위치로 정합니다.
+
+## 어려운 경우
+- 카드가 기울었거나 비스듬히 찍혀 사다리꼴로 보이면, 보이는 그대로 네 점을 찍습니다(직사각형으로 맞추지 않습니다).
+- 모서리가 둥글면 양쪽 직선 변을 연장해 만나는 점을 찍습니다.
+- 모서리가 손가락이나 물건에 가려졌거나 사진 밖으로 조금 나갔으면, 두 변을 연장해 추정한 위치를 씁니다(0 미만이나 1000 초과도 괜찮습니다).
+- 카드나 라벨이 전혀 없으면 found를 false로 하고 나머지는 비웁니다.`;
 
 async function findCorners(base64, mimeType) {
   const geminiResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
@@ -420,9 +436,10 @@ async function findCorners(base64, mimeType) {
     headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY },
     body: JSON.stringify({
       model: GEMINI_MODEL,
-      input: [{ type: "image", mime_type: mimeType, data: base64 }, { type: "text", text: CORNER_PROMPT }],
+      input: [{ type: "image", mime_type: mimeType, data: base64, resolution: "high" }, { type: "text", text: CORNER_PROMPT }],
       response_format: { type: "text", mime_type: "application/json", schema: cornerSchema },
-      generation_config: { thinking_level: thinkingLevel, max_output_tokens: 1024 },
+      // Placing points benefits from a little reasoning, unlike copying a label.
+      generation_config: { thinking_level: "low", max_output_tokens: 2048 },
       store: false
     })
   });
@@ -430,11 +447,25 @@ async function findCorners(base64, mimeType) {
   if (!geminiResponse.ok) return { status: geminiResponse.status, error: errorMessage(payload) };
   let parsed = null;
   try { parsed = JSON.parse(interactionText(payload)); } catch { return { corners: null }; }
-  const points = Array.isArray(parsed?.corners) ? parsed.corners : [];
-  const valid = points.length === 4 && points.every(point => Array.isArray(point) && point.length >= 2 && point.slice(0, 2).every(value => Number.isFinite(value) && value >= -50 && value <= 1050));
-  // Back as 0–1 fractions of the photo, clamped to its edges.
+  return { corners: parsed?.found === false ? null : cornersFrom(parsed) };
+}
+
+// Back as [x, y] fractions of the photo (top-left, top-right, bottom-right, bottom-left), or null when the answer is not a
+// usable card outline: a point missing, the shape crossed over itself, or too small to be the card.
+export function cornersFrom(parsed) {
+  const names = ["top_left", "top_right", "bottom_right", "bottom_left"];
+  const raw = names.map(name => parsed?.[name]);
+  if (!raw.every(point => Array.isArray(point) && point.length >= 2 && point.slice(0, 2).every(value => Number.isFinite(value) && value >= -100 && value <= 1100))) return null;
   const clamp = value => Math.min(1, Math.max(0, value / 1000));
-  return { corners: parsed?.found !== false && valid ? points.map(([x, y]) => [clamp(x), clamp(y)]) : null };
+  const points = raw.map(([y, x]) => [clamp(x), clamp(y)]);
+  // Convex and in order: every turn goes the same way.
+  const turns = points.map((p, i) => {
+    const q = points[(i + 1) % 4], r = points[(i + 2) % 4];
+    return (q[0] - p[0]) * (r[1] - q[1]) - (q[1] - p[1]) * (r[0] - q[0]);
+  });
+  if (!(turns.every(turn => turn > 0) || turns.every(turn => turn < 0))) return null;
+  const area = Math.abs(points.reduce((sum, p, i) => sum + p[0] * points[(i + 1) % 4][1] - points[(i + 1) % 4][0] * p[1], 0)) / 2;
+  return area >= 0.03 ? points : null;
 }
 
 function interactionText(payload) {

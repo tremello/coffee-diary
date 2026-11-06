@@ -9,7 +9,7 @@ const MAX_SIDE = 4000;
 const QUALITY = 0.92;
 const THUMB_SIDE = 480;
 const THUMB_QUALITY = 0.8;
-const DETECT_SIDE = 1024;
+const DETECT_SIDE = 1536;
 
 // A corner as a fraction (0–1) of the photo's width and height, in the order top-left, top-right, bottom-right, bottom-left.
 export type Point = [number, number];

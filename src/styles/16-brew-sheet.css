@@ -101,3 +101,10 @@ form.be-panel .be-quick .be-row-name { color: inherit; font-size: inherit; }
 .bw-cafe-chips .bw-again:disabled { opacity: .6; cursor: default; }
 .be-pick-new button:disabled { color: var(--c-ink-3); cursor: default; }
 .bw-map-link { margin-left: 4px; color: var(--c-accent); font-size: 12px; font-weight: 600; white-space: nowrap; }
+/* A cafe card has no "다시 내리기", so 수정·삭제 sit on its last line instead of a row of their own. */
+.bw-card.is-cafe { position: relative; }
+.bw-card.is-cafe .bw-card-open { padding-bottom: 14px; }
+.bw-card.is-cafe .bw-card-open > :last-child { padding-right: 92px; }
+.bw-card.is-cafe .bw-card-foot { position: absolute; right: 16px; bottom: 8px; padding: 0; }
+.bw-card.is-cafe .bw-card-foot > span:first-child { display: none; }
+@media (max-width: 720px) { .bw-card.is-cafe .bw-card-foot { right: 14px; } }

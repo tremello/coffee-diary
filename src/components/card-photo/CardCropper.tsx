@@ -19,7 +19,9 @@ export function CardCropper({ source, detect, status, onInfoOnly, onSaved, onCan
   const [error, setError] = useState("");
   const stageRef = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState({ left: 0, top: 0, width: 0, height: 0 });
-  const dragging = useRef<number | null>(null);
+  // The handle being dragged: it moves by the finger's travel (no jump to the fingertip), and a loupe shows that corner enlarged.
+  const dragging = useRef<{ index: number; x: number; y: number; start: Point } | null>(null);
+  const [active, setActive] = useState<number | null>(null);
 
   useEffect(() => () => { if (cut) URL.revokeObjectURL(cut.url); }, [cut]);
   useEffect(() => {
@@ -57,21 +59,20 @@ export function CardCropper({ source, detect, status, onInfoOnly, onSaved, onCan
     return () => observer.disconnect();
   }, [source, step === "result"]);
 
-  const moveTo = (index: number, event: PointerEvent) => {
-    const stage = stageRef.current;
-    if (!stage || !box.width) return;
-    const rect = stage.getBoundingClientRect();
-    const x = Math.min(1, Math.max(0, (event.clientX - rect.left - box.left) / box.width));
-    const y = Math.min(1, Math.max(0, (event.clientY - rect.top - box.top) / box.height));
-    setQuad(current => current.map((point, i) => i === index ? [x, y] : point) as Quad);
-  };
   const onHandleDown = (index: number) => (event: PointerEvent<HTMLButtonElement>) => {
     event.preventDefault();
-    dragging.current = index;
+    dragging.current = { index, x: event.clientX, y: event.clientY, start: quad[index] };
+    setActive(index);
     event.currentTarget.setPointerCapture(event.pointerId);
   };
-  const onHandleMove = (index: number) => (event: PointerEvent<HTMLButtonElement>) => { if (dragging.current === index) moveTo(index, event); };
-  const onHandleUp = () => { dragging.current = null; };
+  const onHandleMove = (index: number) => (event: PointerEvent<HTMLButtonElement>) => {
+    const drag = dragging.current;
+    if (!drag || drag.index !== index || !box.width) return;
+    const x = Math.min(1, Math.max(0, drag.start[0] + (event.clientX - drag.x) / box.width));
+    const y = Math.min(1, Math.max(0, drag.start[1] + (event.clientY - drag.y) / box.height));
+    setQuad(current => current.map((point, i) => i === index ? [x, y] : point) as Quad);
+  };
+  const onHandleUp = () => { dragging.current = null; setActive(null); };
   // Arrow keys nudge a focused handle, so the corners can be set without a mouse or finger.
   const nudge = (index: number, dx: number, dy: number) => setQuad(current => current.map((point, i) => i === index ? [Math.min(1, Math.max(0, point[0] + dx)), Math.min(1, Math.max(0, point[1] + dy))] : point) as Quad);
 
@@ -118,6 +119,7 @@ export function CardCropper({ source, detect, status, onInfoOnly, onSaved, onCan
         : <>
           <img className="cp-photo" src={source.preview} alt="" style={{ left: box.left, top: box.top, width: box.width, height: box.height }} draggable={false} />
           <svg className="cp-frame" aria-hidden="true"><polygon points={pointsAttr} /></svg>
+          {active !== null && step === "adjust" && <Loupe src={source.preview} box={box} quad={quad} index={active} stage={stageRef.current} />}
           {step !== "finding" && quad.map((point, index) => {
             const [left, top] = px(point);
             return <button key={index} type="button" className="cp-handle" style={{ left, top }} aria-label={`${names[index]} 모서리, 화살표 키로 옮기기`}
@@ -142,4 +144,24 @@ export function CardCropper({ source, detect, status, onInfoOnly, onSaved, onCan
       </>}
     </div>
   </div>, document.body);
+}
+
+const LOUPE = 128;
+const ZOOM = 3;
+
+// A round magnifier above the finger while a corner is dragged: the photo around that corner at 3×, the card's outline,
+// and a cross at the exact point, so the corner can be set on the card's edge without the finger hiding it.
+function Loupe({ src, box, quad, index, stage }: { src: string; box: { left: number; top: number; width: number; height: number }; quad: Quad; index: number; stage: HTMLDivElement | null }) {
+  const r = LOUPE / 2;
+  const [x, y] = quad[index];
+  const w = box.width * ZOOM, h = box.height * ZOOM;
+  const cx = box.left + x * box.width, cy = box.top + y * box.height;
+  const stageWidth = stage?.clientWidth ?? 0;
+  // Above the finger, or below it near the top; kept inside the stage sideways.
+  const top = cy - r - 72 < -40 ? cy + 56 : cy - LOUPE - 56;
+  const left = Math.min(Math.max(cx - r, 0), Math.max(0, stageWidth - LOUPE));
+  const at = (point: Point) => `${point[0] * w - x * w + r},${point[1] * h - y * h + r}`;
+  return <div className="cp-loupe" aria-hidden="true" style={{ left, top, width: LOUPE, height: LOUPE, backgroundImage: `url(${src})`, backgroundSize: `${w}px ${h}px`, backgroundPosition: `${r - x * w}px ${r - y * h}px` }}>
+    <svg width={LOUPE} height={LOUPE}><polygon points={quad.map(at).join(" ")} /><path d={`M${r - 10} ${r}h20M${r} ${r - 10}v20`} /></svg>
+  </div>;
 }

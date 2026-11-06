@@ -443,7 +443,7 @@ export function BrewLog({ beans, setBeans, brews, setBrews, notes, setNotes, rec
           const taste = tasteSummary(saved);
           const title = cafe ? cafeTitle(brew) : bean?.name || "삭제된 원두";
           return (
-            <article key={brew.id} className="brew-card bw-card">
+            <article key={brew.id} className={`brew-card bw-card${cafe ? " is-cafe" : ""}`}>
               <button type="button" className="bw-card-open" onClick={() => setDetailId(brew.id)} aria-label={`${title} 기록 자세히 보기`}>
                 {/* The stars share only the small top line, so the name below gets the card's full width. */}
                 <span className="bw-card-title">
