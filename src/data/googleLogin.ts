@@ -33,6 +33,8 @@ export const takeGoogleReturn = (): GoogleReturn => {
   const params = new URLSearchParams(window.location.hash.slice(1));
   if (!params.has("id_token") && !params.has("error")) return null;
   window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  // The Mac menu-bar app started this login: hand Google's answer to it; the app checks state and nonce.
+  if (params.get("state")?.startsWith("mac.")) { window.location.replace(`coffeediary://auth/callback#${params}`); return null; }
   let nonce = "", state = "";
   try {
     nonce = sessionStorage.getItem(NONCE_KEY) ?? ""; state = sessionStorage.getItem(STATE_KEY) ?? "";
